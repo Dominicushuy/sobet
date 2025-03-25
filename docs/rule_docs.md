@@ -11,7 +11,7 @@ I. Loại đài:
 
 1. Miền Nam:
 
-- Các kiểu viết tắt (mã miền): "mn", "dmn", "dn", "dnam", "miennam", "mien nam", "miền nam", "đài nam", "đài miền nam", "mnam".
+- Cách viết: "mn", "dmn", "dn", "dnam", "miennam", "mien nam", "miền nam", "đài nam", "đài miền nam", "mnam".
 - Nếu cược một lúc cả 2 đến 3 đài miền nam thì thêm số 2,3 vào trước. Ví dụ: 2mn, 3mn, 2dmn, 3dmn, 2dn, 3dn, 2dnam, 3dnam, 2miennam, 3miennam, 2miền nam, 3miền nam, 2đài nam, 3đài miền nam, 2mnam, 3mnam,...
 - Lịch xổ:
 
@@ -23,7 +23,7 @@ I. Loại đài:
 * Thứ sáu: Vĩnh Long, Bình Dương, Trà Vinh
 * Thứ bảy: TP. HCM, Long An, Bình Phước, Hậu Giang
 
-- Viết tắt của mỗi đài:
+- Cách viết của mỗi đài:
 
 * Tiền Giang: "tg", "tgiang", "tiengiang", "tien giang", "tiền giang".
 * Kiên Giang: "kg", "kgiang", "kiengiang", "kien giang", "kiên giang".
@@ -49,7 +49,7 @@ I. Loại đài:
 
 2. Miền Trung:
 
-- Các kiểu viết tắt: "mt", "dmt", "dt", "dtrung", "mientrung", "mien trung", "miền trung", "đài trung", "đài miền trung", "mtrung".
+- Cách viết: "mt", "dmt", "dt", "dtrung", "mientrung", "mien trung", "miền trung", "đài trung", "đài miền trung", "mtrung".
 - Nếu cược một lúc cả 2 đến 3 đài miền trung thì thêm số 2,3 vào trước. Ví dụ: 2mt, 3mt, 2dmt, 3dmt, 2dt, 3dt, 2dtrung, 3dtrung, 2mientrung, 3mientrung, 2miền trung, 3miền trung, 2đài trung, 3đài miền trung, 2mtrung, 3mtrung,...
 - Lịch xổ:
 
@@ -61,7 +61,7 @@ I. Loại đài:
 * Thứ sáu: Gia Lai, Ninh Thuận
 * Thứ bảy: Đà Nẵng, Quảng Ngãi, Đắk Nông
 
-- Viết tắt của mỗi đài:
+- Cách viết của mỗi đài:
 
 * Kon Tum: "kt", "ktum", "kontum", "kon tum", "kon tum".
 * Khánh Hòa: "kh", "khoa", "khanhhoa", "khanh hoa", "khánh hòa".
@@ -80,7 +80,7 @@ I. Loại đài:
 
 3. Miền Bắc:
 
-- Các kiểu viết tắt: "mb", "hn", "hanoi", "mienbac", "db", "hà nội", "miền bắc", "daibac", "dbac", "đài bắc", "đài miền bắc".
+- Cách viết: "mb", "hn", "hanoi", "mienbac", "db", "hà nội", "miền bắc", "daibac", "dbac", "đài bắc", "đài miền bắc".
 
 - Viết tắt của mỗi đài:
 
@@ -545,14 +545,103 @@ IV. Mô tả các kiểu chọn tổ hợp số:
 
 V. Cách viết mã cược:
 
+- Người dùng sẽ sử dụng Input textarea để nhập mã cược. Ban đầu phải chọn đài đầu tiên và nằm trên một dòng. Sau đó mỗi dòng tiếp theo chứa một mã cược. Mỗi mã cược sẽ chứa thông tin về loại cược, số cược, đài cược và số tiền cược.
+- Mã đặt cược hợp lệ sẽ bao gồm các thông tin sau:
+
+  - Đài cược: Có thể là một hoặc nhiều đài tùy theo loại cược.
+  - Số cược: Có thể là một hoặc nhiều số tùy theo loại cược.
+  - Loại cược: Có thể là các loại cược đã mô tả ở trên.
+  - Số tiền cược: Số tiền cược phải là một số dương chia cho 1000.
+  - Cách viết:
+    "[đài cược 1]
+    [số cược 1.1][loại cược 1.1][số tiền cược 1.1]
+    [số cược 1.2][loại cược 1.2][số tiền cược 1.2]
+    [đài cược 2]
+    [số cược 2.1][loại cược 2.1][số tiền cược 2.1]
+    [số cược 2.2][loại cược 2.2][số tiền cược 2.2]"
+
+- Bước 1: Chọn đài cược.
+  - Phải chọn ít nhất 1 đài cược.
+  - Nếu chỉ chọn miền: Có thể chọn 2, 3 Đài miền Trung hoặc Miền Nam hoặc 1 Đài Miền Bắc.
+    - Ví dụ: 2mt (2 đài miền trung), 3mn (3 đài miền nam), mb (1 đài miền bắc),...
+  - Nếu chọn 2 đài cụ thể bất kỳ thì sử dụng cách viết của mỗi đài và nối với nhau bằng dấu chấm (".").
+    - Ví dụ cược 2 đài vào Chủ nhật: 1 đài Tiền Giang và 1 đài Kon Tum. Cách viết: tg.kt
+- Bước 2: Chọn số cần cược:
+  - Có thể chọn một hoặc nhiều số tùy theo loại cược.
+  - Nếu chọn nhiều số thì các số phải cách nhau bằng dấu chấm ("."). Nếu người dùng sử dụng dấu cách hoặc dấu "," thì hệ thống phải tự động chuyển thành dấu chấm (".")
+    - Ví dụ:
+      01.02.03 => 01.02.03
+      01 02 03 => 01.02.03
+      01,02,03 => 01.02.03
+      01, 02, 03 => 01.02.03
+  - Nếu chọn theo tổ hợp thì sử dụng cách viết của tổ hợp đó.
+    - Ví dụ: 20/30keo90, tai, xiu, chan, le, chanchan, lele, chanle, lechan.
+- Bước 3: Chọn loại cược:
+  - Chọn 1 loại cược như đã mô tả ở trên.
+- Bước 4: Chọn số tiền cược:
+
+  - Số tiền cược phải là một số dương chia cho 1000.
+  - Ví dụ: 1 = 1000, 1,5 = 1500, 0,5 = 500
+
+- Một vài ví dụ:
+
+  1. Người dùng muốn đánh 2 mã cho 2 đài Miền Nam bất kì:
+
+  - Mã 1 đánh 2 số "01" và "02" với kiểu đánh đầu đuôi ("dd") với số tiền cược là 1000 ("1").
+  - Mã 2 đánh 3 số "123", "456" và "789" với kiểu đánh xỉu chủ ("xc") với số tiền cược là 1500 ("1,5").
+    => Cách viết:
+
+  ```
+  2dmn
+  01.02dd1
+  123.456.789xc1,5
+  ```
+
+  2. Người dùng muốn đánh 3 mã cho 1 đài Miền Bắc:
+
+  - Mã 1 đánh 3 số "39", "25" và "52" với kiểu đánh bao lô ("b") với số tiền cược là 5000 ("5").
+  - Mã 2 đánh 3 số "45", "58" và "23" với kiểu đánh đá ("da") với số tiền cược là 500 ("0,5").
+  - Mã 3 đánh 5 số "14", "41", "69", "96", "64" với kiểu đánh đuôi ("duoi") với số tiền cược là 6000 ("6").
+    => Cách viết:
+
+  ```
+  mb
+  39.25.52b5
+  45.58.23da0,5
+  14.41.69.96.64duoi6
+  ```
+
+- Một vài trường hợp đặc biệt:
+
 VI. Quy tắc tính số tiền cược:
 
 Thông tin chung:
 
 - Cách tính số biến thể cho tất cả kiểu đảo
+
   - N là số chữ số của số cược.
   - Số biến thể: Sử dụng công thức hoán vị "N!", sau đó loại bỏ các số trùng nhau.
   - Ví dụ người chơi đặt số 11 (có 1 chữ số khác nhau) thì sẽ có 1 biến thể là 11.
   - Ví dụ người chơi đặt số 12 (có 2 chữ số khác nhau) thì sẽ có 2 biến thể là 12 và 21.
   - Ví dụ người chơi đặt số 123 (có 3 chữ số khác nhau) thì sẽ có 6 biến thể là 123, 132, 213, 231, 312, 321.
   - Ví dụ người chơi đặt số 112 (có 2 chữ số khác nhau) thì sẽ có 3 biến thể là 112, 121, 211.
+
+- Quy tắc tính số tiền cược:
+  - Số tiền đóng = [Số đài] \* [Số cược] \* [Số tổ hợp] \* [Số tiền cược].
+  - Ví dụ:
+    1. Người chơi đặt 2 số "01" và "02" với kiểu đánh đầu đuôi ("dd") với số tiền cược là 1000 ("1") của 2 đài Miền Nam bất kì.
+    - Số đài = 2, Số cược = 2, Số tổ hợp = 2, Số tiền cược = 1000.
+    - Số tiền đóng = 2 \* 2 \* 2 \* 1000 = 8000.
+    2. Người chơi đặt 3 số "123", "456" và "789" với kiểu đánh xỉu chủ ("xc") với số tiền cược là 1500 ("1,5") của 2 đài Miền Nam bất kì.
+    - Số đài = 2, Số cược = 3, Số tổ hợp = 2, Số tiền cược = 1500.
+    - Số tiền đóng = 2 \* 3 \* 2 \* 1500 = 18000.
+    3. Người chơi đặt 3 số "39", "25" và "52" với kiểu đánh bao lô ("b") với số tiền cược là 5000 ("5") của 1 đài Miền Bắc.
+    - Số đài = 1, Số cược = 3, Số tổ hợp = 27, Số tiền cược = 5000.
+    - Số tiền đóng = 1 \* 3 \* 27 \* 5000 = 405000.
+    4. Người chơi đặt 3 số "45", "58" và "23" với kiểu đánh đá ("da") với số tiền cược là 500 ("0,5") của 1 đài Miền Bắc.
+       (Kiểu đá không nhân trực tiếp với số cược mà nhân với hệ số vòng, hệ số vòng tính theo công thức "tổ hợp chập n" C(n,2) = n\*(n-1)/2, ở đây n = 3 => hệ số vòng = 3\*(3-1)/2 = 3)
+    - Số đài = 1, Số vòng = 3, Số tổ hợp = 27, Số tiền cược = 500.
+    - Số tiền đóng = 1 \* 3 \* 27 \* 500 = 40500.
+    5. Người chơi đặt 5 số "14", "41", "69", "96", "64" với kiểu đánh đuôi ("duoi") với số tiền cược là 6000 ("6") của 1 đài Miền Bắc.
+    - Số đài = 1, Số cược = 5, Số tổ hợp = 1, Số tiền cược = 6000.
+    - Số tiền đóng = 1 \* 5 \* 1 \* 6000 = 30000.
