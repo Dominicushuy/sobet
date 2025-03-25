@@ -551,7 +551,7 @@ Thông tin chung:
 
 - Cách tính số biến thể cho tất cả kiểu đảo
   - N là số chữ số của số cược.
-  - Số biến thể: Sử dụng hoán vị chữ số để tạo ra các biến thể, sau đó loại bỏ các biến thể trùng nhau.
+  - Số biến thể: Sử dụng công thức hoán vị "N!", sau đó loại bỏ các số trùng nhau.
   - Ví dụ người chơi đặt số 11 (có 1 chữ số khác nhau) thì sẽ có 1 biến thể là 11.
   - Ví dụ người chơi đặt số 12 (có 2 chữ số khác nhau) thì sẽ có 2 biến thể là 12 và 21.
   - Ví dụ người chơi đặt số 123 (có 3 chữ số khác nhau) thì sẽ có 6 biến thể là 123, 132, 213, 231, 312, 321.
