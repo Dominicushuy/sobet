@@ -1,0 +1,382 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "nguon": "https://www.minhngoc.net.vn/ket-qua-xo-so",
+    "ngayLayDuLieu": "2025-03-25T01:45:50.647Z",
+    "tongSoMien": 3,
+    "tongSoNgay": 7
+  },
+  "duLieu": {
+    "thu-hai": {
+      "mien-bac": [
+        {
+          "tinh": "Hà Nội",
+          "ngay": "2025-03-24",
+          "thu": "Thứ hai",
+          "mien": "mien-bac"
+        }
+      ],
+      "mien-trung": [
+        {
+          "tinh": "Phú Yên",
+          "maTinh": "XSPY",
+          "ngay": "2025-03-24",
+          "thu": "Thứ hai",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Thừa T. Huế",
+          "maTinh": "XSTTH",
+          "ngay": "2025-03-24",
+          "thu": "Thứ hai",
+          "mien": "mien-trung"
+        }
+      ],
+      "mien-nam": [
+        {
+          "tinh": "TP. HCM",
+          "maTinh": "XSHCM - 3E2",
+          "ngay": "2025-03-24",
+          "thu": "Thứ hai",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Đồng Tháp",
+          "maTinh": "XSDT - T12",
+          "ngay": "2025-03-24",
+          "thu": "Thứ hai",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Cà Mau",
+          "maTinh": "XSCM - 25-T03K4",
+          "ngay": "2025-03-24",
+          "thu": "Thứ hai",
+          "mien": "mien-nam"
+        }
+      ]
+    },
+    "thu-ba": {
+      "mien-bac": [
+        {
+          "tinh": "Quảng Ninh",
+          "ngay": "2025-03-18",
+          "thu": "Thứ ba",
+          "mien": "mien-bac"
+        }
+      ],
+      "mien-trung": [
+        {
+          "tinh": "Đắk Lắk",
+          "maTinh": "XSDLK",
+          "ngay": "2025-03-18",
+          "thu": "Thứ ba",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Quảng Nam",
+          "maTinh": "XSQNM",
+          "ngay": "2025-03-18",
+          "thu": "Thứ ba",
+          "mien": "mien-trung"
+        }
+      ],
+      "mien-nam": [
+        {
+          "tinh": "Bến Tre",
+          "maTinh": "XSBTR - K11-T03",
+          "ngay": "2025-03-18",
+          "thu": "Thứ ba",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Vũng Tàu",
+          "maTinh": "XSVT - 3C",
+          "ngay": "2025-03-18",
+          "thu": "Thứ ba",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Bạc Liêu",
+          "maTinh": "XSBL - T3-K3",
+          "ngay": "2025-03-18",
+          "thu": "Thứ ba",
+          "mien": "mien-nam"
+        }
+      ]
+    },
+    "thu-tu": {
+      "mien-bac": [
+        {
+          "tinh": "Bắc Ninh",
+          "ngay": "2025-03-19",
+          "thu": "Thứ tư",
+          "mien": "mien-bac"
+        }
+      ],
+      "mien-trung": [
+        {
+          "tinh": "Đà Nẵng",
+          "maTinh": "XSDNG",
+          "ngay": "2025-03-19",
+          "thu": "Thứ tư",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Khánh Hòa",
+          "maTinh": "XSKH",
+          "ngay": "2025-03-19",
+          "thu": "Thứ tư",
+          "mien": "mien-trung"
+        }
+      ],
+      "mien-nam": [
+        {
+          "tinh": "Đồng Nai",
+          "maTinh": "XSDN - 3K3",
+          "ngay": "2025-03-19",
+          "thu": "Thứ tư",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Cần Thơ",
+          "maTinh": "XSCT - K3T3",
+          "ngay": "2025-03-19",
+          "thu": "Thứ tư",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Sóc Trăng",
+          "maTinh": "XSST - K3T3",
+          "ngay": "2025-03-19",
+          "thu": "Thứ tư",
+          "mien": "mien-nam"
+        }
+      ]
+    },
+    "thu-nam": {
+      "mien-bac": [
+        {
+          "tinh": "Hà Nội",
+          "ngay": "2025-03-20",
+          "thu": "Thứ năm",
+          "mien": "mien-bac"
+        }
+      ],
+      "mien-trung": [
+        {
+          "tinh": "Bình Định",
+          "maTinh": "XSBDI",
+          "ngay": "2025-03-20",
+          "thu": "Thứ năm",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Quảng Trị",
+          "maTinh": "XSQT",
+          "ngay": "2025-03-20",
+          "thu": "Thứ năm",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Quảng Bình",
+          "maTinh": "XSQB",
+          "ngay": "2025-03-20",
+          "thu": "Thứ năm",
+          "mien": "mien-trung"
+        }
+      ],
+      "mien-nam": [
+        {
+          "tinh": "Tây Ninh",
+          "maTinh": "XSTN - 3K3",
+          "ngay": "2025-03-20",
+          "thu": "Thứ năm",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "An Giang",
+          "maTinh": "XSAG - AG-3K3",
+          "ngay": "2025-03-20",
+          "thu": "Thứ năm",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Bình Thuận",
+          "maTinh": "XSBTH - 3K3",
+          "ngay": "2025-03-20",
+          "thu": "Thứ năm",
+          "mien": "mien-nam"
+        }
+      ]
+    },
+    "thu-sau": {
+      "mien-bac": [
+        {
+          "tinh": "Hải Phòng",
+          "ngay": "2025-03-21",
+          "thu": "Thứ sáu",
+          "mien": "mien-bac"
+        }
+      ],
+      "mien-trung": [
+        {
+          "tinh": "Gia Lai",
+          "maTinh": "XSGL",
+          "ngay": "2025-03-21",
+          "thu": "Thứ sáu",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Ninh Thuận",
+          "maTinh": "XSNT",
+          "ngay": "2025-03-21",
+          "thu": "Thứ sáu",
+          "mien": "mien-trung"
+        }
+      ],
+      "mien-nam": [
+        {
+          "tinh": "Vĩnh Long",
+          "maTinh": "XSVL - 46VL12",
+          "ngay": "2025-03-21",
+          "thu": "Thứ sáu",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Bình Dương",
+          "maTinh": "XSBD - 03K12",
+          "ngay": "2025-03-21",
+          "thu": "Thứ sáu",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Trà Vinh",
+          "maTinh": "XSTV - 34TV12",
+          "ngay": "2025-03-21",
+          "thu": "Thứ sáu",
+          "mien": "mien-nam"
+        }
+      ]
+    },
+    "thu-bay": {
+      "mien-bac": [
+        {
+          "tinh": "Nam Định",
+          "ngay": "2025-03-22",
+          "thu": "Thứ bảy",
+          "mien": "mien-bac"
+        }
+      ],
+      "mien-trung": [
+        {
+          "tinh": "Đà Nẵng",
+          "maTinh": "XSDNG",
+          "ngay": "2025-03-22",
+          "thu": "Thứ bảy",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Quảng Ngãi",
+          "maTinh": "XSQNG",
+          "ngay": "2025-03-22",
+          "thu": "Thứ bảy",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Đắk Nông",
+          "maTinh": "XSDNO",
+          "ngay": "2025-03-22",
+          "thu": "Thứ bảy",
+          "mien": "mien-trung"
+        }
+      ],
+      "mien-nam": [
+        {
+          "tinh": "TP. HCM",
+          "maTinh": "XSHCM - 3D7",
+          "ngay": "2025-03-22",
+          "thu": "Thứ bảy",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Long An",
+          "maTinh": "XSLA - 3K4",
+          "ngay": "2025-03-22",
+          "thu": "Thứ bảy",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Bình Phước",
+          "maTinh": "XSBP - 3K4-N25",
+          "ngay": "2025-03-22",
+          "thu": "Thứ bảy",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Hậu Giang",
+          "maTinh": "XSHG - K4T3",
+          "ngay": "2025-03-22",
+          "thu": "Thứ bảy",
+          "mien": "mien-nam"
+        }
+      ]
+    },
+    "chu-nhat": {
+      "mien-bac": [
+        {
+          "tinh": "Thái Bình",
+          "ngay": "2025-03-23",
+          "thu": "Chủ nhật",
+          "mien": "mien-bac"
+        }
+      ],
+      "mien-trung": [
+        {
+          "tinh": "Kon Tum",
+          "maTinh": "XSKT",
+          "ngay": "2025-03-23",
+          "thu": "Chủ nhật",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Khánh Hòa",
+          "maTinh": "XSKH",
+          "ngay": "2025-03-23",
+          "thu": "Chủ nhật",
+          "mien": "mien-trung"
+        },
+        {
+          "tinh": "Thừa T. Huế",
+          "maTinh": "XSTTH",
+          "ngay": "2025-03-23",
+          "thu": "Chủ nhật",
+          "mien": "mien-trung"
+        }
+      ],
+      "mien-nam": [
+        {
+          "tinh": "Tiền Giang",
+          "maTinh": "XSTG - TG-D3",
+          "ngay": "2025-03-23",
+          "thu": "Chủ nhật",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Kiên Giang",
+          "maTinh": "XSKG - 3K4",
+          "ngay": "2025-03-23",
+          "thu": "Chủ nhật",
+          "mien": "mien-nam"
+        },
+        {
+          "tinh": "Đà Lạt",
+          "maTinh": "XSDL - ĐL3K4",
+          "ngay": "2025-03-23",
+          "thu": "Chủ nhật",
+          "mien": "mien-nam"
+        }
+      ]
+    }
+  }
+}
