@@ -6,6 +6,8 @@ import { useBetCodes } from './useBetCodes'
 import { parseBetCode } from '@/services/betCodeParser/parser'
 import { detectErrors } from '@/services/betCodeParser/errorDetector'
 import { suggestFixes, fixBetCode } from '@/services/betCodeParser/errorFixer'
+import { calculateStake } from '@/services/calculator/stakeCalculator'
+import { calculatePotentialPrize } from '@/services/calculator/prizeCalculator'
 import { toast } from 'sonner'
 
 const BOT_TYPING_DELAY = 500 // Mô phỏng thời gian bot suy nghĩ
@@ -92,29 +94,6 @@ export function useChat() {
     }
   }, [])
 
-  // Tính toán tiền cược
-  const calculateStake = useCallback((parsedResult) => {
-    if (!parsedResult || !parsedResult.success || !parsedResult.lines) return 0
-
-    // Mô phỏng tính toán tiền cược
-    // TODO: Sẽ được thay thế bằng logic thực tế từ stakeCalculator
-    let totalStake = 0
-    parsedResult.lines.forEach((line) => {
-      if (line.valid && line.amount > 0) {
-        // Số tiền cược cho mỗi dòng
-        const lineStake = line.amount
-        // Nếu là đài nhiều miền, nhân với số đài
-        const stationMultiplier = line.multiStation ? line.station.count : 1
-        // Số lượng số cược
-        const numberCount = line.numbers.length || 1
-
-        totalStake += lineStake * stationMultiplier * numberCount
-      }
-    })
-
-    return totalStake
-  }, [])
-
   // Gửi tin nhắn từ người dùng
   const sendMessage = useCallback(
     async (content) => {
@@ -145,7 +124,14 @@ export function useChat() {
 
         if (analysisResult.parsedResult.success) {
           // Tính tiền cược
-          const stakeAmount = calculateStake(analysisResult.parsedResult)
+          const stakeResult = calculateStake(analysisResult.parsedResult)
+          const stakeAmount = stakeResult.totalStake
+
+          // Tính tiềm năng thắng cược
+          const potentialResult = calculatePotentialPrize(
+            analysisResult.parsedResult
+          )
+          const potentialWinning = potentialResult.totalPotential
 
           if (analysisResult.errorResult.hasErrors) {
             // Có lỗi, hiển thị gợi ý sửa
@@ -173,6 +159,7 @@ export function useChat() {
             // Không có lỗi, hiển thị kết quả phân tích
             botResponse = 'Mã cược hợp lệ!\n\n'
             botResponse += `Tổng tiền cược: ${stakeAmount.toLocaleString()} đồng\n`
+            botResponse += `Tiềm năng thắng: ${potentialWinning.toLocaleString()} đồng\n`
             botResponse += 'Chi tiết:\n'
 
             analysisResult.parsedResult.lines.forEach((line, index) => {
@@ -196,6 +183,9 @@ export function useChat() {
             attachments = {
               parsedResult: analysisResult.parsedResult,
               stakeAmount,
+              potentialWinning,
+              stakeDetails: stakeResult.details,
+              potentialDetails: potentialResult.details,
             }
 
             // Lưu mã cược vào database
@@ -204,7 +194,7 @@ export function useChat() {
                 content,
                 analysisResult.parsedResult.lines,
                 stakeAmount,
-                0, // potentialWinning - sẽ được tính sau
+                potentialWinning,
                 [] // errors - không có lỗi
               )
 
@@ -253,7 +243,7 @@ export function useChat() {
         setBotTyping(false)
       }
     },
-    [analyzeBetCode, calculateStake, addBetCode]
+    [analyzeBetCode, addBetCode]
   )
 
   // Sử dụng mã cược đã được sửa

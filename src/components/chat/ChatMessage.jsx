@@ -1,13 +1,15 @@
 // src/components/chat/ChatMessage.jsx
-import React from 'react'
+import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 const ChatMessage = ({ message, onUseFixedBetCode }) => {
   const isBot = message.sender === 'bot'
   const isError = message.type === 'error'
   const isSuccess = message.type === 'success'
+  const [showDetails, setShowDetails] = useState(false)
 
   const formatTime = (timestamp) => {
     try {
@@ -15,6 +17,10 @@ const ChatMessage = ({ message, onUseFixedBetCode }) => {
     } catch (e) {
       return ''
     }
+  }
+
+  const toggleDetails = () => {
+    setShowDetails((prev) => !prev)
   }
 
   return (
@@ -70,6 +76,95 @@ const ChatMessage = ({ message, onUseFixedBetCode }) => {
                   </div>
                 ))}
             </div>
+          )}
+
+        {/* Hiển thị chi tiết cách tính (nếu có) */}
+        {isBot &&
+          message.attachments?.parsedResult &&
+          message.attachments?.stakeAmount > 0 && (
+            <>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={toggleDetails}
+                className='flex items-center justify-center space-x-1 w-full mt-2 text-xs'>
+                <span>
+                  {showDetails ? 'Ẩn chi tiết' : 'Hiển thị chi tiết cách tính'}
+                </span>
+                {showDetails ? (
+                  <ChevronUp className='h-3 w-3' />
+                ) : (
+                  <ChevronDown className='h-3 w-3' />
+                )}
+              </Button>
+
+              {showDetails && (
+                <div className='mt-2 border-t border-border pt-2'>
+                  <div className='text-xs font-medium mb-1'>
+                    Chi tiết tính tiền cược:
+                  </div>
+                  {message.attachments.stakeDetails?.map(
+                    (detail, idx) =>
+                      detail.valid && (
+                        <div
+                          key={idx}
+                          className='text-xs mb-1 pl-2 border-l-2 border-primary/30'>
+                          <div className='flex justify-between'>
+                            <span>Dòng {detail.lineIndex + 1}:</span>
+                            <span>{detail.stake.toLocaleString()}đ</span>
+                          </div>
+                          {detail.formula && (
+                            <div className='text-muted-foreground'>
+                              Công thức: {detail.formula}
+                            </div>
+                          )}
+                        </div>
+                      )
+                  )}
+                  <div className='text-xs font-medium mt-1 flex justify-between'>
+                    <span>Tổng cược:</span>
+                    <span>
+                      {message.attachments.stakeAmount.toLocaleString()}đ
+                    </span>
+                  </div>
+
+                  {message.attachments.potentialWinning > 0 && (
+                    <>
+                      <div className='text-xs font-medium mt-2 mb-1'>
+                        Chi tiết tiềm năng thắng:
+                      </div>
+                      {message.attachments.potentialDetails?.map(
+                        (detail, idx) =>
+                          detail.valid && (
+                            <div
+                              key={idx}
+                              className='text-xs mb-1 pl-2 border-l-2 border-green-500/30'>
+                              <div className='flex justify-between'>
+                                <span>Dòng {detail.lineIndex + 1}:</span>
+                                <span>
+                                  {detail.potentialPrize.toLocaleString()}đ
+                                </span>
+                              </div>
+                              {detail.formula && (
+                                <div className='text-muted-foreground'>
+                                  Công thức: {detail.formula}
+                                </div>
+                              )}
+                            </div>
+                          )
+                      )}
+                      <div className='text-xs font-medium mt-1 flex justify-between text-green-500'>
+                        <span>Tiềm năng thắng tối đa:</span>
+                        <span>
+                          {message.attachments.potentialWinning.toLocaleString()}
+                          đ
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
           )}
       </div>
     </div>
