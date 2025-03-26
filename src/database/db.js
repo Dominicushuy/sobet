@@ -1,3 +1,4 @@
+// src/database/db.js
 import Dexie from 'dexie'
 import { schema } from './schema'
 
@@ -15,6 +16,8 @@ class LotteryDatabase extends Dexie {
     this.lotteryResults = this.table('lotteryResults')
     this.verificationResults = this.table('verificationResults')
     this.settings = this.table('settings')
+    this.userPayoutRates = this.table('userPayoutRates')
+    this.userStationMultipliers = this.table('userStationMultipliers')
   }
 }
 
