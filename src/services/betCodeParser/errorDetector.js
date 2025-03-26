@@ -100,6 +100,21 @@ function validateStation(station) {
         scope: "station",
       });
     }
+
+    // Kiểm tra số lượng đài có vượt quá số đài xổ trong ngày không
+    const maxStations = getMaxStationsForRegionOnDay(
+      station.region,
+      currentDay
+    );
+    if (station.count > maxStations) {
+      errors.push({
+        type: "INVALID_STATION_COUNT",
+        message: `Miền ${getRegionName(
+          station.region
+        )} chỉ có ${maxStations} đài xổ trong ngày ${getDayName(currentDay)}`,
+        scope: "station",
+      });
+    }
   } else if (station.stations) {
     // Nếu là nhiều đài cụ thể
     for (const subStation of station.stations) {
@@ -150,6 +165,47 @@ function validateStation(station) {
   }
 
   return errors;
+}
+
+/**
+ * Lấy số lượng đài tối đa cho miền vào ngày cụ thể
+ * @param {string} region - Miền
+ * @param {number} day - Ngày trong tuần
+ * @returns {number} Số lượng đài tối đa
+ */
+function getMaxStationsForRegionOnDay(region, day) {
+  // Số lượng đài xổ mỗi ngày theo miền
+  const stationCounts = {
+    south: {
+      0: 3, // Chủ nhật
+      1: 3, // Thứ hai
+      2: 3, // Thứ ba
+      3: 3, // Thứ tư
+      4: 3, // Thứ năm
+      5: 3, // Thứ sáu
+      6: 4, // Thứ bảy
+    },
+    central: {
+      0: 3, // Chủ nhật
+      1: 2, // Thứ hai
+      2: 2, // Thứ ba
+      3: 2, // Thứ tư
+      4: 3, // Thứ năm
+      5: 2, // Thứ sáu
+      6: 3, // Thứ bảy
+    },
+    north: {
+      0: 1, // Chủ nhật
+      1: 1, // Thứ hai
+      2: 1, // Thứ ba
+      3: 1, // Thứ tư
+      4: 1, // Thứ năm
+      5: 1, // Thứ sáu
+      6: 1, // Thứ bảy
+    },
+  };
+
+  return stationCounts[region]?.[day] || 1;
 }
 
 /**

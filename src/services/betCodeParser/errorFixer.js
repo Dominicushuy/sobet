@@ -98,6 +98,12 @@ function generateSuggestion(error, betCode) {
         message: error.message,
         suggestion: "Hãy chọn đài khác hoặc đặt cược vào ngày khác.",
       };
+    case "INVALID_STATION_COUNT":
+      return {
+        message: error.message,
+        suggestion:
+          "Điều chỉnh số lượng đài cho phù hợp với lịch xổ số hôm nay.",
+      };
     case "NO_BET_TYPE":
       return {
         message: "Thiếu kiểu cược.",
@@ -161,6 +167,25 @@ function generateFix(error, lines) {
       if (suggestedStation) {
         return {
           newLine: suggestedStation,
+        };
+      }
+      break;
+    }
+    case "INVALID_STATION_COUNT": {
+      // Điều chỉnh số lượng đài
+      const stationCount = parseInt(line.match(/^(\d+)/)[1], 10);
+      const region =
+        line.toLowerCase().includes("nam") || line.toLowerCase().includes("dmn")
+          ? "south"
+          : "central";
+      const currentDay = new Date().getDay();
+      const maxCount = getMaxStationsForRegionOnDay(region, currentDay);
+
+      if (stationCount > maxCount) {
+        // Tạo mẫu với số lượng đài điều chỉnh
+        const regionPrefix = region === "south" ? "dmn" : "dmt";
+        return {
+          newLine: line.replace(/^(\d+)/, maxCount),
         };
       }
       break;
@@ -244,12 +269,67 @@ function generateFix(error, lines) {
 }
 
 /**
+ * Lấy số lượng đài tối đa cho miền vào ngày cụ thể
+ * @param {string} region - Miền
+ * @param {number} day - Ngày trong tuần
+ * @returns {number} Số lượng đài tối đa
+ */
+function getMaxStationsForRegionOnDay(region, day) {
+  // Số lượng đài xổ mỗi ngày theo miền
+  const stationCounts = {
+    south: {
+      0: 3, // Chủ nhật
+      1: 3, // Thứ hai
+      2: 3, // Thứ ba
+      3: 3, // Thứ tư
+      4: 3, // Thứ năm
+      5: 3, // Thứ sáu
+      6: 4, // Thứ bảy
+    },
+    central: {
+      0: 3, // Chủ nhật
+      1: 2, // Thứ hai
+      2: 2, // Thứ ba
+      3: 2, // Thứ tư
+      4: 3, // Thứ năm
+      5: 2, // Thứ sáu
+      6: 3, // Thứ bảy
+    },
+    north: {
+      0: 1, // Chủ nhật
+      1: 1, // Thứ hai
+      2: 1, // Thứ ba
+      3: 1, // Thứ tư
+      4: 1, // Thứ năm
+      5: 1, // Thứ sáu
+      6: 1, // Thứ bảy
+    },
+  };
+
+  return stationCounts[region]?.[day] || 1;
+}
+
+/**
  * Tìm đài tương tự với đài không hợp lệ
  * @param {string} invalidStation - Tên đài không hợp lệ
  * @returns {string} Tên đài gợi ý
  */
 function findSimilarStation(invalidStation) {
   const normalized = invalidStation.toLowerCase();
+
+  // Kiểm tra đài nhiều miền đặc biệt
+  const multiStationMatch = normalized.match(/^(\d+)([a-z]+)/);
+  if (multiStationMatch) {
+    const count = parseInt(multiStationMatch[1], 10);
+    const regionPart = multiStationMatch[2];
+
+    // Kiểm tra nếu là phần miền nam/trung
+    if (["dmn", "dn", "mn", "dnam", "mnam"].includes(regionPart)) {
+      return `${count}dmn`;
+    } else if (["dmt", "dt", "mt", "dtrung", "mtrung"].includes(regionPart)) {
+      return `${count}dmt`;
+    }
+  }
 
   // Tìm đài có alias gần giống nhất
   let bestMatch = null;

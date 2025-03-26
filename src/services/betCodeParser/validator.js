@@ -1,9 +1,5 @@
 // src/services/betCodeParser/validator.js
-import {
-  defaultStations,
-  defaultBetTypes,
-  defaultNumberCombinations,
-} from "@/config/defaults";
+import { defaultStations, defaultBetTypes } from "@/config/defaults";
 
 /**
  * Kiểm tra mã cược
@@ -119,15 +115,40 @@ function validateStation(stationString) {
 
   // Kiểm tra đài miền Nam/Trung nhiều đài
   const multipleStationMatch = stationText.match(
-    /^(\d+)(dmn|dmt|dn|dt|dnam|dtrung)/
+    /^(\d+)(dmn|dmt|dn|dt|dnam|dtrung|mn|mt|mnam|mtrung|mien nam|mien trung|miền nam|miền trung)/i
   );
+
   if (multipleStationMatch) {
     const count = parseInt(multipleStationMatch[1], 10);
     if (count <= 0) {
       return { valid: false, error: "Số lượng đài không hợp lệ" };
     }
 
-    const region = multipleStationMatch[2].includes("n") ? "south" : "central";
+    // Xác định miền dựa trên chuỗi phù hợp
+    const regionPart = multipleStationMatch[2].toLowerCase();
+    const isSouthern =
+      regionPart === "dmn" ||
+      regionPart === "dn" ||
+      regionPart === "dnam" ||
+      regionPart === "mn" ||
+      regionPart === "mnam" ||
+      regionPart === "mien nam" ||
+      regionPart === "miền nam";
+
+    const region = isSouthern ? "south" : "central";
+
+    // Kiểm tra số lượng đài có vượt quá số đài xổ trong ngày không
+    const currentDay = new Date().getDay();
+    const maxStations = getMaxStationsForRegionOnDay(region, currentDay);
+
+    if (count > maxStations) {
+      return {
+        valid: false,
+        error: `Miền ${
+          region === "south" ? "Nam" : "Trung"
+        } chỉ có ${maxStations} đài xổ trong ngày ${getDayName(currentDay)}`,
+      };
+    }
 
     return {
       valid: true,
@@ -239,6 +260,65 @@ function validateStation(stationString) {
     valid: false,
     error: `Không tìm thấy đài phù hợp với "${stationText}"`,
   };
+}
+
+/**
+ * Lấy số lượng đài tối đa cho miền vào ngày cụ thể
+ * @param {string} region - Miền
+ * @param {number} day - Ngày trong tuần
+ * @returns {number} Số lượng đài tối đa
+ */
+function getMaxStationsForRegionOnDay(region, day) {
+  // Số lượng đài xổ mỗi ngày theo miền
+  const stationCounts = {
+    south: {
+      0: 3, // Chủ nhật
+      1: 3, // Thứ hai
+      2: 3, // Thứ ba
+      3: 3, // Thứ tư
+      4: 3, // Thứ năm
+      5: 3, // Thứ sáu
+      6: 4, // Thứ bảy
+    },
+    central: {
+      0: 3, // Chủ nhật
+      1: 2, // Thứ hai
+      2: 2, // Thứ ba
+      3: 2, // Thứ tư
+      4: 3, // Thứ năm
+      5: 2, // Thứ sáu
+      6: 3, // Thứ bảy
+    },
+    north: {
+      0: 1, // Chủ nhật
+      1: 1, // Thứ hai
+      2: 1, // Thứ ba
+      3: 1, // Thứ tư
+      4: 1, // Thứ năm
+      5: 1, // Thứ sáu
+      6: 1, // Thứ bảy
+    },
+  };
+
+  return stationCounts[region]?.[day] || 1;
+}
+
+/**
+ * Lấy tên ngày từ số ngày trong tuần
+ * @param {number} day - Số ngày trong tuần (0: Chủ nhật, 1-6: Thứ 2 - Thứ 7)
+ * @returns {string} Tên ngày
+ */
+function getDayName(day) {
+  const days = [
+    "Chủ nhật",
+    "Thứ hai",
+    "Thứ ba",
+    "Thứ tư",
+    "Thứ năm",
+    "Thứ sáu",
+    "Thứ bảy",
+  ];
+  return days[day];
 }
 
 /**
