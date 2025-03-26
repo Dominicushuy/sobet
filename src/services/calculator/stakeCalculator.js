@@ -1,3 +1,4 @@
+// src/services/calculator/stakeCalculator.js
 import { defaultBetTypes } from '@/config/defaults'
 
 /**
@@ -200,6 +201,7 @@ function getBetTypeInfo(line, userSettings) {
     alias: betTypeAlias,
     payoutRate,
     combined: line.betType?.combined || false,
+    specialCalc: defaultBetType.specialCalc || null,
   }
 }
 
@@ -233,7 +235,21 @@ function getNumberInfo(line, betTypeInfo) {
     betTypeAlias === 'daob' ||
     betTypeAlias === 'bdao' ||
     betTypeAlias === 'daoxc' ||
-    betTypeAlias === 'dxc'
+    betTypeAlias === 'dxc' ||
+    betTypeAlias === 'daodau' ||
+    betTypeAlias === 'ddau' ||
+    betTypeAlias === 'daoduoi' ||
+    betTypeAlias === 'daodui' ||
+    betTypeAlias === 'dduoi' ||
+    betTypeAlias === 'ddui' ||
+    betTypeAlias === 'dxcdau' ||
+    betTypeAlias === 'dxcduoi' ||
+    betTypeAlias === 'baobaydao' ||
+    betTypeAlias === 'b7ld' ||
+    betTypeAlias === 'b7ldao' ||
+    betTypeAlias === 'baotamdao' ||
+    betTypeAlias === 'b8ld' ||
+    betTypeAlias === 'b8ldao'
 
   // Tìm thông tin bet type từ defaults
   const defaultBetType = defaultBetTypes.find(
@@ -304,6 +320,13 @@ function getNumberInfo(line, betTypeInfo) {
   } else if (betTypeAlias === 'b8l' || betTypeAlias === 'baotam') {
     // Bao lô 8
     combinationCount = 8
+  } else if (
+    betTypeAlias === 'nt' ||
+    betTypeAlias === 'nto' ||
+    betTypeAlias === 'nhatto'
+  ) {
+    // Nhất to
+    combinationCount = 1
   }
 
   return {
@@ -325,13 +348,15 @@ function getNumberInfo(line, betTypeInfo) {
  */
 function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
   const betAmount = line.amount || 0
+  const betTypeAlias = betTypeInfo.alias?.toLowerCase()
 
   // Kiểm tra nếu là kiểu đá (bridge)
-  if (numberInfo.isBridge) {
-    // Tính bridgeFactor = C(n,2) = n*(n-1)/2
+  if (numberInfo.isBridge || betTypeInfo.specialCalc === 'bridge') {
+    // Tính bridge factor: C(n,2) = n*(n-1)/2
     const n = numberInfo.count
     const bridgeFactor = (n * (n - 1)) / 2
 
+    // Tính stake cho kiểu đá
     const stake =
       stationInfo.count *
       bridgeFactor *
@@ -352,13 +377,17 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
   }
   // Kiểm tra nếu là kiểu đảo (permutation)
   else if (numberInfo.isPermutation) {
-    // Tính số lượng hoán vị (không tính trùng lặp)
-    const permutationCount = calculatePermutationCount(line.numbers[0] || '')
+    // Tổng số hoán vị của tất cả số
+    let totalPermutations = 0
 
+    for (const number of line.numbers || []) {
+      totalPermutations += calculatePermutationCount(number)
+    }
+
+    // Tính stake cho kiểu đảo
     const stake =
       stationInfo.count *
-      permutationCount *
-      numberInfo.count *
+      totalPermutations *
       numberInfo.combinationCount *
       betAmount *
       stationInfo.multiplier
@@ -367,12 +396,36 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       stake,
       valid: true,
       stationCount: stationInfo.count,
-      permutationCount,
+      permutationCount: totalPermutations,
+      combinationCount: numberInfo.combinationCount,
+      betAmount,
+      multiplier: stationInfo.multiplier,
+      formula: `${stationInfo.count} × ${totalPermutations} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
+    }
+  }
+  // Kiểu xiên
+  else if (
+    betTypeAlias === 'xien' ||
+    betTypeAlias === 'xienmb' ||
+    betTypeAlias === 'xienmbac'
+  ) {
+    // Với xiên miền bắc, cần chọn đủ số (2, 3 hoặc 4 số)
+    // Chỉ tính một lần số tiền cược, không nhân với số lượng số
+    const stake =
+      stationInfo.count *
+      numberInfo.combinationCount *
+      betAmount *
+      stationInfo.multiplier
+
+    return {
+      stake,
+      valid: true,
+      stationCount: stationInfo.count,
       numberCount: numberInfo.count,
       combinationCount: numberInfo.combinationCount,
       betAmount,
       multiplier: stationInfo.multiplier,
-      formula: `${stationInfo.count} × ${permutationCount} × ${numberInfo.count} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
+      formula: `${stationInfo.count} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
     }
   }
   // Trường hợp thông thường

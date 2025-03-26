@@ -1,10 +1,6 @@
 // src/services/calculator/prizeCalculator.js
-import { REGIONS } from '@/config/constants'
-import {
-  defaultStations,
-  defaultBetTypes,
-  defaultNumberCombinations,
-} from '@/config/defaults'
+
+import { defaultStations, defaultBetTypes } from '@/config/defaults'
 
 /**
  * Tính toán tiềm năng thắng cược dựa trên mã cược đã phân tích
@@ -171,6 +167,20 @@ function getBetTypeInfo(line, userSettings) {
       } else {
         payoutRate = payoutRate.bridgeOneStation || 750
       }
+    } else if (
+      betTypeAlias === 'xien' ||
+      betTypeAlias === 'xienmb' ||
+      betTypeAlias === 'xienmbac'
+    ) {
+      // Kiểu xiên
+      const numberCount = line.numbers?.length || 0
+      if (numberCount === 2) {
+        payoutRate = payoutRate.crossTwo || 350
+      } else if (numberCount === 3) {
+        payoutRate = payoutRate.crossThree || 1000
+      } else if (numberCount >= 4) {
+        payoutRate = payoutRate.crossFour || 3000
+      }
     } else {
       // Các kiểu khác
       if (digitCount === 2) {
@@ -205,6 +215,7 @@ function getBetTypeInfo(line, userSettings) {
     alias: betTypeAlias,
     payoutRate,
     combined: line.betType?.combined || false,
+    specialCalc: defaultBetType.specialCalc || null,
   }
 }
 
@@ -231,14 +242,31 @@ function getNumberInfo(line, betTypeInfo) {
   const digitCount = getDigitCount(line)
 
   // Kiểm tra loại cược
-  const isBridge = betTypeAlias === 'da' || betTypeAlias === 'dv'
+  const isBridge =
+    betTypeAlias === 'da' ||
+    betTypeAlias === 'dv' ||
+    betTypeInfo.specialCalc === 'bridge'
   const isPermutation =
     betTypeAlias === 'dao' ||
     betTypeAlias === 'xcd' ||
     betTypeAlias === 'daob' ||
     betTypeAlias === 'bdao' ||
     betTypeAlias === 'daoxc' ||
-    betTypeAlias === 'dxc'
+    betTypeAlias === 'dxc' ||
+    betTypeAlias === 'daodau' ||
+    betTypeAlias === 'ddau' ||
+    betTypeAlias === 'daoduoi' ||
+    betTypeAlias === 'daodui' ||
+    betTypeAlias === 'dduoi' ||
+    betTypeAlias === 'ddui' ||
+    betTypeAlias === 'dxcdau' ||
+    betTypeAlias === 'dxcduoi' ||
+    betTypeAlias === 'baobaydao' ||
+    betTypeAlias === 'b7ld' ||
+    betTypeAlias === 'b7ldao' ||
+    betTypeAlias === 'baotamdao' ||
+    betTypeAlias === 'b8ld' ||
+    betTypeAlias === 'b8ldao'
 
   // Tìm thông tin bet type từ defaults
   const defaultBetType = defaultBetTypes.find(
@@ -309,6 +337,13 @@ function getNumberInfo(line, betTypeInfo) {
   } else if (betTypeAlias === 'b8l' || betTypeAlias === 'baotam') {
     // Bao lô 8
     combinationCount = 8
+  } else if (
+    betTypeAlias === 'nt' ||
+    betTypeAlias === 'nto' ||
+    betTypeAlias === 'nhatto'
+  ) {
+    // Nhất to
+    combinationCount = 1
   }
 
   return {
@@ -363,9 +398,9 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       totalPermutations += calculatePermutationCount(number)
     }
 
-    // Tính tiềm năng thắng (không nhân với combinationCount)
+    // Tính tiềm năng thắng (nhân với combinationCount)
     const potentialPrize =
-      stationInfo.count * numbers.length * betAmount * payoutRate
+      stationInfo.count * totalPermutations * betAmount * payoutRate
 
     return {
       potentialPrize,
@@ -376,7 +411,7 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       betAmount,
       payoutRate,
       multiplier: stationInfo.multiplier,
-      formula: `${stationInfo.count} × ${numbers.length} × ${betAmount} × ${payoutRate}`,
+      formula: `${stationInfo.count} × ${totalPermutations} × ${betAmount} × ${payoutRate}`,
     }
   }
   // Kiểu xiên
@@ -385,7 +420,7 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
     betTypeAlias === 'xienmb' ||
     betTypeAlias === 'xienmbac'
   ) {
-    // Tính tiềm năng thắng
+    // Tính tiềm năng thắng - không nhân với số lượng số
     const potentialPrize = betAmount * payoutRate
 
     return {
@@ -401,7 +436,7 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
   }
   // Trường hợp thông thường
   else {
-    // Tính tiềm năng thắng (không nhân với combinationCount)
+    // Tính tiềm năng thắng
     const potentialPrize =
       stationInfo.count * numberInfo.count * betAmount * payoutRate
 
@@ -653,6 +688,20 @@ function calculateLinePrize(line, matchingResults, userSettings = {}) {
       } else {
         payoutRate = payoutRate.bridgeOneStation || 750
       }
+    } else if (
+      betTypeAlias === 'xien' ||
+      betTypeAlias === 'xienmb' ||
+      betTypeAlias === 'xienmbac'
+    ) {
+      // Kiểu xiên
+      const numberCount = line.numbers?.length || 0
+      if (numberCount === 2) {
+        payoutRate = payoutRate.crossTwo || 350
+      } else if (numberCount === 3) {
+        payoutRate = payoutRate.crossThree || 1000
+      } else if (numberCount >= 4) {
+        payoutRate = payoutRate.crossFour || 3000
+      }
     } else {
       // Các kiểu khác
       if (digitCount === 2) {
@@ -687,7 +736,11 @@ function calculateLinePrize(line, matchingResults, userSettings = {}) {
   }
 
   // Xử lý theo từng loại cược
-  if (betTypeAlias === 'da' || betTypeAlias === 'dv') {
+  if (
+    betTypeAlias === 'da' ||
+    betTypeAlias === 'dv' ||
+    defaultBetType.specialCalc === 'bridge'
+  ) {
     // Kiểu đá (bridge)
     return calculateBridgePrize(line, matchedNumbers, payoutRate, betAmount)
   } else if (
@@ -819,7 +872,21 @@ function findMatchedNumbers(line, matchingResults, betType) {
     betTypeAlias === 'daob' ||
     betTypeAlias === 'bdao' ||
     betTypeAlias === 'daoxc' ||
-    betTypeAlias === 'dxc'
+    betTypeAlias === 'dxc' ||
+    betTypeAlias === 'daodau' ||
+    betTypeAlias === 'ddau' ||
+    betTypeAlias === 'daoduoi' ||
+    betTypeAlias === 'daodui' ||
+    betTypeAlias === 'dduoi' ||
+    betTypeAlias === 'ddui' ||
+    betTypeAlias === 'dxcdau' ||
+    betTypeAlias === 'dxcduoi' ||
+    betTypeAlias === 'baobaydao' ||
+    betTypeAlias === 'b7ld' ||
+    betTypeAlias === 'b7ldao' ||
+    betTypeAlias === 'baotamdao' ||
+    betTypeAlias === 'b8ld' ||
+    betTypeAlias === 'b8ldao'
 
   const matchedNumbers = []
 
@@ -995,6 +1062,58 @@ function extractDrawNumbers(result, line, betType) {
       }
     }
   } else if (
+    betTypeAlias === 'daoxc' ||
+    betTypeAlias === 'dxc' ||
+    betTypeAlias === 'xcd' ||
+    betTypeAlias === 'xcdao'
+  ) {
+    // Đảo xỉu chủ - tương tự xỉu chủ, lấy giải 7 và đặc biệt cho miền Nam/Trung, giải 6 và đặc biệt cho miền Bắc
+    if (region === 'north') {
+      // Miền Bắc - giải 6 và đặc biệt
+      if (result.results.sixth) {
+        result.results.sixth.forEach((num) => digits.push(num.slice(-3)))
+      }
+      if (result.results.special) {
+        result.results.special.forEach((num) => digits.push(num.slice(-3)))
+      }
+    } else {
+      // Miền Nam/Trung - giải 7 và đặc biệt
+      if (result.results.seventh) {
+        result.results.seventh.forEach((num) => digits.push(num.slice(-3)))
+      }
+      if (result.results.special) {
+        result.results.special.forEach((num) => digits.push(num.slice(-3)))
+      }
+    }
+  } else if (
+    betTypeAlias === 'dxcdau' ||
+    betTypeAlias === 'daodau' ||
+    betTypeAlias === 'ddau'
+  ) {
+    // Đảo xỉu chủ đầu - lấy giải 7 cho miền Nam/Trung, giải 6 cho miền Bắc
+    if (region === 'north') {
+      // Miền Bắc - giải 6
+      if (result.results.sixth) {
+        result.results.sixth.forEach((num) => digits.push(num.slice(-3)))
+      }
+    } else {
+      // Miền Nam/Trung - giải 7
+      if (result.results.seventh) {
+        result.results.seventh.forEach((num) => digits.push(num.slice(-3)))
+      }
+    }
+  } else if (
+    betTypeAlias === 'dxcduoi' ||
+    betTypeAlias === 'daoduoi' ||
+    betTypeAlias === 'daodui' ||
+    betTypeAlias === 'dduoi' ||
+    betTypeAlias === 'ddui'
+  ) {
+    // Đảo xỉu chủ đuôi - lấy giải đặc biệt
+    if (result.results.special) {
+      result.results.special.forEach((num) => digits.push(num.slice(-3)))
+    }
+  } else if (
     betTypeAlias === 'b' ||
     betTypeAlias === 'bao' ||
     betTypeAlias === 'baolo' ||
@@ -1036,8 +1155,54 @@ function extractDrawNumbers(result, line, betType) {
         })
       }
     }
+  } else if (
+    betTypeAlias === 'daob' ||
+    betTypeAlias === 'bdao' ||
+    betTypeAlias === 'dao bao' ||
+    betTypeAlias === 'dao bao lo'
+  ) {
+    // Đảo bao lô - tương tự như bao lô
+    const allResults = { ...result.results }
+
+    // Kiểm tra nếu là 3 chữ số, loại bỏ giải 8 với miền Nam/Trung hoặc giải 7 với miền Bắc
+    if (digitCount === 3) {
+      if (region !== 'north') {
+        delete allResults.eighth
+      } else {
+        delete allResults.seventh
+      }
+    }
+
+    // Trích xuất tất cả các số từ các giải còn lại
+    for (const prize in allResults) {
+      if (Array.isArray(allResults[prize])) {
+        allResults[prize].forEach((num) => {
+          if (digitCount === 2) {
+            digits.push(num.slice(-2))
+          } else if (digitCount === 3) {
+            digits.push(num.slice(-3))
+          }
+        })
+      }
+    }
   } else if (betTypeAlias === 'b7l' || betTypeAlias === 'baobay') {
     // Bao lô 7 - Giải 8, 7, 6, 5 và đặc biệt (Miền Nam/Trung)
+    if (region !== 'north') {
+      const prizes = ['eighth', 'seventh', 'sixth', 'fifth', 'special']
+      for (const prize of prizes) {
+        if (Array.isArray(result.results[prize])) {
+          result.results[prize].forEach((num) => {
+            digits.push(num.slice(-2))
+          })
+        }
+      }
+    }
+  } else if (
+    betTypeAlias === 'baobaydao' ||
+    betTypeAlias === 'b7ld' ||
+    betTypeAlias === 'b7ldao'
+  ) {
+    // Bao lô 7 đảo - Giải 8, 7, 6, 5 và đặc biệt (Miền Nam/Trung)
     if (region !== 'north') {
       const prizes = ['eighth', 'seventh', 'sixth', 'fifth', 'special']
       for (const prize of prizes) {
@@ -1060,7 +1225,27 @@ function extractDrawNumbers(result, line, betType) {
         }
       }
     }
-  } else if (betTypeAlias === 'nto' || betTypeAlias === 'nhatto') {
+  } else if (
+    betTypeAlias === 'baotamdao' ||
+    betTypeAlias === 'b8ld' ||
+    betTypeAlias === 'b8ldao'
+  ) {
+    // Bao lô 8 đảo - Giải 7, 6 và đặc biệt (Miền Bắc)
+    if (region === 'north') {
+      const prizes = ['seventh', 'sixth', 'special']
+      for (const prize of prizes) {
+        if (Array.isArray(result.results[prize])) {
+          result.results[prize].forEach((num) => {
+            digits.push(num.slice(-2))
+          })
+        }
+      }
+    }
+  } else if (
+    betTypeAlias === 'nt' ||
+    betTypeAlias === 'nto' ||
+    betTypeAlias === 'nhatto'
+  ) {
     // Nhất to - chỉ lấy giải nhất
     if (result.results.first) {
       result.results.first.forEach((num) => {
@@ -1072,6 +1257,21 @@ function extractDrawNumbers(result, line, betType) {
           digits.push(num.slice(-4))
         }
       })
+    }
+  } else if (
+    betTypeAlias === 'xien' ||
+    betTypeAlias === 'xienmb' ||
+    betTypeAlias === 'xienmbac'
+  ) {
+    // Xiên miền bắc - lấy tất cả các giải miền bắc
+    if (region === 'north') {
+      for (const prize in result.results) {
+        if (Array.isArray(result.results[prize])) {
+          result.results[prize].forEach((num) => {
+            digits.push(num.slice(-2))
+          })
+        }
+      }
     }
   } else {
     // Mặc định - lấy tất cả 2 chữ số cuối của tất cả các giải

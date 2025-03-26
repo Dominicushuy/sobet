@@ -276,7 +276,7 @@ export const defaultStations = [
   {
     name: 'Kon Tum',
     region: 'central',
-    aliases: ['kt', 'ktum', 'kontum', 'kon tum', 'kon tum'],
+    aliases: ['kt', 'ktum', 'kontum', 'kon tum'],
     isActive: true,
     schedule: { day: 'sunday', order: 1 },
   },
@@ -484,6 +484,245 @@ export const defaultBetTypes = [
       '2 digits': 75,
       '3 digits': 650,
       '4 digits': 5500,
+    },
+    isActive: true,
+  },
+  {
+    name: 'Đảo Bao Lô',
+    aliases: ['daob', 'bdao', 'dao bao', 'dao bao lo', 'permutation cover'],
+    applicableRegions: ['south', 'central', 'north'],
+    betRule: ['2 digits', '3 digits'],
+    matchingDraw: {
+      '2 digits': {
+        south: 'all prizes',
+        central: 'all prizes',
+        north: 'all prizes',
+      },
+      '3 digits': {
+        south: 'all prizes except eighth',
+        central: 'all prizes except eighth',
+        north: 'all prizes except seventh',
+      },
+    },
+    combinations: {
+      '2 digits': {
+        south: 18,
+        central: 18,
+        north: 27,
+      },
+      '3 digits': {
+        south: 17,
+        central: 17,
+        north: 23,
+      },
+    },
+    matchingMethod: 'Match any permutation of the last N digits of the draw',
+    payoutRate: {
+      '2 digits': 75,
+      '3 digits': 650,
+    },
+    isActive: true,
+  },
+  {
+    name: 'Bao Lô 7',
+    aliases: ['baobay', 'b7l', 'bao lo 7', 'cover seven'],
+    applicableRegions: ['south', 'central'],
+    betRule: ['2 digits'],
+    matchingDraw: {
+      south: 'eighth, seventh, sixth, fifth, special prizes',
+      central: 'eighth, seventh, sixth, fifth, special prizes',
+    },
+    combinations: {
+      south: 7,
+      central: 7,
+    },
+    matchingMethod: 'Match the last 2 digits of specific prizes',
+    payoutRate: 75,
+    isActive: true,
+  },
+  {
+    name: 'Bao Lô 8',
+    aliases: ['baotam', 'b8l', 'bao lo 8', 'cover eight'],
+    applicableRegions: ['north'],
+    betRule: ['2 digits'],
+    matchingDraw: {
+      north: 'seventh, sixth, special prizes',
+    },
+    combinations: {
+      north: 8,
+    },
+    matchingMethod: 'Match the last 2 digits of specific prizes',
+    payoutRate: 75,
+    isActive: true,
+  },
+  {
+    name: 'Bao Lô 7 Đảo',
+    aliases: ['baobaydao', 'b7ld', 'b7ldao', 'cover seven permutation'],
+    applicableRegions: ['south', 'central'],
+    betRule: ['2 digits'],
+    matchingDraw: {
+      south: 'eighth, seventh, sixth, fifth, special prizes',
+      central: 'eighth, seventh, sixth, fifth, special prizes',
+    },
+    combinations: {
+      south: 7,
+      central: 7,
+    },
+    matchingMethod:
+      'Match any permutation of the last 2 digits of specific prizes',
+    payoutRate: 75,
+    isActive: true,
+  },
+  {
+    name: 'Bao Lô 8 Đảo',
+    aliases: ['baotamdao', 'b8ld', 'b8ldao', 'cover eight permutation'],
+    applicableRegions: ['north'],
+    betRule: ['2 digits'],
+    matchingDraw: {
+      north: 'seventh, sixth, special prizes',
+    },
+    combinations: {
+      north: 8,
+    },
+    matchingMethod:
+      'Match any permutation of the last 2 digits of specific prizes',
+    payoutRate: 75,
+    isActive: true,
+  },
+  {
+    name: 'Đá',
+    aliases: ['da', 'dv', 'bridge'],
+    applicableRegions: ['south', 'central', 'north'],
+    betRule: ['2 digits'],
+    matchingDraw: {
+      south: 'all prizes',
+      central: 'all prizes',
+      north: 'all prizes',
+    },
+    combinations: {
+      south: 18,
+      central: 18,
+      north: 27,
+    },
+    matchingMethod: 'At least 2 betted numbers match the draw',
+    payoutRate: {
+      bridgeOneStation: 750,
+      bridgeTwoStations: 550,
+      bridgeNorth: 650,
+    },
+    specialCalc: 'bridge',
+    isActive: true,
+  },
+  {
+    name: 'Đảo Xỉu Chủ',
+    aliases: ['daoxc', 'dxc', 'xcd', 'xcdao', 'permutation three digits'],
+    applicableRegions: ['south', 'central', 'north'],
+    betRule: ['3 digits'],
+    matchingDraw: {
+      south: {
+        head: [{ prize: 'seventh', count: 1 }],
+        tail: [{ prize: 'special', count: 1 }],
+      },
+      central: {
+        head: [{ prize: 'seventh', count: 1 }],
+        tail: [{ prize: 'special', count: 1 }],
+      },
+      north: {
+        head: [{ prize: 'sixth', count: 3 }],
+        tail: [{ prize: 'special', count: 1 }],
+      },
+    },
+    combinations: {
+      south: 2,
+      central: 2,
+      north: 4,
+    },
+    matchingMethod: 'Match any permutation of the last 3 digits of the draw',
+    payoutRate: 650,
+    isActive: true,
+  },
+  {
+    name: 'Đảo Xỉu Chủ Đầu',
+    aliases: ['dxcdau', 'daodau', 'ddau', 'permutation head'],
+    applicableRegions: ['south', 'central', 'north'],
+    betRule: ['3 digits'],
+    matchingDraw: {
+      south: [{ prize: 'seventh', count: 1 }],
+      central: [{ prize: 'seventh', count: 1 }],
+      north: [{ prize: 'sixth', count: 3 }],
+    },
+    combinations: {
+      south: 1,
+      central: 1,
+      north: 3,
+    },
+    matchingMethod:
+      'Match any permutation of the last 3 digits of the head prize',
+    payoutRate: 650,
+    isActive: true,
+  },
+  {
+    name: 'Đảo Xỉu Chủ Đuôi',
+    aliases: [
+      'dxcduoi',
+      'daoduoi',
+      'daodui',
+      'dduoi',
+      'ddui',
+      'permutation tail',
+    ],
+    applicableRegions: ['south', 'central', 'north'],
+    betRule: ['3 digits'],
+    matchingDraw: {
+      south: [{ prize: 'special', count: 1 }],
+      central: [{ prize: 'special', count: 1 }],
+      north: [{ prize: 'special', count: 1 }],
+    },
+    combinations: {
+      south: 1,
+      central: 1,
+      north: 1,
+    },
+    matchingMethod:
+      'Match any permutation of the last 3 digits of the special prize',
+    payoutRate: 650,
+    isActive: true,
+  },
+  {
+    name: 'Nhất To',
+    aliases: ['nt', 'nto', 'nhatto', 'first prize'],
+    applicableRegions: ['north'],
+    betRule: ['2 digits', '3 digits', '4 digits'],
+    matchingDraw: {
+      north: [{ prize: 'first', count: 1 }],
+    },
+    combinations: {
+      north: 1,
+    },
+    matchingMethod: 'Match the last N digits of the first prize',
+    payoutRate: {
+      '2 digits': 75,
+      '3 digits': 650,
+      '4 digits': 5500,
+    },
+    isActive: true,
+  },
+  {
+    name: 'Xiên Miền Bắc',
+    aliases: ['xien', 'xienmb', 'xienmbac', 'cross'],
+    applicableRegions: ['north'],
+    betRule: ['2 digits'],
+    matchingDraw: {
+      north: 'all prizes',
+    },
+    combinations: {
+      north: 27,
+    },
+    matchingMethod: 'All betted numbers must match the draw',
+    payoutRate: {
+      crossTwo: 350,
+      crossThree: 1000,
+      crossFour: 3000,
     },
     isActive: true,
   },
