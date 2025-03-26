@@ -98,18 +98,21 @@ function getStationInfo(line, userSettings) {
     return {
       count: line.station.count || 1,
       multiplier: stationMultiplier,
+      region: line.station.region,
     }
   } else if (line.station?.stations) {
     // Nhiều đài (vl.ct)
     return {
       count: line.station.stations.length || 1,
       multiplier: stationMultiplier,
+      region: line.station.region,
     }
   } else {
     // Đài đơn lẻ
     return {
       count: 1,
       multiplier: stationMultiplier,
+      region: line.station?.region,
     }
   }
 }
@@ -122,38 +125,99 @@ function getStationInfo(line, userSettings) {
  */
 function getBetTypeInfo(line, userSettings) {
   const betTypeId = line.betType?.id
-  const defaultBetType = defaultBetTypes.find((bt) => bt.id === betTypeId)
+  const betTypeAlias = line.betType?.alias?.toLowerCase()
+
+  // Tìm bet type dựa trên ID hoặc alias
+  const defaultBetType = defaultBetTypes.find(
+    (bt) =>
+      bt.id === betTypeId ||
+      bt.aliases.some((a) => a.toLowerCase() === betTypeAlias)
+  )
+
+  if (!defaultBetType) {
+    return {
+      id: betTypeId,
+      name: line.betType?.name || 'Unknown',
+      alias: betTypeAlias || '',
+      payoutRate: 0,
+      combined: false,
+    }
+  }
 
   // Lấy payoutRate mặc định hoặc từ cài đặt người dùng
-  let payoutRate = defaultBetType?.payoutRate || 0
+  let payoutRate = defaultBetType.payoutRate || 0
   if (userSettings.payoutRates && userSettings.payoutRates[betTypeId]) {
     payoutRate = userSettings.payoutRates[betTypeId]
   }
 
+  // Xác định số chữ số để lấy tỉ lệ chính xác
+  const digitCount = getDigitCount(line)
+
   // Xử lý payoutRate phức tạp (dạng object)
   if (typeof payoutRate === 'object') {
-    // Mặc định sử dụng cho 2 chữ số
-    payoutRate = payoutRate['2 digits'] || 75
+    if (betTypeAlias === 'da' || betTypeAlias === 'dv') {
+      // Kiểu đá (bridge)
+      const region = line.station?.region
+      const stationCount = line.multiStation
+        ? line.station?.count || 1
+        : line.station?.stations?.length || 1
 
-    // Kiểm tra độ dài số đầu tiên nếu có
-    if (line.numbers && line.numbers.length > 0) {
-      const firstNumber = line.numbers[0]
-      if (firstNumber) {
-        const digitCount = `${firstNumber.length} digits`
-        if (payoutRate[digitCount]) {
-          payoutRate = payoutRate[digitCount]
-        }
+      // Đặt tỉ lệ theo đúng quy tắc từ tài liệu
+      if (region === 'north') {
+        payoutRate = payoutRate.bridgeNorth || 650
+      } else if (stationCount === 2) {
+        payoutRate = payoutRate.bridgeTwoStations || 550
+      } else {
+        payoutRate = payoutRate.bridgeOneStation || 750
+      }
+    } else if (
+      betTypeAlias === 'xien' ||
+      betTypeAlias === 'xienmb' ||
+      betTypeAlias === 'xienmbac'
+    ) {
+      // Kiểu xiên
+      const numberCount = line.numbers?.length || 0
+      if (numberCount === 2) {
+        payoutRate = payoutRate.crossTwo || 350
+      } else if (numberCount === 3) {
+        payoutRate = payoutRate.crossThree || 1000
+      } else if (numberCount >= 4) {
+        payoutRate = payoutRate.crossFour || 3000
+      }
+    } else {
+      // Các kiểu khác
+      if (digitCount === 2) {
+        payoutRate =
+          payoutRate.twoDigits?.standard ||
+          payoutRate.standard ||
+          payoutRate['2 digits'] ||
+          75
+      } else if (digitCount === 3) {
+        payoutRate = payoutRate.threeDigits || payoutRate['3 digits'] || 650
+      } else if (digitCount === 4) {
+        payoutRate = payoutRate.fourDigits || payoutRate['4 digits'] || 5500
       }
     }
   }
 
   return {
-    id: betTypeId,
-    name: line.betType?.name || 'Unknown',
-    alias: line.betType?.alias || '',
+    id: defaultBetType.id,
+    name: defaultBetType.name,
+    alias: betTypeAlias,
     payoutRate,
     combined: line.betType?.combined || false,
   }
+}
+
+/**
+ * Lấy số lượng chữ số của số đầu tiên trong dòng
+ */
+function getDigitCount(line) {
+  if (line.numbers && line.numbers.length > 0) {
+    const firstNumber = line.numbers[0]
+    return firstNumber ? firstNumber.length : 2
+  }
+  return 2 // Mặc định là 2 chữ số
 }
 
 /**
@@ -164,79 +228,97 @@ function getBetTypeInfo(line, userSettings) {
  */
 function getNumberInfo(line, betTypeInfo) {
   const numbers = line.numbers || []
-  const combinationCount = getCombinationCount(line, betTypeInfo)
+  const betTypeAlias = betTypeInfo.alias?.toLowerCase()
+  const digitCount = getDigitCount(line)
+
+  // Kiểm tra loại cược
+  const isBridge = betTypeAlias === 'da' || betTypeAlias === 'dv'
+  const isPermutation =
+    betTypeAlias === 'dao' ||
+    betTypeAlias === 'xcd' ||
+    betTypeAlias === 'daob' ||
+    betTypeAlias === 'bdao' ||
+    betTypeAlias === 'daoxc' ||
+    betTypeAlias === 'dxc'
+
+  // Tìm thông tin bet type từ defaults
+  const defaultBetType = defaultBetTypes.find(
+    (bt) =>
+      bt.id === betTypeInfo.id ||
+      bt.aliases.some((a) => a.toLowerCase() === betTypeAlias)
+  )
+
+  // Lấy số lượng tổ hợp dựa trên miền và bet type
+  let combinationCount = 1
+  if (defaultBetType && defaultBetType.combinations) {
+    const region = line.station?.region || 'south'
+
+    if (typeof defaultBetType.combinations === 'object') {
+      // Kiểm tra nếu có nested structure cho số chữ số
+      if (
+        typeof defaultBetType.combinations[`${digitCount} digits`] === 'object'
+      ) {
+        combinationCount =
+          defaultBetType.combinations[`${digitCount} digits`][region] || 1
+      }
+      // Kiểm tra nếu có direct mapping cho region
+      else if (typeof defaultBetType.combinations[region] === 'number') {
+        combinationCount = defaultBetType.combinations[region]
+      }
+      // Kiểm tra nếu có direct mapping cho số chữ số
+      else if (
+        typeof defaultBetType.combinations[`${digitCount} digits`] === 'number'
+      ) {
+        combinationCount = defaultBetType.combinations[`${digitCount} digits`]
+      }
+    } else if (typeof defaultBetType.combinations === 'number') {
+      combinationCount = defaultBetType.combinations
+    }
+  }
+
+  // Xử lý các trường hợp đặc biệt
+  if (
+    betTypeAlias === 'b' ||
+    betTypeAlias === 'bao' ||
+    betTypeAlias === 'baolo'
+  ) {
+    // Kiểu bao lô
+    const region = line.station?.region || 'south'
+
+    if (digitCount === 2) {
+      if (region === 'north') {
+        combinationCount = 27
+      } else {
+        combinationCount = 18
+      }
+    } else if (digitCount === 3) {
+      if (region === 'north') {
+        combinationCount = 23
+      } else {
+        combinationCount = 17
+      }
+    } else if (digitCount === 4) {
+      if (region === 'north') {
+        combinationCount = 20
+      } else {
+        combinationCount = 16
+      }
+    }
+  } else if (betTypeAlias === 'b7l' || betTypeAlias === 'baobay') {
+    // Bao lô 7
+    combinationCount = 7
+  } else if (betTypeAlias === 'b8l' || betTypeAlias === 'baotam') {
+    // Bao lô 8
+    combinationCount = 8
+  }
 
   return {
     count: numbers.length,
     combinationCount,
-    isBridge: betTypeInfo.alias === 'da' || betTypeInfo.alias === 'dv',
-    isPermutation: betTypeInfo.alias === 'dao' || betTypeInfo.alias === 'xcd',
+    isBridge,
+    isPermutation,
+    digitCount,
   }
-}
-
-/**
- * Lấy số lượng tổ hợp dựa vào kiểu cược và miền
- * @param {object} line - Dòng mã cược
- * @param {object} betTypeInfo - Thông tin về kiểu cược
- * @returns {number} Số lượng tổ hợp
- */
-function getCombinationCount(line, betTypeInfo) {
-  // For combined bet types with specific info
-  if (betTypeInfo.combined && line.details?.numbersAndBetTypes?.combined) {
-    return line.details.numbersAndBetTypes.combined.length || 1
-  }
-
-  // Find bet type info from defaults
-  const betType = defaultBetTypes.find((bt) => bt.id === betTypeInfo.id)
-  if (!betType) return 1
-
-  // Determine region
-  const region = line.station?.region || 'south'
-
-  // Determine digit count
-  let digitCount = '2 digits' // Default to 2 digits
-  if (line.numbers && line.numbers.length > 0) {
-    const firstNumber = line.numbers[0]
-    if (firstNumber) {
-      digitCount = `${firstNumber.length} digits`
-    }
-  }
-
-  // Get combination count based on bet type, region, and digit count
-  let combinations = 1
-
-  // If the combinations structure exists
-  if (betType.combinations) {
-    // If it's a simple number
-    if (typeof betType.combinations === 'number') {
-      combinations = betType.combinations
-    }
-    // If it's nested by digit count and region
-    else if (
-      typeof betType.combinations === 'object' &&
-      betType.combinations[digitCount] &&
-      typeof betType.combinations[digitCount] === 'object'
-    ) {
-      // Try to get region-specific value
-      combinations = betType.combinations[digitCount][region] || 1
-    }
-    // If it's an object with direct digit-count mapping
-    else if (
-      typeof betType.combinations === 'object' &&
-      typeof betType.combinations[digitCount] === 'number'
-    ) {
-      combinations = betType.combinations[digitCount]
-    }
-    // If it's an object with direct region mapping
-    else if (
-      typeof betType.combinations === 'object' &&
-      typeof betType.combinations[region] === 'number'
-    ) {
-      combinations = betType.combinations[region]
-    }
-  }
-
-  return combinations
 }
 
 /**
@@ -277,37 +359,12 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
   // Kiểm tra nếu là kiểu đảo (permutation)
   else if (numberInfo.isPermutation) {
     // Tính số lượng hoán vị (không tính trùng lặp)
-    const numbers = line.numbers || []
-    const uniqueDigits = new Set()
-
-    // Lấy số đầu tiên để xác định độ dài
-    const firstNumber = numbers[0] || ''
-    for (let i = 0; i < firstNumber.length; i++) {
-      uniqueDigits.add(firstNumber.charAt(i))
-    }
-
-    // Tính số lượng hoán vị dựa trên số chữ số và số chữ số khác nhau
-    const n = firstNumber.length
-    const uniqueCount = uniqueDigits.size
-
-    // Hoán vị với lặp: n! / (n1! * n2! * ... * nk!)
-    let permutationCount = factorial(n)
-
-    // Trường hợp có chữ số trùng lặp
-    if (uniqueCount < n) {
-      // Đơn giản hóa, giả sử có 2 hoặc 3 chữ số
-      if (n === 2) {
-        permutationCount = uniqueCount === 1 ? 1 : 2
-      } else if (n === 3) {
-        if (uniqueCount === 1) permutationCount = 1
-        else if (uniqueCount === 2) permutationCount = 3
-        else permutationCount = 6
-      }
-    }
+    const permutationCount = calculatePermutationCount(line.numbers[0] || '')
 
     const stake =
       stationInfo.count *
       permutationCount *
+      numberInfo.count *
       numberInfo.combinationCount *
       betAmount *
       stationInfo.multiplier
@@ -316,11 +373,12 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       stake,
       valid: true,
       stationCount: stationInfo.count,
-      betFactor: permutationCount,
+      permutationCount,
+      numberCount: numberInfo.count,
       combinationCount: numberInfo.combinationCount,
       betAmount,
       multiplier: stationInfo.multiplier,
-      formula: `${stationInfo.count} × ${permutationCount} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
+      formula: `${stationInfo.count} × ${permutationCount} × ${numberInfo.count} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
     }
   }
   // Trường hợp thông thường
@@ -346,13 +404,50 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
 }
 
 /**
+ * Tính số lượng hoán vị của một số (không tính trùng lặp)
+ * @param {string} number - Số cần tính hoán vị
+ * @returns {number} Số lượng hoán vị
+ */
+function calculatePermutationCount(number) {
+  if (!number) return 1
+
+  // Đếm số lượng mỗi chữ số
+  const digitCounts = {}
+  for (let i = 0; i < number.length; i++) {
+    const digit = number[i]
+    digitCounts[digit] = (digitCounts[digit] || 0) + 1
+  }
+
+  // Tính giai thừa của độ dài số
+  let factorial = 1
+  for (let i = 2; i <= number.length; i++) {
+    factorial *= i
+  }
+
+  // Chia cho giai thừa của số lần xuất hiện của mỗi chữ số
+  for (const digit in digitCounts) {
+    let digitFactorial = 1
+    for (let i = 2; i <= digitCounts[digit]; i++) {
+      digitFactorial *= i
+    }
+    factorial /= digitFactorial
+  }
+
+  return factorial
+}
+
+/**
  * Tính giai thừa
  * @param {number} n - Số cần tính giai thừa
  * @returns {number} Giai thừa của n
  */
 function factorial(n) {
   if (n <= 1) return 1
-  return n * factorial(n - 1)
+  let result = 1
+  for (let i = 2; i <= n; i++) {
+    result *= i
+  }
+  return result
 }
 
 /**
@@ -368,26 +463,19 @@ export function quickCalculateStake(parsedResult) {
   // Duyệt qua từng dòng
   parsedResult.lines.forEach((line) => {
     if (line.valid && line.amount > 0) {
-      // Số lượng đài
-      const stationCount = line.multiStation
-        ? line.station?.count || 1
-        : line.station?.stations?.length || 1
+      // Lấy thông tin
+      const stationInfo = getStationInfo(line, {})
+      const betTypeInfo = getBetTypeInfo(line, {})
+      const numberInfo = getNumberInfo(line, betTypeInfo)
 
-      // Số lượng số
-      const numberCount = line.numbers?.length || 1
-
-      // Kiểm tra kiểu cược đặc biệt
-      const isBridge =
-        line.betType?.alias === 'da' || line.betType?.alias === 'dv'
-
-      if (isBridge && numberCount >= 2) {
-        // Tính bridgeFactor
-        const bridgeFactor = (numberCount * (numberCount - 1)) / 2
-        totalStake += stationCount * bridgeFactor * line.amount
-      } else {
-        // Trường hợp thông thường
-        totalStake += stationCount * numberCount * line.amount
-      }
+      // Tính stake cho dòng
+      const lineStake = calculateLineStake(
+        line,
+        stationInfo,
+        betTypeInfo,
+        numberInfo
+      )
+      totalStake += lineStake.stake
     }
   })
 
