@@ -212,8 +212,8 @@ export const defaultBetTypes = [
     isActive: true,
   },
   {
-    name: 'Ba Càng',
-    aliases: ['xc', 'x', 'ba cang', 'ba càng', 'three digits'],
+    name: 'Xỉu chủ',
+    aliases: ['xc', 'x', 'xiu chu', 'xiuchu', 'three digits'],
     applicableRegions: ['south', 'central', 'north'],
     betRule: ['3 digits'],
     matchingDraw: {

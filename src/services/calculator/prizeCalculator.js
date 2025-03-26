@@ -145,7 +145,7 @@ function getBetTypeInfo(line, userSettings) {
     }
   }
 
-  // Lấy payoutRate mặc định hoặc từ cài đặt người dùng
+  // Lấy payoutRate mặc định
   let payoutRate = defaultBetType.payoutRate || 0
   if (userSettings.payoutRates && userSettings.payoutRates[betTypeId]) {
     payoutRate = userSettings.payoutRates[betTypeId]
@@ -163,27 +163,13 @@ function getBetTypeInfo(line, userSettings) {
         ? line.station?.count || 1
         : line.station?.stations?.length || 1
 
-      // Đặt tỉ lệ theo đúng quy tắc từ tài liệu
+      // Đặt tỉ lệ theo đúng quy tắc
       if (region === 'north') {
         payoutRate = payoutRate.bridgeNorth || 650
       } else if (stationCount === 2) {
         payoutRate = payoutRate.bridgeTwoStations || 550
       } else {
         payoutRate = payoutRate.bridgeOneStation || 750
-      }
-    } else if (
-      betTypeAlias === 'xien' ||
-      betTypeAlias === 'xienmb' ||
-      betTypeAlias === 'xienmbac'
-    ) {
-      // Kiểu xiên
-      const numberCount = line.numbers?.length || 0
-      if (numberCount === 2) {
-        payoutRate = payoutRate.crossTwo || 350
-      } else if (numberCount === 3) {
-        payoutRate = payoutRate.crossThree || 1000
-      } else if (numberCount >= 4) {
-        payoutRate = payoutRate.crossFour || 3000
       }
     } else {
       // Các kiểu khác
@@ -198,6 +184,18 @@ function getBetTypeInfo(line, userSettings) {
       } else if (digitCount === 4) {
         payoutRate = payoutRate.fourDigits || payoutRate['4 digits'] || 5500
       }
+    }
+  } else {
+    // Kiểm tra cụ thể với xỉu chủ (Ba Càng)
+    if (betTypeAlias === 'xc' || betTypeAlias === 'x') {
+      payoutRate = 650 // Ghi đè đảm bảo giá trị đúng
+    }
+
+    // Kiểm tra số chữ số cho các loại cược khác
+    if (digitCount === 3 && payoutRate === 75) {
+      payoutRate = 650 // Nếu là số 3 chữ số mà tỉ lệ là 75, sửa thành 650
+    } else if (digitCount === 4 && payoutRate === 75) {
+      payoutRate = 5500 // Nếu là số 4 chữ số, tỉ lệ là 5500
     }
   }
 
@@ -341,22 +339,8 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
     const n = numberInfo.count
     const maxPairs = (n * (n - 1)) / 2 // C(n,2) = số cặp tối đa
 
-    // Tính tiềm năng tối đa
-    let potentialPrize = stationInfo.count * maxPairs * betAmount * payoutRate
-
-    // Xử lý trường hợp đặc biệt với phép tính thưởng nháy
-    // Đây là ví dụ mô phỏng tình huống tốt nhất khi tất cả các số đều về
-    // và có số về 2 lần (tính thưởng nháy)
-    const bonusFactor = 0.5 // 50% của thắng cược là thưởng nháy
-    let bonusPrize = 0
-
-    // Nếu có ít nhất 3 số, thì có thể có số về 2 lần
-    if (n >= 3) {
-      const baseWinAmount = betAmount * payoutRate
-      bonusPrize = bonusFactor * baseWinAmount
-    }
-
-    potentialPrize += bonusPrize
+    // Tính tiềm năng thắng (không nhân với combinationCount)
+    const potentialPrize = stationInfo.count * maxPairs * betAmount * payoutRate
 
     return {
       potentialPrize,
@@ -366,13 +350,12 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       betAmount,
       payoutRate,
       multiplier: stationInfo.multiplier,
-      bonusPrize,
-      formula: `${stationInfo.count} × ${maxPairs} × ${betAmount} × ${payoutRate} + ${bonusPrize}`,
+      formula: `${stationInfo.count} × ${maxPairs} × ${betAmount} × ${payoutRate}`,
     }
   }
   // Kiểm tra nếu là kiểu đảo (permutation)
   else if (numberInfo.isPermutation) {
-    // Tính số lượng hoán vị (không tính trùng lặp)
+    // Số lượng hoán vị của các số
     const numbers = line.numbers || []
     let totalPermutations = 0
 
@@ -380,14 +363,9 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       totalPermutations += calculatePermutationCount(number)
     }
 
-    // Tính tiềm năng thắng tối đa
+    // Tính tiềm năng thắng (không nhân với combinationCount)
     const potentialPrize =
-      stationInfo.count *
-      totalPermutations *
-      numberInfo.combinationCount *
-      betAmount *
-      payoutRate *
-      stationInfo.multiplier
+      stationInfo.count * numbers.length * betAmount * payoutRate
 
     return {
       potentialPrize,
@@ -395,11 +373,10 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       stationCount: stationInfo.count,
       permutationCount: totalPermutations,
       numberCount: numbers.length,
-      combinationCount: numberInfo.combinationCount,
       betAmount,
       payoutRate,
       multiplier: stationInfo.multiplier,
-      formula: `${stationInfo.count} × ${totalPermutations} × ${numberInfo.combinationCount} × ${betAmount} × ${payoutRate} × ${stationInfo.multiplier}`,
+      formula: `${stationInfo.count} × ${numbers.length} × ${betAmount} × ${payoutRate}`,
     }
   }
   // Kiểu xiên
@@ -408,7 +385,7 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
     betTypeAlias === 'xienmb' ||
     betTypeAlias === 'xienmbac'
   ) {
-    // Xiên chỉ áp dụng cho miền Bắc
+    // Tính tiềm năng thắng
     const potentialPrize = betAmount * payoutRate
 
     return {
@@ -424,25 +401,19 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
   }
   // Trường hợp thông thường
   else {
-    // Tính tiềm năng thắng tối đa
+    // Tính tiềm năng thắng (không nhân với combinationCount)
     const potentialPrize =
-      stationInfo.count *
-      numberInfo.count *
-      numberInfo.combinationCount *
-      betAmount *
-      payoutRate *
-      stationInfo.multiplier
+      stationInfo.count * numberInfo.count * betAmount * payoutRate
 
     return {
       potentialPrize,
       valid: true,
       stationCount: stationInfo.count,
       numberCount: numberInfo.count,
-      combinationCount: numberInfo.combinationCount,
       betAmount,
       payoutRate,
       multiplier: stationInfo.multiplier,
-      formula: `${stationInfo.count} × ${numberInfo.count} × ${numberInfo.combinationCount} × ${betAmount} × ${payoutRate} × ${stationInfo.multiplier}`,
+      formula: `${stationInfo.count} × ${numberInfo.count} × ${betAmount} × ${payoutRate}`,
     }
   }
 }
