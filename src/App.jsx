@@ -1,14 +1,60 @@
+import { useEffect } from 'react'
+
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Toaster } from 'sonner'
+
+// Auth
+import LoginPage from './pages/auth/LoginPage'
+
+// User Pages
+import BetCodeInput from './pages/user/BetCodeInput'
+import BetCodeHistory from './pages/user/BetCodeHistory'
+
+// Admin Pages
+import Dashboard from './pages/admin/Dashboard'
+import UserManagement from './pages/admin/UserManagement'
+import StationManagement from './pages/admin/StationManagement'
+import BetTypeManagement from './pages/admin/BetTypeManagement'
+import BetCodeVerification from './pages/admin/BetCodeVerification'
+import VerificationHistory from './pages/admin/VerificationHistory'
+
+// Layouts
+import MainLayout from './components/layout/MainLayout'
+
 function App() {
+  useEffect(() => {
+    // Seed database khi khởi động app
+    import('./database/seeders').then(({ seedDatabase }) => {
+      seedDatabase()
+    })
+  }, [])
+
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold text-blue-600 mb-4">
-        Tailwind CSS Example
-      </h1>
-      <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-        Click me
-      </button>
-    </div>
-  );
+    <Router>
+      <Routes>
+        <Route path='/login' element={<LoginPage />} />
+
+        <Route path='/' element={<MainLayout />}>
+          {/* User Routes */}
+          <Route index element={<BetCodeInput />} />
+          <Route path='history' element={<BetCodeHistory />} />
+
+          {/* Admin Routes */}
+          <Route path='admin' element={<Dashboard />} />
+          <Route path='admin/users' element={<UserManagement />} />
+          <Route path='admin/stations' element={<StationManagement />} />
+          <Route path='admin/bet-types' element={<BetTypeManagement />} />
+          <Route path='admin/verification' element={<BetCodeVerification />} />
+          <Route
+            path='admin/verification-history'
+            element={<VerificationHistory />}
+          />
+        </Route>
+      </Routes>
+
+      <Toaster position='top-right' />
+    </Router>
+  )
 }
 
-export default App;
+export default App

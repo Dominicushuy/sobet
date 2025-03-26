@@ -568,20 +568,28 @@ V. Cách viết mã cược:
     - Ví dụ cược 2 đài vào Chủ nhật: 1 đài Tiền Giang và 1 đài Kon Tum. Cách viết: tg.kt
 - Bước 2: Chọn số cần cược:
   - Có thể chọn một hoặc nhiều số tùy theo loại cược.
-  - Nếu chọn nhiều số thì các số phải cách nhau bằng dấu chấm ("."). Nếu người dùng sử dụng dấu cách hoặc dấu "," thì hệ thống phải tự động chuyển thành dấu chấm (".")
+  - Nếu chọn nhiều số thì các số phải cách nhau bằng dấu chấm ("."). Nếu người dùng sử dụng dấu cách (" "), dấu phẩy (",") hoặc dấu gạch ngang ("-") thì hệ thống phải tự động chuyển thành dấu chấm (".")
     - Ví dụ:
       01.02.03 => 01.02.03
       01 02 03 => 01.02.03
       01,02,03 => 01.02.03
       01, 02, 03 => 01.02.03
+      01, 02,03 => 01.02.03
+      01-02-03 => 01.02.03
+      01 -02-03 => 01.02.03
   - Nếu chọn theo tổ hợp thì sử dụng cách viết của tổ hợp đó.
     - Ví dụ: 20/30keo90, tai, xiu, chan, le, chanchan, lele, chanle, lechan.
 - Bước 3: Chọn loại cược:
   - Chọn 1 loại cược như đã mô tả ở trên.
 - Bước 4: Chọn số tiền cược:
 
-  - Số tiền cược phải là một số dương chia cho 1000.
-  - Ví dụ: 1 = 1000, 1,5 = 1500, 0,5 = 500
+  - Số tiền cược phải là một số dương chia cho 1000. Nếu người dùng viết 50n thì hệ thống phải tự động chuyển thành 50 (bỏ hết ký tự "n" vì "n" nghĩa là nghìn).
+  - Ví dụ:
+    1 (1000)
+    1,5 (1500)
+    0,5 (500)
+    75n => 75
+    5,5n => 5,5
 
 - Một vài ví dụ:
 
@@ -610,8 +618,6 @@ V. Cách viết mã cược:
   45.58.23da0,5
   14.41.69.96.64duoi6
   ```
-
-- Một vài trường hợp đặc biệt:
 
 VI. Quy tắc tính số tiền cược:
 
@@ -645,3 +651,6 @@ Thông tin chung:
     5. Người chơi đặt 5 số "14", "41", "69", "96", "64" với kiểu đánh đuôi ("duoi") với số tiền cược là 6000 ("6") của 1 đài Miền Bắc.
     - Số đài = 1, Số cược = 5, Số tổ hợp = 1, Số tiền cược = 6000.
     - Số tiền đóng = 1 \* 5 \* 1 \* 6000 = 30000.
+    6. Người chơi đặt 2 số "123" với kiểu đánh đảo bao lô ("dx") với số tiền cược là 1000 ("1") của 1 đài Miền Bắc.
+    - Số đài = 1, Số cược = Số biến thể đảo = 6, Số tổ hợp = 23, Số tiền cược = 1000.
+    - Số tiền đóng = 1 \* 6 \* 23 \* 1000 = 138000.
