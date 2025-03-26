@@ -157,6 +157,7 @@ export function useChat() {
             }
           } else {
             // Không có lỗi, hiển thị kết quả phân tích
+            // Không có lỗi, hiển thị kết quả phân tích
             botResponse = 'Mã cược hợp lệ!\n\n'
             botResponse += `Tổng tiền cược: ${stakeAmount.toLocaleString()} đồng\n`
             botResponse += `Tiềm năng thắng: ${potentialWinning.toLocaleString()} đồng\n`
@@ -173,9 +174,9 @@ export function useChat() {
 
                 botResponse += `- Dòng ${
                   index + 1
-                }: ${stationName}, ${line.numbers.join(
-                  ', '
-                )} ${betTypeName} ${amount}\n`
+                }: ${stationName}, ${line.numbers.join(', ')} ${betTypeName} ${
+                  amount / 1000
+                }k (${amount.toLocaleString()}đ)\n`
               }
             })
 

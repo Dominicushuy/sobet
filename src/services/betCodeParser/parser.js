@@ -615,8 +615,8 @@ function parseAmount(amountPart) {
   // Xử lý dấu phân cách thập phân
   let amount = parseFloat(cleanedAmount.replace(/,/g, '.'))
 
-  // Nhân 1000 nếu có "n"
-  if (hasN) amount *= 1000
+  // Nhân 1000 nếu có "n" hoặc trong mọi trường hợp (do 1 đơn vị = 1000 đồng)
+  amount *= 1000
 
   return isNaN(amount) ? 0 : amount
 }
