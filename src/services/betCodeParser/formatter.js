@@ -43,7 +43,7 @@ export function formatBetCode(betCode) {
  */
 function formatStation(stationLine) {
   // Nếu đã có số cược, tách phần đài ra
-  if (/\d/.test(stationLine) && !stationLine.startsWith(/\d+d/)) {
+  if (/\d/.test(stationLine) && !stationLine.match(/^\d+d/)) {
     const stationPart = extractStationPart(stationLine);
     return stationPart;
   }
@@ -150,9 +150,12 @@ function formatBetLine(line) {
   const digitLength = determineDigitLength(normalizedNumbers);
 
   // Xử lý các trường hợp số không có dấu phân cách
-  const noSeparatorMatch = normalizedNumbers.match(
-    /(\d{digitLength*2,}(?!\d*[a-z]))/g
+  const noSeparatorPattern = new RegExp(
+    `(\\d{${digitLength * 2},}(?!\\d*[a-z]))`,
+    "g"
   );
+  const noSeparatorMatch = normalizedNumbers.match(noSeparatorPattern);
+
   if (noSeparatorMatch) {
     for (const match of noSeparatorMatch) {
       // Phân tích thành từng cụm theo độ dài số

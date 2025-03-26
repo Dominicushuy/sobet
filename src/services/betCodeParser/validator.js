@@ -197,7 +197,7 @@ function validateStation(stationString) {
           name: region === "south" ? "Miền Nam" : "Miền Trung",
           region,
           multiStation: true,
-          count: 1,
+          count: 1, // Mặc định là 1 nếu không chỉ định
         },
       };
     }

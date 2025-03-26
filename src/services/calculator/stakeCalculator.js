@@ -423,7 +423,7 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
   if (numberInfo.isBridge || betTypeInfo.specialCalc === "bridge") {
     // Tính bridge factor: C(n,2) = n*(n-1)/2
     const n = numberInfo.count;
-    const bridgeFactor = (n * (n - 1)) / 2;
+    const bridgeFactor = n < 2 ? 0 : (n * (n - 1)) / 2;
 
     // Tính stake cho kiểu đá (chú ý không nhân với combinationCount)
     const stake =

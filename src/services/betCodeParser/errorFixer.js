@@ -173,7 +173,9 @@ function generateFix(error, lines) {
     }
     case "INVALID_STATION_COUNT": {
       // Điều chỉnh số lượng đài
-      const stationCount = parseInt(line.match(/^(\d+)/)[1], 10);
+      const stationCount = parseInt(line.match(/^(\d+)/)?.[1], 10);
+      if (!stationCount) return null;
+
       const region =
         line.toLowerCase().includes("nam") || line.toLowerCase().includes("dmn")
           ? "south"
@@ -183,7 +185,6 @@ function generateFix(error, lines) {
 
       if (stationCount > maxCount) {
         // Tạo mẫu với số lượng đài điều chỉnh
-        const regionPrefix = region === "south" ? "dmn" : "dmt";
         return {
           newLine: line.replace(/^(\d+)/, maxCount),
         };
@@ -315,6 +316,8 @@ function getMaxStationsForRegionOnDay(region, day) {
  * @returns {string} Tên đài gợi ý
  */
 function findSimilarStation(invalidStation) {
+  if (!invalidStation) return null;
+
   const normalized = invalidStation.toLowerCase();
 
   // Kiểm tra đài nhiều miền đặc biệt
@@ -355,6 +358,8 @@ function findSimilarStation(invalidStation) {
  * @returns {string} Kiểu cược gợi ý
  */
 function findSimilarBetType(invalidBetType) {
+  if (!invalidBetType) return "dd";
+
   const normalized = invalidBetType.toLowerCase();
 
   // Tìm kiểu cược có alias gần giống nhất

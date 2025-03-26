@@ -16,7 +16,9 @@ export function parseBetCode(betCode) {
     const normalizedBetCode = betCode.trim().toLowerCase();
 
     // Phân tách các dòng
-    const lines = normalizedBetCode.split(/\r?\n/);
+    const lines = normalizedBetCode
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== "");
     if (lines.length === 0) {
       return { success: false, errors: [{ message: "Mã cược trống" }] };
     }
@@ -143,7 +145,7 @@ function extractStationPart(line) {
   const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases);
   for (const alias of betTypeAliases) {
     const aliasPos = line.indexOf(alias);
-    if (aliasPos !== -1) {
+    if (aliasPos !== -1 && !isPartOfStationName(alias, line)) {
       index = Math.min(index, aliasPos);
     }
   }
@@ -301,8 +303,6 @@ function parseStation(stationString) {
           // Kiểm tra xem các đài có cùng miền không
           if (regionType === null) {
             regionType = station.region;
-          } else if (regionType !== station.region) {
-            // Cho phép trộn miền khác nhau
           }
 
           stationObjects.push({
