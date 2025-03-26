@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useBetCodes } from '@/hooks/useBetCodes'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search,
   FileDown,
-  FilePdf,
   Edit,
   Trash2,
   Eye,
@@ -261,7 +260,7 @@ const UserBetCodeHistoryPage = () => {
                     Xuất Excel
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExportToPdf}>
-                    <FilePdf className='h-4 w-4 mr-2' />
+                    <FileText className='h-4 w-4 mr-2' />
                     Xuất PDF
                   </DropdownMenuItem>
                 </DropdownMenuContent>

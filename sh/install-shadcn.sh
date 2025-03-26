@@ -18,7 +18,8 @@ COMPONENTS=(
     "form"  
     "toast"  
     "sheet"  
-    "popover"  
+    "popover"
+    "tooltip"
 )  
 
 # Cài đặt từng component  
