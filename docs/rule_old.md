@@ -1,4 +1,4 @@
-## Quy tắc
+## Quy tắc cũ
 
 ### Cách viết tên đài:
 
