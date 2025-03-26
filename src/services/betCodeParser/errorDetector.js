@@ -112,7 +112,7 @@ function detectBasicErrors(betCode) {
   }
 
   // Kiểm tra có ký tự đặc biệt không hợp lệ
-  const invalidCharsMatch = betCode.match(/[^\w\s,.;:\/\-+*=x()[\]{}]/gi)
+  const invalidCharsMatch = betCode.match(/[^\w\s,.;:\-+*=x()[\]{}]/gi)
   if (invalidCharsMatch) {
     errors.push({
       type: 'INVALID_CHARACTERS',
@@ -284,7 +284,7 @@ function detectLineErrors(parsedLine, lineIndex) {
     })
   } else {
     // Kiểm tra từng số
-    detectNumberErrors(parsedLine, errors, lineIndex)
+    detectBetNumberErrors(parsedLine, errors, lineIndex)
   }
 
   // Kiểm tra số tiền
@@ -491,7 +491,7 @@ function detectBetTypeErrors(parsedLine, errors, lineIndex) {
  * @param {array} errors - Mảng lỗi để thêm vào
  * @param {number} lineIndex - Chỉ số dòng
  */
-function detectNumberErrors(parsedLine, errors, lineIndex) {
+function detectBetNumberErrors(parsedLine, errors, lineIndex) {
   const numbers = parsedLine.numbers
   const betType = parsedLine.betType
 
@@ -904,7 +904,7 @@ function detectSpecialCases(betCode, parsedResult) {
  * @param {object} betType - Thông tin kiểu cược
  * @returns {array} Danh sách lỗi của số cược
  */
-export function detectNumberErrors(number, betType) {
+export function checkNumberErrors(number, betType) {
   const errors = []
 
   // Kiểm tra số có phải là số hợp lệ
@@ -956,5 +956,5 @@ export function detectNumberErrors(number, betType) {
 
 export default {
   detectErrors,
-  detectNumberErrors,
+  checkNumberErrors,
 }

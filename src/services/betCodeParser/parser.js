@@ -628,7 +628,7 @@ function parseAmount(amountPart) {
  */
 function parseSequence(sequencePart) {
   // Mẫu regex cho dạng A/BkeoC
-  const sequencePattern = /(\d+)[\/.,](\d+)keo(\d+)/i
+  const sequencePattern = /(\d+)[/.,](\d+)keo(\d+)/i
   const matches = sequencePart.match(sequencePattern)
 
   if (!matches) return []

@@ -94,41 +94,53 @@ export function fixBetCode(betCode, errorResult) {
 function fixError(code, error) {
   try {
     switch (error.type) {
-      case 'TYPO_STATION_ALIAS':
+      case 'TYPO_STATION_ALIAS': {
         return fixTypoStationAlias(code, error)
+      }
 
-      case 'TYPO_BET_TYPE_ALIAS':
+      case 'TYPO_BET_TYPE_ALIAS': {
         return fixTypoBetTypeAlias(code, error)
+      }
 
-      case 'ASTERISK_INSTEAD_OF_X':
+      case 'ASTERISK_INSTEAD_OF_X': {
         return fixAsterisk(code, error)
+      }
 
-      case 'AMBIGUOUS_STATION':
+      case 'AMBIGUOUS_STATION': {
         return suggestUnambiguousStation(code, error)
+      }
 
-      case 'INVALID_CHARACTERS':
+      case 'INVALID_CHARACTERS': {
         return fixInvalidCharacters(code, error)
+      }
 
-      case 'EMPTY_LINES':
+      case 'EMPTY_LINES': {
         return fixEmptyLines(code, error)
+      }
 
-      case 'REDUNDANT_DOTS':
+      case 'REDUNDANT_DOTS': {
         return fixRedundantDots(code, error)
+      }
 
-      case 'REDUNDANT_COMMAS':
+      case 'REDUNDANT_COMMAS': {
         return fixRedundantCommas(code, error)
+      }
 
-      case 'TRAILING_PUNCTUATION':
+      case 'TRAILING_PUNCTUATION': {
         return fixTrailingPunctuation(code, error)
+      }
 
-      case 'LEADING_PUNCTUATION':
+      case 'LEADING_PUNCTUATION': {
         return fixLeadingPunctuation(code, error)
+      }
 
-      case 'SEPARATED_N_SUFFIX':
+      case 'SEPARATED_N_SUFFIX': {
         return fixSeparatedNSuffix(code, error)
+      }
 
-      case 'INCOMPLETE_MULTI_STATION':
+      case 'INCOMPLETE_MULTI_STATION': {
         return suggestCompleteMultiStation(code, error)
+      }
 
       default:
         return {
@@ -291,7 +303,7 @@ function suggestUnambiguousStation(code, error) {
  */
 function fixInvalidCharacters(code, error) {
   // Thay thế các ký tự không hợp lệ bằng khoảng trắng
-  const fixed = code.replace(/[^\w\s,.;:\/\-+*=x()[\]{}]/g, ' ')
+  const fixed = code.replace(/[^\w\s,.;:\-+*=x()[\]{}]/g, ' ')
 
   return {
     original: code,
@@ -417,12 +429,18 @@ function fixSeparatedNSuffix(code, error) {
  */
 function suggestCompleteMultiStation(code, error) {
   // Bổ sung ví dụ cho trường hợp nhiều đài
-  const suggestedBetTypes = ['dd', 'dau', 'duoi', 'b', 'xc']
-  const suggestedNumbers = ['12', '34', '56']
+  const betTypeOptions = ['dd', 'dau', 'duoi', 'b', 'xc']
+  const numberOptions = ['12', '34', '56']
+
+  const suggestedBetType =
+    betTypeOptions[Math.floor(Math.random() * betTypeOptions.length)]
+  const suggestedNumber =
+    numberOptions[Math.floor(Math.random() * numberOptions.length)]
   const suggestedAmount = '10'
 
   // Tìm phần đài nhiều miền
   const multiStationMatch = code.match(/(\d+)(dmn|dmt|dn)(\s*$|\s+[^\d])/i)
+
   if (!multiStationMatch) {
     return {
       original: code,
@@ -443,12 +461,6 @@ function suggestCompleteMultiStation(code, error) {
       success: false,
     }
   }
-
-  // Tạo chuỗi gợi ý
-  const suggestedBetType =
-    suggestedBetTypes[Math.floor(Math.random() * suggestedBetTypes.length)]
-  const suggestedNumber =
-    suggestedNumbers[Math.floor(Math.random() * suggestedNumbers.length)]
 
   // Thay thế phần thiếu với gợi ý
   const originalPart = `${count}${regionCode}`
@@ -502,7 +514,7 @@ export function suggestFixes(betCode, errorResult) {
  */
 function createSuggestion(code, error) {
   switch (error.type) {
-    case 'TYPO_STATION_ALIAS':
+    case 'TYPO_STATION_ALIAS': {
       return {
         type: 'REPLACE_TEXT',
         message: `Có thể bạn muốn viết "${error.suggestion}" thay vì "${
@@ -512,8 +524,9 @@ function createSuggestion(code, error) {
         suggestion: error.suggestion,
         position: error.position,
       }
+    }
 
-    case 'TYPO_BET_TYPE_ALIAS':
+    case 'TYPO_BET_TYPE_ALIAS': {
       return {
         type: 'REPLACE_TEXT',
         message: `Có thể bạn muốn viết "${error.suggestion}" thay vì "${
@@ -523,8 +536,9 @@ function createSuggestion(code, error) {
         suggestion: error.suggestion,
         position: error.position,
       }
+    }
 
-    case 'ASTERISK_INSTEAD_OF_X':
+    case 'ASTERISK_INSTEAD_OF_X': {
       return {
         type: 'REPLACE_ALL',
         message: 'Thay thế tất cả dấu * bằng x?',
@@ -532,8 +546,9 @@ function createSuggestion(code, error) {
         suggestion: 'x',
         position: error.position,
       }
+    }
 
-    case 'AMBIGUOUS_STATION':
+    case 'AMBIGUOUS_STATION': {
       // Đề xuất các alias không gây nhầm lẫn
       const ambiguousSuggestions = []
       if (error.suggestions) {
@@ -561,8 +576,9 @@ function createSuggestion(code, error) {
         choices: ambiguousSuggestions,
         position: error.position,
       }
+    }
 
-    case 'MISSING_STATION':
+    case 'MISSING_STATION': {
       return {
         type: 'ADD_STATION',
         message: 'Thiếu thông tin đài, bạn muốn thêm đài nào?',
@@ -574,8 +590,9 @@ function createSuggestion(code, error) {
           })),
         position: error.position,
       }
+    }
 
-    case 'MISSING_BET_TYPE':
+    case 'MISSING_BET_TYPE': {
       return {
         type: 'ADD_BET_TYPE',
         message: 'Thiếu thông tin kiểu cược, bạn muốn thêm loại cược nào?',
@@ -587,8 +604,9 @@ function createSuggestion(code, error) {
           })),
         position: error.position,
       }
+    }
 
-    case 'REDUNDANT_DOTS':
+    case 'REDUNDANT_DOTS': {
       return {
         type: 'REPLACE_ALL',
         message: 'Xóa dấu chấm liên tiếp thừa?',
@@ -596,8 +614,9 @@ function createSuggestion(code, error) {
         suggestion: '.',
         position: error.position,
       }
+    }
 
-    case 'REDUNDANT_COMMAS':
+    case 'REDUNDANT_COMMAS': {
       return {
         type: 'REPLACE_ALL',
         message: 'Xóa dấu phẩy liên tiếp thừa?',
@@ -605,8 +624,9 @@ function createSuggestion(code, error) {
         suggestion: ',',
         position: error.position,
       }
+    }
 
-    case 'SEPARATED_N_SUFFIX':
+    case 'SEPARATED_N_SUFFIX': {
       return {
         type: 'REPLACE_ALL',
         message: 'Gắn ký tự "n" (nghìn) vào số?',
@@ -614,8 +634,9 @@ function createSuggestion(code, error) {
         suggestion: 'n',
         position: error.position,
       }
+    }
 
-    case 'TRAILING_PUNCTUATION':
+    case 'TRAILING_PUNCTUATION': {
       return {
         type: 'REPLACE_ALL',
         message: 'Xóa dấu chấm/phẩy thừa ở cuối?',
@@ -623,8 +644,9 @@ function createSuggestion(code, error) {
         suggestion: '',
         position: error.position,
       }
+    }
 
-    case 'LEADING_PUNCTUATION':
+    case 'LEADING_PUNCTUATION': {
       return {
         type: 'REPLACE_ALL',
         message: 'Xóa dấu chấm/phẩy thừa ở đầu?',
@@ -632,18 +654,23 @@ function createSuggestion(code, error) {
         suggestion: '',
         position: error.position,
       }
+    }
 
-    case 'INCOMPLETE_MULTI_STATION':
+    case 'INCOMPLETE_MULTI_STATION': {
       // Tạo ví dụ gợi ý
-      const suggestedBetType = ['dd', 'dau', 'duoi', 'b', 'xc'][
-        Math.floor(Math.random() * 5)
-      ]
-      const suggestedNumber = ['12', '34', '56'][Math.floor(Math.random() * 3)]
+      const betTypeOptions = ['dd', 'dau', 'duoi', 'b', 'xc']
+      const numberOptions = ['12', '34', '56']
+
+      const suggestedBetType =
+        betTypeOptions[Math.floor(Math.random() * betTypeOptions.length)]
+      const suggestedNumber =
+        numberOptions[Math.floor(Math.random() * numberOptions.length)]
       const suggestedAmount = '10'
 
       const multiStationMatch = code.match(/(\d+)(dmn|dmt|dn)(\s*$|\s+[^\d])/i)
+
       if (multiStationMatch) {
-        const [fullMatch, count, regionCode] = multiStationMatch
+        const [, count, regionCode] = multiStationMatch
         const originalPart = `${count}${regionCode}`
 
         return {
@@ -655,8 +682,9 @@ function createSuggestion(code, error) {
         }
       }
       break
+    }
 
-    default:
+    default: {
       if (error.suggestion) {
         return {
           type: 'GENERAL_SUGGESTION',
@@ -665,6 +693,7 @@ function createSuggestion(code, error) {
           position: error.position,
         }
       }
+    }
   }
 
   return null
