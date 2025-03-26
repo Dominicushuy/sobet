@@ -181,45 +181,58 @@ function getNumberInfo(line, betTypeInfo) {
  * @returns {number} Số lượng tổ hợp
  */
 function getCombinationCount(line, betTypeInfo) {
-  // Nếu là kiểu cược kết hợp, kiểm tra chi tiết
+  // For combined bet types with specific info
   if (betTypeInfo.combined && line.details?.numbersAndBetTypes?.combined) {
     return line.details.numbersAndBetTypes.combined.length || 1
   }
 
-  // Tìm thông tin kiểu cược từ mặc định
+  // Find bet type info from defaults
   const betType = defaultBetTypes.find((bt) => bt.id === betTypeInfo.id)
   if (!betType) return 1
 
-  // Xác định region
+  // Determine region
   const region = line.station?.region || 'south'
 
-  // Lấy số lượng tổ hợp dựa vào kiểu cược và miền
+  // Determine digit count
+  let digitCount = '2 digits' // Default to 2 digits
+  if (line.numbers && line.numbers.length > 0) {
+    const firstNumber = line.numbers[0]
+    if (firstNumber) {
+      digitCount = `${firstNumber.length} digits`
+    }
+  }
+
+  // Get combination count based on bet type, region, and digit count
   let combinations = 1
 
+  // If the combinations structure exists
   if (betType.combinations) {
-    // Trường hợp cấu trúc đơn giản
+    // If it's a simple number
     if (typeof betType.combinations === 'number') {
       combinations = betType.combinations
     }
-    // Trường hợp phân biệt theo miền
-    else if (typeof betType.combinations === 'object') {
-      if (region === REGIONS.SOUTH || region === REGIONS.CENTRAL) {
-        combinations =
-          betType.combinations.south || betType.combinations.central || 1
-      } else if (region === REGIONS.NORTH) {
-        combinations = betType.combinations.north || 1
-      }
-
-      // Trường hợp phân biệt thêm theo số chữ số
-      if (
-        typeof combinations === 'object' &&
-        line.numbers &&
-        line.numbers.length > 0
-      ) {
-        const firstNumber = line.numbers[0]
-        const digitCount = `${firstNumber.length} digits`
-        combinations = combinations[digitCount] || 1
-      }
+    // If it's nested by digit count and region
+    else if (
+      typeof betType.combinations === 'object' &&
+      betType.combinations[digitCount] &&
+      typeof betType.combinations[digitCount] === 'object'
+    ) {
+      // Try to get region-specific value
+      combinations = betType.combinations[digitCount][region] || 1
+    }
+    // If it's an object with direct digit-count mapping
+    else if (
+      typeof betType.combinations === 'object' &&
+      typeof betType.combinations[digitCount] === 'number'
+    ) {
+      combinations = betType.combinations[digitCount]
+    }
+    // If it's an object with direct region mapping
+    else if (
+      typeof betType.combinations === 'object' &&
+      typeof betType.combinations[region] === 'number'
+    ) {
+      combinations = betType.combinations[region]
     }
   }
 
