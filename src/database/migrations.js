@@ -20,18 +20,19 @@ export async function setupMigrations() {
       '++id, userId, stationId, multiplier, [userId+stationId]',
   })
 
-  // Đây là các migration trong tương lai
-  /*
-  db.version(2).stores({
-    // Ví dụ về việc thêm một bảng mới trong tương lai
-    betStatistics: '++id, betCodeId, resultId, winAmount, createdAt',
-  }).upgrade(tx => {
-    // Lôgic nâng cấp dữ liệu từ version 1 lên version 2
-  })
-  */
-
-  // Thông báo migrations đã sẵn sàng
-  console.log('Database migrations setup complete')
+  // Thêm migration phiên bản 2 để thêm betMultiplier cho user
+  db.version(2)
+    .stores({
+      // Schema không thay đổi
+    })
+    .upgrade((tx) => {
+      // Thêm betMultiplier cho các user hiện có
+      return tx.users.toCollection().modify((user) => {
+        if (!user.betMultiplier) {
+          user.betMultiplier = 0.8 // Đặt giá trị mặc định
+        }
+      })
+    })
 }
 
 // Khởi chạy migrations khi cần thiết

@@ -123,8 +123,15 @@ export function useChat() {
         let attachments = null
 
         if (analysisResult.parsedResult.success) {
+          // Get user settings with betMultiplier
+          const userSettings = { betMultiplier: user?.betMultiplier || 0.8 }
+
           // Tính tiền cược
-          const stakeResult = calculateStake(analysisResult.parsedResult)
+          const stakeResult = calculateStake(
+            analysisResult.parsedResult,
+            userSettings
+          )
+
           const stakeAmount = stakeResult.totalStake
 
           // Tính tiềm năng thắng cược

@@ -28,18 +28,19 @@ export async function seedDatabase() {
       password: simpleHash('admin123'), // Hash password
       role: 'admin',
       isActive: true,
-      priceMultiplier: 0.76, // Giá nhân mặc định
+      priceMultiplier: 0.76, // Keep this for future reconciliation
+      betMultiplier: 0.8, // Add new property for bet stake calculation
       paybackRate: 0.95, // Hồi khi thu mặc định
       createdAt: new Date(),
     })
 
-    // Seed một user thử nghiệm
     const testUserId = await db.users.add({
       username: 'testuser',
       password: simpleHash('test123'), // Hash password
       role: 'user',
       isActive: true,
-      priceMultiplier: 0.76, // Giá nhân mặc định
+      priceMultiplier: 0.76, // Keep this for future reconciliation
+      betMultiplier: 0.8, // Add new property for bet stake calculation
       paybackRate: 0.95, // Hồi khi thu mặc định
       createdAt: new Date(),
     })
@@ -104,6 +105,7 @@ export async function seedDatabase() {
     await db.settings.put({ key: 'maxUsers', value: 10 })
     await db.settings.put({ key: 'dataRetentionDays', value: 7 })
     await db.settings.put({ key: 'defaultPriceMultiplier', value: 0.76 })
+    await db.settings.put({ key: 'defaultBetMultiplier', value: 0.8 })
     await db.settings.put({ key: 'defaultPaybackRate', value: 0.95 })
 
     console.log('Database seeded successfully')

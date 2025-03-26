@@ -21,6 +21,7 @@ export function calculateStake(parsedResult, userSettings = {}) {
     const lines = parsedResult.lines
     let totalStake = 0
     const details = []
+    const betMultiplier = userSettings.betMultiplier || 0.8 // Get user's betMultiplier
 
     // Xử lý từng dòng trong mã cược
     for (let i = 0; i < lines.length; i++) {
@@ -54,6 +55,13 @@ export function calculateStake(parsedResult, userSettings = {}) {
         numberInfo
       )
 
+      // Apply user's betMultiplier to the stake
+      const originalStake = lineStake.stake
+      lineStake.stake = originalStake * betMultiplier
+      lineStake.originalStake = originalStake
+      lineStake.betMultiplier = betMultiplier
+      lineStake.formula = `(${lineStake.formula}) × ${betMultiplier}`
+
       totalStake += lineStake.stake
       details.push({
         lineIndex: i,
@@ -67,6 +75,7 @@ export function calculateStake(parsedResult, userSettings = {}) {
       totalStake,
       details,
       error: null,
+      betMultiplier, // Include the betMultiplier in the result
     }
   } catch (error) {
     console.error('Lỗi khi tính tiền cược:', error)
@@ -484,35 +493,23 @@ function calculatePermutationCount(number) {
 }
 
 /**
- * Tính giai thừa
- * @param {number} n - Số cần tính giai thừa
- * @returns {number} Giai thừa của n
- */
-function factorial(n) {
-  if (n <= 1) return 1
-  let result = 1
-  for (let i = 2; i <= n; i++) {
-    result *= i
-  }
-  return result
-}
-
-/**
  * Hàm tối ưu để tính tiền cược nhanh
  * @param {object} parsedResult - Kết quả phân tích mã cược
  * @returns {number} Tổng tiền cược
  */
-export function quickCalculateStake(parsedResult) {
+// Update quickCalculateStake function too
+export function quickCalculateStake(parsedResult, userSettings = {}) {
   if (!parsedResult || !parsedResult.success || !parsedResult.lines) return 0
 
+  const betMultiplier = userSettings.betMultiplier || 0.8
   let totalStake = 0
 
   // Duyệt qua từng dòng
   parsedResult.lines.forEach((line) => {
     if (line.valid && line.amount > 0) {
       // Lấy thông tin
-      const stationInfo = getStationInfo(line, {})
-      const betTypeInfo = getBetTypeInfo(line, {})
+      const stationInfo = getStationInfo(line, userSettings)
+      const betTypeInfo = getBetTypeInfo(line, userSettings)
       const numberInfo = getNumberInfo(line, betTypeInfo)
 
       // Tính stake cho dòng
@@ -522,7 +519,9 @@ export function quickCalculateStake(parsedResult) {
         betTypeInfo,
         numberInfo
       )
-      totalStake += lineStake.stake
+
+      // Apply user's betMultiplier
+      totalStake += lineStake.stake * betMultiplier
     }
   })
 

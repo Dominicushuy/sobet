@@ -53,11 +53,16 @@ export function useBetCodes() {
       setLoading(true)
       setError(null)
       try {
+        // Get user's betMultiplier
+        const userBetMultiplier = user.betMultiplier || 0.8
+
         const betCode = {
           userId: user.id,
           content,
           parsedContent,
           stakeAmount,
+          originalStakeAmount: stakeAmount / userBetMultiplier, // Store original stake
+          betMultiplier: userBetMultiplier, // Store the multiplier used
           potentialWinning,
           errors,
           createdAt: new Date(),
