@@ -17,6 +17,7 @@ import StationManagement from './pages/admin/StationManagement'
 import BetTypeManagement from './pages/admin/BetTypeManagement'
 import BetCodeVerification from './pages/admin/BetCodeVerification'
 import VerificationHistory from './pages/admin/VerificationHistory'
+import LotteryResults from './pages/admin/LotteryResults'
 
 // Layouts
 import MainLayout from './components/layout/MainLayout'
@@ -49,6 +50,7 @@ function App() {
             path='admin/verification-history'
             element={<VerificationHistory />}
           />
+          <Route path='admin/lottery-results' element={<LotteryResults />} />
         </Route>
       </Routes>
 

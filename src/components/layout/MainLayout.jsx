@@ -8,6 +8,7 @@ import {
   History,
   MessageSquare,
   LogOut,
+  Calendar,
 } from 'lucide-react'
 import { AuthContext } from '@/contexts/AuthContext'
 import { Button } from '../ui/button'
@@ -59,6 +60,11 @@ export default function MainLayout() {
       path: '/admin/verification-history',
       label: 'Lịch sử đối soát',
       icon: <History size={20} />,
+    },
+    {
+      path: '/admin/lottery-results',
+      label: 'Kết quả xổ số',
+      icon: <Calendar size={20} />,
     },
   ]
 
