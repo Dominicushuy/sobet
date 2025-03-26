@@ -9,6 +9,7 @@ import {
   MessageSquare,
   LogOut,
   Calendar,
+  User,
 } from 'lucide-react'
 import { AuthContext } from '@/contexts/AuthContext'
 import { Button } from '../ui/button'
@@ -16,14 +17,26 @@ import { Button } from '../ui/button'
 export default function MainLayout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout } = useContext(AuthContext)
+  const { user, logout, loading } = useContext(AuthContext)
 
   // Kiểm tra authen
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       navigate('/login')
     }
-  }, [user, navigate])
+  }, [user, navigate, loading])
+
+  // Hiển thị loading state
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-screen'>
+        <div className='text-center'>
+          <div className='w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4'></div>
+          <p className='text-lg'>Đang tải...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!user) return null
 
@@ -80,10 +93,10 @@ export default function MainLayout() {
   return (
     <div className='flex h-screen'>
       {/* Sidebar */}
-      <div className='w-64 bg-slate-800 text-white p-4'>
+      <div className='w-64 bg-slate-800 text-white p-4 flex flex-col'>
         <div className='text-xl font-bold mb-6'>Quản lý xổ số</div>
 
-        <nav className='space-y-2'>
+        <nav className='space-y-2 flex-1'>
           {menuItems.map((item) => (
             <Link
               key={item.path}
@@ -97,15 +110,28 @@ export default function MainLayout() {
           ))}
         </nav>
 
-        <div className='mt-auto pt-6'>
-          <Button
-            variant='ghost'
-            className='w-full flex items-center gap-2 text-white'
-            onClick={handleLogout}>
-            <LogOut size={20} />
-            <span>Đăng xuất</span>
-          </Button>
+        {/* User info */}
+        <div className='border-t border-slate-700 pt-4 mt-4 mb-4'>
+          <div className='flex items-center gap-2 px-2 py-2'>
+            <div className='w-8 h-8 rounded-full bg-primary flex items-center justify-center'>
+              <User size={16} />
+            </div>
+            <div>
+              <div className='font-medium'>{user.username}</div>
+              <div className='text-xs text-slate-400'>
+                {isAdmin ? 'Quản trị viên' : 'Người dùng'}
+              </div>
+            </div>
+          </div>
         </div>
+
+        <Button
+          variant='ghost'
+          className='w-full flex items-center gap-2 text-white'
+          onClick={handleLogout}>
+          <LogOut size={20} />
+          <span>Đăng xuất</span>
+        </Button>
       </div>
 
       {/* Main Content */}

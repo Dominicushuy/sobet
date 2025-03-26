@@ -1,5 +1,6 @@
-import { createContext, useState, useEffect } from 'react'
+import { createContext, useState, useEffect, useCallback } from 'react'
 import { db } from '../database/db'
+import { hasPermission as checkPermission } from '@/config/roles'
 
 export const AuthContext = createContext()
 
@@ -42,13 +43,16 @@ export const AuthProvider = ({ children }) => {
         .first()
 
       if (!userRecord) {
-        throw new Error('User not found or inactive')
+        throw new Error('Tài khoản không tồn tại hoặc đã bị vô hiệu hóa')
       }
 
       // Trong thực tế, bạn nên hash password và so sánh
       // Đây chỉ là ví dụ đơn giản
-      if (userRecord.password !== password) {
-        throw new Error('Invalid password')
+      if (
+        userRecord.password !== password &&
+        !userRecord.password.startsWith(`hashed_${password}_`)
+      ) {
+        throw new Error('Mật khẩu không chính xác')
       }
 
       // Cập nhật lastLogin
@@ -78,8 +82,27 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user')
   }
 
+  // Kiểm tra quyền của user hiện tại
+  const hasPermission = useCallback(
+    (permission) => {
+      if (!user) return false
+      return checkPermission(user.role, permission)
+    },
+    [user]
+  )
+
+  // Kiểm tra vai trò của user hiện tại
+  const hasRole = useCallback(
+    (role) => {
+      if (!user) return false
+      return user.role === role
+    },
+    [user]
+  )
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, loading, hasPermission, hasRole }}>
       {children}
     </AuthContext.Provider>
   )
