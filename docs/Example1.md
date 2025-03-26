@@ -12,9 +12,8 @@
 8. [Đá (da)](#8-đá-da)
 9. [Đảo xỉu chủ và biến thể](#9-đảo-xỉu-chủ-và-biến-thể)
 10. [Nhất to (nt)](#10-nhất-to-nt)
-11. [Xiên miền bắc (xien)](#11-xiên-miền-bắc-xien)
-12. [Các kiểu tổ hợp số](#12-các-kiểu-tổ-hợp-số)
-13. [Mã cược phức hợp](#13-mã-cược-phức-hợp)
+11. [Các kiểu tổ hợp số](#11-các-kiểu-tổ-hợp-số)
+12. [Mã cược phức hợp](#12-mã-cược-phức-hợp)
 
 > **Lưu ý**: Trong tất cả các ví dụ, áp dụng hệ số nhân (betMultiplier) là 0.8. Tùy thuộc vào cài đặt người dùng, hệ số này có thể thay đổi.
 
@@ -552,8 +551,9 @@ vl
 - Số tổ hợp cho miền Nam: 18 (tất cả các giải)
 - Tiền cược mỗi cặp: 10.000đ
 - Hệ số nhân: 0.8
+- Hệ số đá: 2
 
-Tiền đóng = 1 × 6 × 18 × 10.000 × 0.8 = 864.000đ
+Tiền đóng = 1 × 6 × 18 × 10.000 × 0.8 × 2 = 1.728.000đ
 
 **Tính tiềm năng thắng:**
 
@@ -583,8 +583,9 @@ tp.dt
 - Số tổ hợp cho miền Nam: 18 (tất cả các giải)
 - Tiền cược mỗi cặp: 5.000đ
 - Hệ số nhân: 0.8
+- Hệ số đá: 2
 
-Tiền đóng = 2 × 3 × 18 × 5.000 × 0.8 = 432.000đ
+Tiền đóng = 2 × 3 × 18 × 5.000 × 0.8 × 2 = 864.000đ
 
 **Tính tiềm năng thắng:**
 
@@ -614,8 +615,9 @@ mb
 - Số tổ hợp cho miền Bắc: 27 (tất cả các giải)
 - Tiền cược mỗi cặp: 2.000đ
 - Hệ số nhân: 0.8
+- Hệ số đá: 2
 
-Tiền đóng = 1 × 6 × 27 × 2.000 × 0.8 = 259.200đ
+Tiền đóng = 1 × 6 × 27 × 2.000 × 0.8 × 2 = 518.400đ
 
 **Tính tiềm năng thắng:**
 
@@ -778,87 +780,7 @@ Tiền đóng = 1 × 3 × 1 × 5.000 × 0.8 = 12.000đ
 - Tiềm năng thắng trên 1 số: 5.000 × 650 = 3.250.000đ
 - Tiềm năng thắng tất cả: 3.250.000 × 3 = 9.750.000đ
 
-## 11. Xiên miền bắc (xien)
-
-### Ví dụ 1: Xiên 2 số
-
-```
-mb
-23.45xien10
-```
-
-**Giải thích:**
-
-- Đài: Miền Bắc (mb)
-- Số cược: 23, 45
-- Kiểu cược: Xiên (xien)
-- Tiền cược: 10.000đ
-
-**Tính tiền đóng:**
-
-- Số đài: 1
-- Tiền cược mỗi xiên: 10.000đ
-- Hệ số nhân: 0.8
-
-Tiền đóng = 1 × 10.000 × 0.8 = 8.000đ
-
-**Tính tiềm năng thắng:**
-
-- Tiềm năng thắng cho xiên 2 số: 10.000 × 350 = 3.500.000đ
-
-### Ví dụ 2: Xiên 3 số
-
-```
-mb
-23.45.67xien5
-```
-
-**Giải thích:**
-
-- Đài: Miền Bắc (mb)
-- Số cược: 23, 45, 67
-- Kiểu cược: Xiên (xien)
-- Tiền cược: 5.000đ
-
-**Tính tiền đóng:**
-
-- Số đài: 1
-- Tiền cược mỗi xiên: 5.000đ
-- Hệ số nhân: 0.8
-
-Tiền đóng = 1 × 5.000 × 0.8 = 4.000đ
-
-**Tính tiềm năng thắng:**
-
-- Tiềm năng thắng cho xiên 3 số: 5.000 × 1000 = 5.000.000đ
-
-### Ví dụ 3: Xiên 4 số
-
-```
-mb
-23.45.67.89xienmb10
-```
-
-**Giải thích:**
-
-- Đài: Miền Bắc (mb)
-- Số cược: 23, 45, 67, 89
-- Kiểu cược: Xiên miền bắc (xienmb)
-- Tiền cược: 10.000đ
-
-**Tính tiền đóng:**
-
-- Số đài: 1
-- Tiền cược mỗi xiên: 10.000đ
-- Hệ số nhân: 0.8
-
-Tiền đóng = 1 × 10.000 × 0.8 = 8.000đ
-
-**Tính tiềm năng thắng:**
-
-- Tiềm năng thắng cho xiên 4 số: 10.000 × 3000 = 30.000.000đ
-
-## 12. Các kiểu tổ hợp số
+## 11. Các kiểu tổ hợp số
 
 ### Ví dụ 1: Kéo
 
@@ -947,7 +869,7 @@ Tiền đóng = 1 × 25 × 1 × 5.000 × 0.8 = 100.000đ
 - Tiềm năng thắng trên 1 số: 5.000 × 75 = 375.000đ
 - Tiềm năng thắng tất cả: 375.000 × 25 = 9.375.000đ
 
-## 13. Mã cược phức hợp
+## 12. Mã cược phức hợp
 
 ### Ví dụ 1: Nhiều dòng cược khác nhau
 
@@ -971,8 +893,8 @@ Tiền đóng = 1 × 25 × 1 × 5.000 × 0.8 = 100.000đ
 Dòng 1: 3 × 3 × 2 × 10.000 × 0.8 = 144.000đ
 Dòng 2: 3 × 3 × 2 × 2.000 × 0.8 = 28.800đ
 Dòng 3: 3 × 4 × 18 × 5.000 × 0.8 = 864.000đ
-Dòng 4: 3 × 1 × 18 × 10.000 × 0.8 = 432.000đ
-Tổng tiền đóng = 1.468.800đ
+Dòng 4: 3 × 1 × 18 × 10.000 × 0.8 × 2 = 864.000đ
+Tổng tiền đóng = 1.900.800đ
 
 **Tính tiềm năng thắng:**
 Dòng 1:
