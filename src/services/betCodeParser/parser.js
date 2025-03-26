@@ -137,17 +137,23 @@ function extractStationPart(line) {
   // Tìm vị trí của số đầu tiên hoặc kiểu cược
   let index = line.length;
 
-  // Tìm vị trí số đầu tiên
-  const numberMatch = line.match(/\d/);
-  if (numberMatch) {
-    index = Math.min(index, line.indexOf(numberMatch[0]));
+  // Bỏ qua việc tìm số đầu tiên nếu là mẫu đài như 2dmn, 3dn
+  if (!/^\d+d/.test(line)) {
+    // Tìm vị trí số đầu tiên
+    const numberMatch = line.match(/\d/);
+    if (numberMatch) {
+      index = Math.min(index, line.indexOf(numberMatch[0]));
+    }
   }
 
   // Tìm vị trí kiểu cược đầu tiên
   const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases);
   for (const alias of betTypeAliases) {
     const aliasPos = line.indexOf(alias);
-    if (aliasPos !== -1) {
+    if (
+      aliasPos !== -1 &&
+      !isPartOfStationName(alias, line.substring(0, aliasPos + alias.length))
+    ) {
       index = Math.min(index, aliasPos);
     }
   }
@@ -164,7 +170,7 @@ function parseStation(stationString) {
   const stationText = stationString.trim().toLowerCase();
 
   // Trường hợp đặc biệt: chuỗi chứa cả số, có thể là đài + số cược
-  if (/\d/.test(stationText)) {
+  if (/\d/.test(stationText) && !/^\d+d/.test(stationText)) {
     // Trích xuất phần đài
     const stationPart = extractStationPart(stationText);
     return parseStation(stationPart);
@@ -245,6 +251,40 @@ function parseStation(stationString) {
     };
   }
 
+  // Kiểm tra đài ghép không đúng định dạng
+  for (const station1 of defaultStations) {
+    for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
+      for (const station2 of defaultStations) {
+        if (station1.name === station2.name) continue;
+        for (const alias2 of [
+          station2.name.toLowerCase(),
+          ...station2.aliases,
+        ]) {
+          if (stationText === alias1 + alias2) {
+            // Đài ghép không dùng dấu phân cách
+            return {
+              success: true,
+              data: {
+                stations: [
+                  {
+                    name: station1.name,
+                    region: station1.region,
+                  },
+                  {
+                    name: station2.name,
+                    region: station2.region,
+                  },
+                ],
+                region: station1.region,
+                multiStation: false,
+              },
+            };
+          }
+        }
+      }
+    }
+  }
+
   // Kiểm tra nhiều đài cụ thể
   if (
     stationText.includes(".") ||
@@ -286,6 +326,61 @@ function parseStation(stationString) {
     }
   }
 
+  // Xử lý các trường hợp viết tắt gây nhầm lẫn
+  if (stationText === "dn") {
+    const currentDay = new Date().getDay();
+    // Thứ 4 (ngày 3) có cả Đồng Nai và Đà Nẵng
+    if (currentDay === 3) {
+      return {
+        success: true,
+        data: {
+          name: "Đồng Nai", // Mặc định chọn Đồng Nai
+          region: "south",
+          multiStation: false,
+        },
+      };
+    } else {
+      // Trong những ngày khác, có thể đoán dựa vào lịch xổ số
+      const station = findBestStationMatch(stationText);
+      if (station) {
+        return {
+          success: true,
+          data: {
+            name: station.name,
+            region: station.region,
+            multiStation: false,
+          },
+        };
+      }
+    }
+  }
+
+  if (stationText === "dt") {
+    // Đồng Tháp xổ thứ 2, 'đài trung' có thể là bất kỳ ngày nào
+    const currentDay = new Date().getDay();
+    if (currentDay === 1) {
+      // Thứ 2
+      return {
+        success: true,
+        data: {
+          name: "Đồng Tháp",
+          region: "south",
+          multiStation: false,
+        },
+      };
+    } else {
+      return {
+        success: true,
+        data: {
+          name: "Miền Trung",
+          region: "central",
+          multiStation: true,
+          count: 1,
+        },
+      };
+    }
+  }
+
   // Kiểm tra đài đơn lẻ
   const station = findStationByAlias(stationText);
   if (station) {
@@ -316,6 +411,57 @@ function findStationByAlias(alias) {
 }
 
 /**
+ * Tìm đài phù hợp nhất dựa trên lịch xổ số hiện tại
+ */
+function findBestStationMatch(alias) {
+  // Tìm tất cả đài có alias trùng hoặc gần giống
+  const matchingStations = defaultStations.filter(
+    (s) =>
+      s.name.toLowerCase() === alias ||
+      s.aliases.some((a) => a === alias || a.includes(alias))
+  );
+
+  if (matchingStations.length === 0) return null;
+  if (matchingStations.length === 1) return matchingStations[0];
+
+  // Ưu tiên đài xổ trong ngày
+  const currentDay = new Date().getDay();
+  const dayString = getDayStringFromNumber(currentDay);
+
+  const stationsToday = matchingStations.filter((station) => {
+    if (Array.isArray(station.schedule)) {
+      return station.schedule.some((sch) => sch.day === dayString);
+    }
+    return (
+      station.schedule?.day === dayString || station.schedule?.day === "daily"
+    );
+  });
+
+  if (stationsToday.length > 0) {
+    return stationsToday[0];
+  }
+
+  // Nếu không có đài xổ hôm nay, trả về đài đầu tiên tìm thấy
+  return matchingStations[0];
+}
+
+/**
+ * Chuyển đổi số ngày sang chuỗi
+ */
+function getDayStringFromNumber(dayNumber) {
+  const days = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  return days[dayNumber];
+}
+
+/**
  * Phân tích dòng cược
  * @param {string} line - Dòng cược
  * @param {object} station - Thông tin đài
@@ -333,6 +479,37 @@ function parseBetLine(line, station) {
   try {
     // Chuẩn hóa dấu phân cách
     let normalizedLine = line.replace(/[,\- ]/g, ".");
+
+    // Xử lý các trường hợp đặc biệt số không có dấu phân cách
+    // Ví dụ: 304050da1 -> 30.40.50da1
+    const noSeparatorMatch = normalizedLine.match(/(\d{4,}(?!\d*[a-z]))/g);
+    if (noSeparatorMatch) {
+      for (const match of noSeparatorMatch) {
+        // Phân tích thành từng cụm 2-3 chữ số
+        const chunkSize = match.length % 2 === 0 ? 2 : 3;
+        const chunks = [];
+
+        for (let i = 0; i < match.length; i += chunkSize) {
+          chunks.push(match.substr(i, chunkSize));
+        }
+
+        const replaced = chunks.join(".");
+        normalizedLine = normalizedLine.replace(match, replaced);
+      }
+    }
+
+    // Xử lý các trường hợp kết hợp nhiều kiểu cược
+    // Ví dụ: 93.97da0,5.dd5 -> 93.97da0,5dd5
+    // Trước tiên, tìm các mẫu kiểu cược liên tiếp
+    const combinedBetTypes = normalizedLine.match(
+      /([a-z]+\d+(?:[,.]\d+)?)[.,]([a-z]+\d+(?:[,.]\d+)?)/g
+    );
+    if (combinedBetTypes) {
+      for (const combined of combinedBetTypes) {
+        const fixed = combined.replace(/[.,]/, "");
+        normalizedLine = normalizedLine.replace(combined, fixed);
+      }
+    }
 
     // Phân tích
     const numbers = [];
@@ -466,6 +643,40 @@ function parseBetLine(line, station) {
     // Đảm bảo không có số trùng lặp
     result.numbers = Array.from(new Set(numbers));
 
+    // Xử lý trường hợp đặc biệt - nhiều kiểu cược trong một dòng
+    // Ví dụ: 93.97da0,5dd5 (vừa đá vừa đầu đuôi)
+    const multipleBetTypesMatch = normalizedLine.match(
+      /([a-z]+\d+(?:[,.]\d+)?)([a-z]+\d+(?:[,.]\d+)?)/i
+    );
+    if (multipleBetTypesMatch && result.betType) {
+      const fullMatch = multipleBetTypesMatch[0];
+      const firstBetType = multipleBetTypesMatch[1];
+      const secondBetType = multipleBetTypesMatch[2];
+
+      // Nếu đã nhận diện được kiểu cược đầu tiên
+      if (result.betType && result.amount > 0) {
+        // Thử phân tích kiểu cược thứ hai
+        const secondBetTypeMatch = secondBetType.match(
+          /([a-z]+)(\d+(?:[,.]\d+)?)/i
+        );
+        if (secondBetTypeMatch) {
+          const secondBetTypeName = secondBetTypeMatch[1].toLowerCase();
+          const secondBetTypeAmount = secondBetTypeMatch[2];
+
+          const secondBetType = identifyBetType(secondBetTypeName);
+          if (secondBetType) {
+            // Tạo dòng cược thứ hai
+            result.additionalBetTypes = result.additionalBetTypes || [];
+            result.additionalBetTypes.push({
+              betType: secondBetType,
+              amount: parseAmount(secondBetTypeAmount),
+              numbers: [...result.numbers], // Sử dụng cùng số cược
+            });
+          }
+        }
+      }
+    }
+
     // Kiểm tra tính hợp lệ
     result.valid =
       result.numbers.length > 0 && result.betType && result.amount > 0;
@@ -534,6 +745,11 @@ function parseAmount(amountString) {
  * Xác định kiểu cược từ chuỗi
  */
 function identifyBetType(betTypeString) {
+  // Xử lý trường hợp đặc biệt "xcdui" -> "xcduoi"
+  if (betTypeString.toLowerCase() === "xcdui") {
+    betTypeString = "xcduoi";
+  }
+
   const normalized = betTypeString.toLowerCase();
 
   for (const betType of defaultBetTypes) {
@@ -546,6 +762,33 @@ function identifyBetType(betTypeString) {
         };
       }
     }
+  }
+
+  // Tìm kiểu cược gần giống nhất
+  let bestMatch = null;
+  let highestScore = 0;
+
+  for (const betType of defaultBetTypes) {
+    for (const alias of betType.aliases) {
+      if (normalized.startsWith(alias) || alias.startsWith(normalized)) {
+        const score =
+          Math.min(normalized.length, alias.length) /
+          Math.max(normalized.length, alias.length);
+        if (score > highestScore) {
+          highestScore = score;
+          bestMatch = {
+            id: betType.name,
+            name: betType.name,
+            alias: alias,
+          };
+        }
+      }
+    }
+  }
+
+  // Nếu có kết quả gần giống, trả về
+  if (bestMatch && highestScore > 0.7) {
+    return bestMatch;
   }
 
   return null;

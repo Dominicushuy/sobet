@@ -42,13 +42,13 @@ export function calculateStake(parsedResult, userSettings = {}) {
       // Lấy thông tin về đài
       const stationInfo = getStationInfo(line, userSettings);
 
-      // Lấy thông tin về kiểu cược
+      // Lấy thông tin về kiểu cược chính
       const betTypeInfo = getBetTypeInfo(line, userSettings);
 
       // Lấy số lượng số và tổ hợp
       const numberInfo = getNumberInfo(line, betTypeInfo);
 
-      // Tính tiền đặt cược cho dòng này
+      // Tính tiền đặt cược cho dòng này với kiểu cược chính
       const lineStake = calculateLineStake(
         line,
         stationInfo,
@@ -64,6 +64,48 @@ export function calculateStake(parsedResult, userSettings = {}) {
       lineStake.formula = `(${lineStake.formula}) × ${betMultiplier}`;
 
       totalStake += lineStake.stake;
+
+      // Tính tiền cược cho các kiểu cược bổ sung nếu có
+      if (line.additionalBetTypes && line.additionalBetTypes.length > 0) {
+        lineStake.additionalStakes = [];
+
+        for (const additionalBet of line.additionalBetTypes) {
+          // Tạo phiên bản sao lưu của dòng để tính riêng
+          const tempLine = {
+            ...line,
+            betType: additionalBet.betType,
+            amount: additionalBet.amount,
+            numbers: additionalBet.numbers,
+          };
+
+          // Lấy thông tin kiểu cược bổ sung
+          const additionalBetTypeInfo = getBetTypeInfo(tempLine, userSettings);
+          const additionalNumberInfo = getNumberInfo(
+            tempLine,
+            additionalBetTypeInfo
+          );
+
+          // Tính tiền đặt cược cho kiểu cược bổ sung
+          const additionalLineStake = calculateLineStake(
+            tempLine,
+            stationInfo,
+            additionalBetTypeInfo,
+            additionalNumberInfo
+          );
+
+          // Tính tiền cược với hệ số nhân
+          const additionalOriginalStake = additionalLineStake.stake;
+          additionalLineStake.stake = additionalOriginalStake * betMultiplier;
+          additionalLineStake.originalStake = additionalOriginalStake;
+          additionalLineStake.betMultiplier = betMultiplier;
+          additionalLineStake.formula = `(${additionalLineStake.formula}) × ${betMultiplier}`;
+          additionalLineStake.betTypeAlias = additionalBetTypeInfo.alias;
+
+          totalStake += additionalLineStake.stake;
+          lineStake.additionalStakes.push(additionalLineStake);
+        }
+      }
+
       details.push({
         lineIndex: i,
         originalLine: line.originalLine,
@@ -202,6 +244,20 @@ function getBetTypeInfo(line, userSettings) {
       } else if (digitCount === 4) {
         payoutRate = payoutRate.fourDigits || payoutRate["4 digits"] || 5500;
       }
+    }
+  } else {
+    // Kiểm tra cụ thể với xỉu chủ (Ba Càng)
+    if (betTypeAlias === "xc" || betTypeAlias === "x") {
+      if (digitCount === 3) {
+        payoutRate = 650; // Đảm bảo tiền đúng cho xỉu chủ
+      }
+    }
+
+    // Kiểm tra số chữ số cho các kiểu cược khác
+    if (digitCount === 3 && payoutRate === 75) {
+      payoutRate = 650; // Nếu là số 3 chữ số mà tỉ lệ mặc định là 75, điều chỉnh thành 650
+    } else if (digitCount === 4 && payoutRate === 75) {
+      payoutRate = 5500; // Nếu là số 4 chữ số, điều chỉnh tỉ lệ thành 5500
     }
   }
 
@@ -382,6 +438,7 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       betAmount,
       multiplier: stationInfo.multiplier,
       formula: `${stationInfo.count} × ${bridgeFactor} × ${betAmount} × ${stationInfo.multiplier}`,
+      betTypeAlias: betTypeAlias,
     };
   }
   // Kiểm tra nếu là kiểu đảo (permutation)
@@ -397,6 +454,7 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
     const stake =
       stationInfo.count *
       totalPermutations *
+      numberInfo.combinationCount *
       betAmount *
       stationInfo.multiplier;
 
@@ -408,7 +466,8 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       combinationCount: numberInfo.combinationCount,
       betAmount,
       multiplier: stationInfo.multiplier,
-      formula: `${stationInfo.count} × ${totalPermutations} × ${betAmount} × ${stationInfo.multiplier}`,
+      formula: `${stationInfo.count} × ${totalPermutations} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
+      betTypeAlias: betTypeAlias,
     };
   }
   // Kiểu xiên
@@ -428,6 +487,7 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       betAmount,
       multiplier: stationInfo.multiplier,
       formula: `${stationInfo.count} × ${betAmount} × ${stationInfo.multiplier}`,
+      betTypeAlias: betTypeAlias,
     };
   }
   // Trường hợp thông thường
@@ -448,6 +508,7 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       betAmount,
       multiplier: stationInfo.multiplier,
       formula: `${stationInfo.count} × ${numberInfo.count} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
+      betTypeAlias: betTypeAlias,
     };
   }
 }
@@ -515,6 +576,37 @@ export function quickCalculateStake(parsedResult, userSettings = {}) {
 
       // Áp dụng hệ số nhân của người dùng
       totalStake += lineStake.stake * betMultiplier;
+
+      // Tính tiền cược cho các kiểu cược bổ sung nếu có
+      if (line.additionalBetTypes && line.additionalBetTypes.length > 0) {
+        for (const additionalBet of line.additionalBetTypes) {
+          // Tạo phiên bản sao lưu của dòng để tính riêng
+          const tempLine = {
+            ...line,
+            betType: additionalBet.betType,
+            amount: additionalBet.amount,
+            numbers: additionalBet.numbers,
+          };
+
+          // Lấy thông tin kiểu cược bổ sung
+          const additionalBetTypeInfo = getBetTypeInfo(tempLine, userSettings);
+          const additionalNumberInfo = getNumberInfo(
+            tempLine,
+            additionalBetTypeInfo
+          );
+
+          // Tính tiền đặt cược cho kiểu cược bổ sung
+          const additionalLineStake = calculateLineStake(
+            tempLine,
+            stationInfo,
+            additionalBetTypeInfo,
+            additionalNumberInfo
+          );
+
+          // Áp dụng hệ số nhân của người dùng
+          totalStake += additionalLineStake.stake * betMultiplier;
+        }
+      }
     }
   });
 

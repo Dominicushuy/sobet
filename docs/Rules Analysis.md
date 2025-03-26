@@ -93,7 +93,7 @@ Miền Bắc mỗi ngày chỉ xổ 1 đài, bao gồm các đài: Hà Nội, Qu
 
 ### Lưu ý
 
-**Lưu ý:** Đối với đài Đà Nẵng và Đắk Nông cùng có ký hiệu viết tắt là "dn". Để tránh nhầm lẫn, đặc biệt trong ngày thứ Tư khi có cả Đà Nẵng và Đồng Nai (cũng viết tắt là "dn"), nên sử dụng cách viết đầy đủ hơn như "dnang" cho Đà Nẵng, "dnong" cho Đắk Nông, "dnai" cho Đồng Nai.
+**Lưu ý:** Đối với đài Đà Nẵng và Đắk Nông cùng có ký hiệu viết tắt là "dn". Để tránh nhầm lẫn, đặc biệt trong ngày thứ Tư khi có cả Đà Nẵng và Đồng Nai (cũng viết tắt là "dn"), nên sử dụng cách viết đầy đủ hơn như "dnang" cho Đà Nẵng, "dnai" cho Đồng Nai.
 
 ## Cơ cấu giải thưởng
 
