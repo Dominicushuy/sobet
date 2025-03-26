@@ -1,11 +1,15 @@
-// src/services/api/lotteryResultService.js
 import axios from 'axios'
+import fs from 'fs'
+import { JSDOM } from 'jsdom'
+import path from 'path'
 
-// Cấu hình API
-const API_CONFIG = {
-  baseUrl: 'https://www.minhngoc.net.vn/ket-qua-xo-so',
-  regions: ['mien-bac', 'mien-trung', 'mien-nam'],
-  days: [
+// Cấu hình chi tiết và mở rộng
+const CONFIG = {
+  // Cấu hình miền
+  mien: ['mien-bac', 'mien-trung', 'mien-nam'],
+
+  // Ngày trong tuần
+  ngay: [
     'thu-hai',
     'thu-ba',
     'thu-tu',
@@ -14,54 +18,53 @@ const API_CONFIG = {
     'thu-bay',
     'chu-nhat',
   ],
-  delayBetweenRequests: 1000,
+
+  baseUrl: 'https://www.minhngoc.net.vn/ket-qua-xo-so',
+  outputFile: 'data/ketqua_xoso.json',
+  delayBetweenRequests: 1000, // ms
   maxRetries: 3,
 }
 
-// Ánh xạ từ tên miền sang region trong database
-const REGION_MAPPING = {
-  'mien-bac': 'north',
-  'mien-trung': 'central',
-  'mien-nam': 'south',
-}
-
-// Ánh xạ từ thứ sang ngày trong tuần
-const DAY_MAPPING = {
-  'thu-hai': 'monday',
-  'thu-ba': 'tuesday',
-  'thu-tu': 'wednesday',
-  'thu-nam': 'thursday',
-  'thu-sau': 'friday',
-  'thu-bay': 'saturday',
-  'chu-nhat': 'sunday',
+// Chỉ lấy một số miền và ngày để kiểm thử
+const DEBUG = {
+  enable: false,
+  mien: ['mien-bac'],
+  ngay: ['thu-hai', 'thu-ba'],
 }
 
 /**
  * Tạo thời gian chờ giữa các request
+ * @param {number} ms - Thời gian chờ tính bằng milliseconds
+ * @returns {Promise} Promise sẽ được resolve sau khoảng thời gian chờ
  */
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * Lấy HTML từ URL với cơ chế thử lại
+ * @param {string} url - URL cần lấy dữ liệu
+ * @param {number} retries - Số lần thử lại tối đa
+ * @returns {Promise<string>} HTML content
  */
-async function fetchWithRetry(url, retries = API_CONFIG.maxRetries) {
+async function fetchWithRetry(url, retries = CONFIG.maxRetries) {
   try {
     const response = await axios.get(url)
     return response.data
   } catch (error) {
     if (retries <= 0) throw error
     console.log(
-      `Thử lại (${API_CONFIG.maxRetries - retries + 1}/${
-        API_CONFIG.maxRetries
+      `Thử lại (${CONFIG.maxRetries - retries + 1}/${
+        CONFIG.maxRetries
       }): ${url}`
     )
-    await delay(API_CONFIG.delayBetweenRequests)
+    await delay(CONFIG.delayBetweenRequests)
     return fetchWithRetry(url, retries - 1)
   }
 }
 
 /**
  * Tạo chuỗi ngày chuẩn từ dữ liệu thô
+ * @param {string} rawDate - Chuỗi ngày thô (VD: "17/03/2025")
+ * @returns {string} Chuỗi ngày định dạng chuẩn (VD: "2025-03-17")
  */
 function formatDate(rawDate) {
   if (!rawDate) return ''
@@ -74,14 +77,10 @@ function formatDate(rawDate) {
 
 /**
  * Trích xuất dữ liệu xổ số miền Bắc
+ * @param {Element} boxKqxs - Element chứa kết quả xổ số miền Bắc
+ * @returns {Object} Dữ liệu xổ số đã được cấu trúc
  */
-function extractMienBacData(document) {
-  const boxKqxs = document.querySelector('.box_kqxs')
-  if (!boxKqxs) {
-    console.log('Không tìm thấy kết quả xổ số miền Bắc')
-    return null
-  }
-
+function extractMienBacData(boxKqxs) {
   // Lấy thông tin tỉnh thành từ tiêu đề
   const titleElement = boxKqxs.querySelector('.title')
   let tenTinh = ''
@@ -153,24 +152,20 @@ function extractMienBacData(document) {
 
 /**
  * Trích xuất dữ liệu xổ số miền Nam, Trung
+ * @param {Element} table - Element chứa kết quả xổ số
+ * @returns {Object} Dữ liệu xổ số đã được cấu trúc
  */
-function extractMienNamTrungData(document) {
-  const targetTable = document.querySelector('table.bkqmiennam')
-  if (!targetTable) {
-    console.log('Không tìm thấy bảng kết quả xổ số miền Nam/Trung')
-    return null
-  }
-
+function extractMienNamTrungData(table) {
   // Lấy thông tin ngày và thứ
-  const thuElement = targetTable.querySelector('.thu a')
+  const thuElement = table.querySelector('.thu a')
   const thu = thuElement ? thuElement.textContent.trim() : ''
 
-  const ngayElement = targetTable.querySelector('.ngay a')
+  const ngayElement = table.querySelector('.ngay a')
   const rawDate = ngayElement ? ngayElement.textContent.trim() : ''
   const ngay = formatDate(rawDate)
 
   // Xử lý cho miền Nam và miền Trung
-  const provinceTableNodes = targetTable.querySelectorAll('table.rightcl')
+  const provinceTableNodes = table.querySelectorAll('table.rightcl')
   const danhSachTinh = []
 
   provinceTableNodes.forEach((provinceTable) => {
@@ -226,57 +221,71 @@ function extractMienNamTrungData(document) {
 
 /**
  * Lấy dữ liệu xổ số cho một ngày và miền cụ thể
+ * @param {string} mien - Tên miền (mien-bac, mien-trung, mien-nam)
+ * @param {string} ngay - Tên ngày (thu-hai, thu-ba, ...)
+ * @returns {Promise<Object>} Dữ liệu xổ số
  */
-async function fetchLotteryResultByRegionAndDay(region, day) {
+async function layDuLieuNgay(mien, ngay) {
   try {
-    console.log(`Đang lấy dữ liệu ${region} - ${day}...`)
-    const url = `${API_CONFIG.baseUrl}/${region}/${day}.html`
+    console.log(`Đang lấy dữ liệu ${mien} - ${ngay}...`)
+    const url = `${CONFIG.baseUrl}/${mien}/${ngay}.html`
 
     // Lấy HTML từ trang web
     const html = await fetchWithRetry(url)
 
-    // Tạo DOM từ HTML
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(html, 'text/html')
+    // Phân tích HTML
+    const dom = new JSDOM(html)
+    const document = dom.window.document
 
-    // Trích xuất dữ liệu theo miền
-    let result
-    if (region === 'mien-bac') {
-      result = extractMienBacData(doc)
+    let duLieu
+    if (mien === 'mien-bac') {
+      const boxKqxs = document.querySelector('.box_kqxs')
+      if (!boxKqxs) {
+        console.log(`Không tìm thấy kết quả xổ số cho ${mien} - ${ngay}`)
+        return null
+      }
+      duLieu = extractMienBacData(boxKqxs)
     } else {
-      result = extractMienNamTrungData(doc)
+      const targetTable = document.querySelector('table.bkqmiennam')
+      if (!targetTable) {
+        console.log(`Không tìm thấy bảng kết quả xổ số cho ${mien} - ${ngay}`)
+        return null
+      }
+      duLieu = extractMienNamTrungData(targetTable)
     }
 
-    return result
+    return duLieu
   } catch (error) {
-    console.error(`Lỗi khi lấy dữ liệu ${region} - ${day}:`, error)
+    console.error(`Lỗi khi lấy dữ liệu ${mien} - ${ngay}:`, error.message)
     return null
   }
 }
 
 /**
- * Lấy dữ liệu kết quả xổ số từ API
+ * Lấy dữ liệu xổ số cho tất cả các miền
  */
-export async function fetchLotteryResults(targetDate = null) {
+async function layDuLieuXoSo() {
   try {
-    // Xác định ngày cần lấy dữ liệu
-    let date = targetDate
+    console.log('Bắt đầu lấy dữ liệu xổ số...')
 
-    if (!date) {
-      const now = new Date()
-      const currentHour = now.getHours()
+    // Lấy danh sách miền từ cấu hình debug hoặc cấu hình chính
+    const danhSachMien = DEBUG.enable ? DEBUG.mien : CONFIG.mien
 
-      // Quyết định lấy dữ liệu của ngày hiện tại hay ngày hôm qua
-      if (currentHour >= 19) {
-        date = now
-      } else {
-        date = new Date(now)
-        date.setDate(date.getDate() - 1)
-      }
+    // Xác định thứ cần lấy dữ liệu dựa trên thời gian hiện tại
+    const now = new Date()
+    const currentHour = now.getHours()
+
+    // Quyết định lấy dữ liệu của ngày hiện tại hay ngày hôm qua
+    let targetDate
+    if (currentHour >= 19) {
+      targetDate = now
+    } else {
+      targetDate = new Date(now)
+      targetDate.setDate(targetDate.getDate() - 1)
     }
 
     // Xác định thứ của ngày cần lấy dữ liệu
-    const dayOfWeek = date.getDay()
+    const dayOfWeek = targetDate.getDay()
     const daysMapping = [
       'chu-nhat',
       'thu-hai',
@@ -290,7 +299,7 @@ export async function fetchLotteryResults(targetDate = null) {
 
     console.log(
       `Lấy dữ liệu cho thứ: ${targetDayOfWeek} (${
-        date.toISOString().split('T')[0]
+        targetDate.toISOString().split('T')[0]
       })`
     )
 
@@ -298,123 +307,48 @@ export async function fetchLotteryResults(targetDate = null) {
     const ketQuaXoSo = {
       metadata: {
         version: '1.1',
-        nguon: API_CONFIG.baseUrl,
+        nguon: CONFIG.baseUrl,
         ngayLayDuLieu: new Date().toISOString(),
-        tongSoMien: API_CONFIG.regions.length,
+        tongSoMien: danhSachMien.length,
         tongSoNgay: 1,
         thuDaLay: targetDayOfWeek,
-        ngayDaLay: date.toISOString().split('T')[0],
+        ngayDaLay: targetDate.toISOString().split('T')[0],
         quyTacApDung: 'Lấy dữ liệu theo thời gian cụ thể của từng miền',
       },
-      duLieu: {
-        [targetDayOfWeek]: {},
-      },
+      duLieu: {},
     }
 
+    // Tạo cấu trúc dữ liệu cho ngày cần lấy
+    ketQuaXoSo.duLieu[targetDayOfWeek] = {}
+
     // Duyệt qua từng miền
-    for (const mien of API_CONFIG.regions) {
+    for (const mien of danhSachMien) {
       // Lấy dữ liệu
-      const duLieu = await fetchLotteryResultByRegionAndDay(
-        mien,
-        targetDayOfWeek
-      )
+      const duLieu = await layDuLieuNgay(mien, targetDayOfWeek)
       ketQuaXoSo.duLieu[targetDayOfWeek][mien] = duLieu
 
       // Đợi giữa các request
-      await delay(API_CONFIG.delayBetweenRequests)
+      await delay(CONFIG.delayBetweenRequests)
     }
 
+    // Tạo thư mục output nếu chưa tồn tại
+    const outputDir = path.dirname(CONFIG.outputFile)
+    if (outputDir !== '.' && !fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true })
+    }
+
+    // Lưu dữ liệu vào file JSON
+    fs.writeFileSync(CONFIG.outputFile, JSON.stringify(ketQuaXoSo, null, 2))
+
+    console.log(`Đã lưu dữ liệu vào file ${CONFIG.outputFile}`)
     return ketQuaXoSo
   } catch (error) {
-    console.error('Lỗi khi lấy dữ liệu xổ số:', error)
+    console.error('Đã xảy ra lỗi chung:', error.message)
     throw error
   }
 }
 
-/**
- * Kiểm tra xem đã có kết quả xổ số cho ngày cụ thể chưa
- */
-export async function hasLotteryResultForDate(db, date) {
-  // Reset time về 00:00:00 để so sánh chính xác ngày
-  const targetDate = new Date(date)
-  targetDate.setHours(0, 0, 0, 0)
-
-  // Tạo ngày tiếp theo
-  const nextDay = new Date(targetDate)
-  nextDay.setDate(nextDay.getDate() + 1)
-
-  // Kiểm tra trong database
-  const count = await db.lotteryResults
-    .where('date')
-    .between(targetDate, nextDay)
-    .count()
-
-  return count > 0
-}
-
-/**
- * Chuyển đổi dữ liệu JSON từ API sang định dạng phù hợp với database
- */
-export function convertLotteryResults(rawData) {
-  const results = []
-  const data = rawData.duLieu
-  const dayOfWeek = rawData.metadata.thuDaLay
-  const date = rawData.metadata.ngayDaLay
-
-  // Duyệt qua các miền
-  Object.keys(data[dayOfWeek]).forEach((regionKey) => {
-    const regionData = data[dayOfWeek][regionKey]
-    if (!regionData) return // Skip if no data for this region
-
-    const dbRegion = REGION_MAPPING[regionKey]
-
-    if (regionKey === 'mien-bac') {
-      // Xử lý miền Bắc
-      results.push({
-        region: dbRegion,
-        station: regionData.tinh || 'Miền Bắc',
-        date: new Date(regionData.ngay),
-        dayOfWeek: DAY_MAPPING[dayOfWeek],
-        results: {
-          special: regionData.ketQua.giaiDacBiet,
-          first: regionData.ketQua.giaiNhat,
-          second: regionData.ketQua.giaiNhi,
-          third: regionData.ketQua.giaiBa,
-          fourth: regionData.ketQua.giaiTu,
-          fifth: regionData.ketQua.giaiNam,
-          sixth: regionData.ketQua.giaiSau,
-          seventh: regionData.ketQua.giaiBay,
-        },
-        rawData: regionData,
-        importedAt: new Date(),
-      })
-    } else {
-      // Xử lý miền Nam và miền Trung
-      if (regionData.cacTinh && Array.isArray(regionData.cacTinh)) {
-        regionData.cacTinh.forEach((tinhData) => {
-          results.push({
-            region: dbRegion,
-            station: tinhData.tinh,
-            date: new Date(regionData.ngay),
-            dayOfWeek: DAY_MAPPING[dayOfWeek],
-            results: {
-              special: tinhData.ketQua.giaiDacBiet,
-              first: tinhData.ketQua.giaiNhat,
-              second: tinhData.ketQua.giaiNhi,
-              third: tinhData.ketQua.giaiBa,
-              fourth: tinhData.ketQua.giaiTu,
-              fifth: tinhData.ketQua.giaiNam,
-              sixth: tinhData.ketQua.giaiSau,
-              seventh: tinhData.ketQua.giaiBay,
-              eighth: tinhData.ketQua.giaiTam,
-            },
-            rawData: tinhData,
-            importedAt: new Date(),
-          })
-        })
-      }
-    }
-  })
-
-  return results
-}
+// Gọi hàm chính
+layDuLieuXoSo().catch((error) => {
+  console.error('Lỗi khi lấy dữ liệu xổ số:', error)
+})
