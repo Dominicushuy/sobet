@@ -574,12 +574,30 @@ function findMatchingResults(line, lotteryResults) {
   }
 
   // Xử lý đài đơn lẻ
-  return lotteryResults.filter((result) => {
-    if (result.station === line.station.name) return true
-    const station = defaultStations.find((s) => s.name === line.station.name)
-    if (station && station.aliases.includes(result.station)) return true
-    return false
+  const stationName = line.station.name
+  const matchedResults = lotteryResults.filter((result) => {
+    return result.station === stationName
   })
+
+  // Nếu không tìm thấy kết quả trực tiếp, tìm qua alias
+  if (matchedResults.length === 0) {
+    const stationInfo = defaultStations.find((s) => s.name === stationName)
+    if (stationInfo) {
+      return lotteryResults.filter((result) => {
+        const resultStationInfo = defaultStations.find(
+          (s) => s.name === result.station
+        )
+        if (!resultStationInfo) return false
+
+        // Kiểm tra xem alias có trùng không
+        return stationInfo.aliases.some((alias) =>
+          resultStationInfo.aliases.includes(alias)
+        )
+      })
+    }
+  }
+
+  return matchedResults
 }
 
 /**

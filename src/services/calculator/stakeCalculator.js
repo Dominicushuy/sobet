@@ -1,10 +1,4 @@
-// src/services/calculator/stakeCalculator.js
-import { REGIONS } from '@/config/constants'
-import {
-  defaultStations,
-  defaultBetTypes,
-  defaultNumberCombinations,
-} from '@/config/defaults'
+import { defaultBetTypes } from '@/config/defaults'
 
 /**
  * Tính toán tiền đặt cược dựa trên mã cược đã phân tích
