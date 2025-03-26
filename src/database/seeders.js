@@ -6,6 +6,11 @@ import {
   defaultNumberCombinations,
 } from '../config/defaults'
 
+// Hàm hash đơn giản (trong thực tế nên sử dụng bcrypt hoặc argon2)
+function simpleHash(password) {
+  return `hashed_${password}_${Date.now()}` // Đây chỉ là mô phỏng, không sử dụng trong thực tế
+}
+
 export async function seedDatabase() {
   // Kiểm tra xem database đã được seed chưa
   const isSeeded = await db.settings.get('isSeeded')
@@ -20,7 +25,7 @@ export async function seedDatabase() {
     // Tạo admin mặc định
     const adminId = await db.users.add({
       username: 'admin',
-      password: 'admin123', // Trong thực tế nên hash password
+      password: simpleHash('admin123'), // Hash password
       role: 'admin',
       isActive: true,
       priceMultiplier: 0.76, // Giá nhân mặc định
@@ -31,7 +36,7 @@ export async function seedDatabase() {
     // Seed một user thử nghiệm
     const testUserId = await db.users.add({
       username: 'testuser',
-      password: 'test123', // Trong thực tế nên hash password
+      password: simpleHash('test123'), // Hash password
       role: 'user',
       isActive: true,
       priceMultiplier: 0.76, // Giá nhân mặc định

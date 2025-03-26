@@ -8,7 +8,8 @@ export async function setupMigrations() {
     stations: '++id, name, region, aliases, isActive, [region+name]',
     betTypes: '++id, name, aliases, isActive',
     numberCombinations: '++id, name, aliases, isActive',
-    betCodes: '++id, userId, content, createdAt, status, [userId+createdAt]',
+    betCodes:
+      '++id, userId, content, parsedContent, stakeAmount, potentialWinning, createdAt, updatedAt, status, errors, [userId+createdAt]',
     lotteryResults:
       '++id, region, station, date, results, [region+station+date]',
     verificationResults:

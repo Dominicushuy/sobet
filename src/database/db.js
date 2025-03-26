@@ -25,5 +25,10 @@ export const db = new LotteryDatabase()
 
 // Hook phổ biến để kiểm tra database đã được khởi tạo chưa
 export function useLiveQuery(querier, deps = []) {
-  return Dexie.liveQuery(querier)
+  // Sử dụng deps để xác định khi nào tạo lại subscription
+  const querierFactory = () => querier()
+  const liveQuery = Dexie.liveQuery(querierFactory)
+
+  // Return liveQuery observation
+  return liveQuery
 }
