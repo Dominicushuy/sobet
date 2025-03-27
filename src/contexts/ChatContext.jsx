@@ -1,3 +1,4 @@
+// src/contexts/ChatContext.jsx
 import React, {
   createContext,
   useState,
@@ -7,7 +8,8 @@ import React, {
 } from 'react'
 import { parseBetCode } from '../services/betCodeParser/parser'
 import { detectErrors } from '../services/betCodeParser/errorDetector'
-import { suggestFixes } from '../services/betCodeParser/errorFixer'
+import { suggestFixes, fixBetCode } from '../services/betCodeParser/errorFixer'
+import { formatBetCode } from '../services/betCodeParser/formatter'
 import { calculateStake } from '../services/calculator/stakeCalculator'
 import { calculatePotentialPrize } from '../services/calculator/prizeCalculator'
 import { useBetCode } from './BetCodeContext'
@@ -78,11 +80,14 @@ export function ChatProvider({ children }) {
       // Short delay to simulate processing
       await new Promise((resolve) => setTimeout(resolve, 500))
 
+      // Format the bet code first for better parsing
+      const formattedBetCode = formatBetCode(text)
+
       // Parse the bet code
-      const parseResult = parseBetCode(text)
+      const parseResult = parseBetCode(formattedBetCode)
 
       // Detect any errors
-      const errorResult = detectErrors(text, parseResult)
+      const errorResult = detectErrors(formattedBetCode, parseResult)
 
       if (parseResult.success && !errorResult.hasErrors) {
         // Calculate stake and potential prize
@@ -95,14 +100,28 @@ export function ChatProvider({ children }) {
           : 0
 
         // Valid bet code
-        addMessage('Mã cược hợp lệ! Đã thêm vào danh sách mã cược.', 'bot', {
-          betCodeInfo: {
-            station: parseResult.station.name,
-            lineCount: parseResult.lines.length,
-            totalStake,
-            potentialWin: totalPotential,
-          },
-        })
+        addMessage(
+          `Mã cược hợp lệ! Đã thêm vào danh sách mã cược.${
+            formattedBetCode !== text
+              ? '\n\nMã cược đã được tối ưu định dạng.'
+              : ''
+          }`,
+          'bot',
+          {
+            betCodeInfo: {
+              station: parseResult.station.name,
+              lineCount: parseResult.lines.length,
+              totalStake,
+              potentialWin: totalPotential,
+              formattedCode:
+                formattedBetCode !== text ? formattedBetCode : null,
+            },
+            detailedCalculations: {
+              stakeDetails: stakeResult.details || [],
+              prizeDetails: prizeResult.details || [],
+            },
+          }
+        )
 
         // Add to draft codes
         if (parseResult.lines && parseResult.lines.length > 0) {
@@ -110,33 +129,96 @@ export function ChatProvider({ children }) {
             station: parseResult.station,
             lines: parseResult.lines,
             originalText: text,
+            formattedText: formattedBetCode !== text ? formattedBetCode : text,
             stakeAmount: totalStake,
             potentialWinning: totalPotential,
+            stakeDetails: stakeResult.details || [],
+            prizeDetails: prizeResult.details || [],
           })
         }
       } else {
         // Check if we have any fix suggestions
-        const fixSuggestions = suggestFixes(text, errorResult)
+        const fixSuggestions = suggestFixes(formattedBetCode, errorResult)
 
-        // Invalid bet code
-        const errorMessage =
-          errorResult.errors?.[0]?.message || 'Mã cược không hợp lệ'
-        const suggestion = fixSuggestions.hasSuggestions
-          ? fixSuggestions.suggestions[0]?.suggestion
-          : 'Vui lòng kiểm tra lại mã cược và thử lại.'
+        // Try to auto-fix the errors
+        const fixResult = fixBetCode(formattedBetCode, errorResult)
 
+        let responseMessage = 'Mã cược không đúng định dạng.'
+        let detailedErrors = []
+
+        // Format detailed error messages
+        if (errorResult.errors && errorResult.errors.length > 0) {
+          // Group errors by line if possible
+          const errorsByLine = {}
+
+          errorResult.errors.forEach((error) => {
+            const lineKey =
+              error.lineIndex !== undefined
+                ? `Dòng ${error.lineIndex + 1}`
+                : 'Chung'
+            if (!errorsByLine[lineKey]) {
+              errorsByLine[lineKey] = []
+            }
+            errorsByLine[lineKey].push(error)
+          })
+
+          // Format errors into a structured list
+          Object.entries(errorsByLine).forEach(([lineKey, errors]) => {
+            const lineErrors = {
+              line: lineKey,
+              errors: errors.map((error) => ({
+                message: error.message,
+                type: error.type,
+                suggestion:
+                  fixSuggestions.suggestions.find(
+                    (s) => s.message === error.message
+                  )?.suggestion || null,
+              })),
+            }
+            detailedErrors.push(lineErrors)
+          })
+
+          // Generate main error message
+          responseMessage = `Mã cược chưa đúng định dạng. ${errorResult.errors[0].message}`
+        }
+
+        // Add fix suggestion if available
+        let fixedCodeMessage = ''
+        if (fixResult.success) {
+          fixedCodeMessage =
+            '\n\nĐề xuất mã cược sửa lỗi:\n```\n' + fixResult.fixed + '\n```'
+
+          // Try parsing the fixed code
+          const fixedParseResult = parseBetCode(fixResult.fixed)
+          if (fixedParseResult.success) {
+            // Calculate fixed code details
+            const fixedStakeResult = calculateStake(fixedParseResult)
+            const fixedPrizeResult = calculatePotentialPrize(fixedParseResult)
+
+            fixedCodeMessage += '\n\nBạn có thể sao chép mã trên và thử lại.'
+          }
+        }
+
+        // Response with error details and fix suggestions
         addMessage(
-          'Mã cược không đúng định dạng. Vui lòng kiểm tra lại.',
+          `${responseMessage}\n\nVui lòng kiểm tra lại mã cược và thử lại.${fixedCodeMessage}`,
           'bot',
           {
-            error: errorMessage,
-            suggestion,
+            error: true,
+            detailedErrors,
+            original: text,
+            formatted: formattedBetCode !== text ? formattedBetCode : null,
+            fixedCode: fixResult.success ? fixResult.fixed : null,
+            changes: fixResult.success ? fixResult.changes : [],
+            suggestions: fixSuggestions.hasSuggestions
+              ? fixSuggestions.suggestions
+              : [],
           }
         )
       }
     } catch (error) {
       console.error('Error processing message:', error)
-      addMessage('Đã xảy ra lỗi khi xử lý mã cược.', 'bot')
+      addMessage('Đã xảy ra lỗi khi xử lý mã cược. ' + error.message, 'bot')
     } finally {
       setIsTyping(false)
     }
@@ -153,12 +235,20 @@ export function ChatProvider({ children }) {
     setMessages((prev) => [...prev, exampleMessage])
   }
 
+  // Add function to handle fix suggestion click
+  const applyFixSuggestion = (fixedCode) => {
+    if (fixedCode) {
+      addMessage(fixedCode, 'user')
+    }
+  }
+
   const value = {
     messages,
     isTyping,
     addMessage,
     clearMessages,
     addSystemExample,
+    applyFixSuggestion,
     messagesEndRef,
   }
 

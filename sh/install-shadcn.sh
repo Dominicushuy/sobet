@@ -20,6 +20,7 @@ COMPONENTS=(
     "sheet"  
     "popover"
     "tooltip"
+    "checkbox"
 )  
 
 # Cài đặt từng component  

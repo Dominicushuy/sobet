@@ -8,21 +8,21 @@
  * @returns {string} Chuỗi tiền tệ đã định dạng
  */
 export function formatMoney(value, useCommaDecimal = false, decimals = 0) {
-  if (value === null || value === undefined) return "0";
+  if (value === null || value === undefined) return '0'
 
   // Làm tròn số
-  const roundedValue = roundToDecimals(value, decimals);
+  const roundedValue = roundToDecimals(value, decimals)
 
   // Chuyển đổi thành định dạng hiển thị
   if (useCommaDecimal) {
     // Định dạng Châu Âu: 1.000,50
     return roundedValue
       .toFixed(decimals)
-      .replace(".", ",")
-      .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      .replace('.', ',')
+      .replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   } else {
     // Định dạng Mỹ/UK: 1,000.50
-    return roundedValue.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return roundedValue.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
   }
 }
 
@@ -33,8 +33,8 @@ export function formatMoney(value, useCommaDecimal = false, decimals = 0) {
  * @returns {number} Giá trị đã làm tròn
  */
 export function roundToDecimals(value, decimals = 2) {
-  const factor = Math.pow(10, decimals);
-  return Math.round(value * factor) / factor;
+  const factor = Math.pow(10, decimals)
+  return Math.round(value * factor) / factor
 }
 
 /**
@@ -43,24 +43,24 @@ export function roundToDecimals(value, decimals = 2) {
  * @returns {number} Giá trị số
  */
 export function parseMoneyString(moneyString) {
-  if (!moneyString) return 0;
+  if (!moneyString) return 0
 
   // Xác định định dạng (phẩy làm dấu thập phân hoặc chấm làm dấu thập phân)
-  const hasCommaDecimal = /\d,\d{1,2}$/.test(moneyString);
+  const hasCommaDecimal = /\d,\d{1,2}$/.test(moneyString)
 
   // Làm sạch chuỗi
-  let cleanedString = moneyString.replace(/[^\d,.]/g, "");
+  let cleanedString = moneyString.replace(/[^\d,.]/g, '')
 
   if (hasCommaDecimal) {
     // Định dạng Châu Âu: 1.000,50
-    cleanedString = cleanedString.replace(/\./g, ""); // Xóa dấu chấm phân cách hàng nghìn
-    cleanedString = cleanedString.replace(",", "."); // Đổi dấu phẩy thành dấu chấm thập phân
+    cleanedString = cleanedString.replace(/\./g, '') // Xóa dấu chấm phân cách hàng nghìn
+    cleanedString = cleanedString.replace(',', '.') // Đổi dấu phẩy thành dấu chấm thập phân
   } else {
     // Định dạng Mỹ/UK: 1,000.50
-    cleanedString = cleanedString.replace(/,/g, ""); // Xóa dấu phẩy phân cách hàng nghìn
+    cleanedString = cleanedString.replace(/,/g, '') // Xóa dấu phẩy phân cách hàng nghìn
   }
 
-  return parseFloat(cleanedString) || 0;
+  return parseFloat(cleanedString) || 0
 }
 
 /**
@@ -70,22 +70,22 @@ export function parseMoneyString(moneyString) {
  * @returns {string} Chuỗi ngày giờ đã định dạng
  */
 export function formatDateTime(date, includeTime = true) {
-  if (!date) return "";
+  if (!date) return ''
 
-  const d = new Date(date);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
+  const d = new Date(date)
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
 
   if (!includeTime) {
-    return `${day}/${month}/${year}`;
+    return `${day}/${month}/${year}`
   }
 
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  const seconds = String(d.getSeconds()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  const seconds = String(d.getSeconds()).padStart(2, '0')
 
-  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
 }
 
 /**
@@ -95,10 +95,10 @@ export function formatDateTime(date, includeTime = true) {
  * @returns {string} Chuỗi phần trăm đã định dạng
  */
 export function formatPercent(value, decimals = 2) {
-  if (value === null || value === undefined) return "0%";
+  if (value === null || value === undefined) return '0%'
 
-  const roundedValue = roundToDecimals(value, decimals);
-  return `${roundedValue.toFixed(decimals)}%`;
+  const roundedValue = roundToDecimals(value, decimals)
+  return `${roundedValue.toFixed(decimals)}%`
 }
 
 /**
@@ -111,7 +111,7 @@ export function toCamelCase(str) {
     .replace(/(?:^\w|[A-Z]|\b\w)/g, (letter, index) =>
       index === 0 ? letter.toLowerCase() : letter.toUpperCase()
     )
-    .replace(/\s+/g, "");
+    .replace(/\s+/g, '')
 }
 
 /**
@@ -123,7 +123,7 @@ export function toTitleCase(str) {
   return str.replace(
     /\w\S*/g,
     (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
-  );
+  )
 }
 
 /**
@@ -133,11 +133,11 @@ export function toTitleCase(str) {
  * @param {string} suffix - Hậu tố (mặc định: "...")
  * @returns {string} Chuỗi đã rút gọn
  */
-export function truncateString(str, maxLength, suffix = "...") {
-  if (!str) return "";
-  if (str.length <= maxLength) return str;
+export function truncateString(str, maxLength, suffix = '...') {
+  if (!str) return ''
+  if (str.length <= maxLength) return str
 
-  return str.substring(0, maxLength) + suffix;
+  return str.substring(0, maxLength) + suffix
 }
 
 /**
@@ -147,10 +147,10 @@ export function truncateString(str, maxLength, suffix = "...") {
  * @returns {string} Chuỗi đã định dạng
  */
 export function formatNumber(value, decimals = 0) {
-  if (value === null || value === undefined) return "0";
+  if (value === null || value === undefined) return '0'
 
-  const roundedValue = roundToDecimals(value, decimals);
-  return roundedValue.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const roundedValue = roundToDecimals(value, decimals)
+  return roundedValue.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
 export default {
@@ -163,4 +163,4 @@ export default {
   toTitleCase,
   truncateString,
   formatNumber,
-};
+}

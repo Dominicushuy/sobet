@@ -1,11 +1,13 @@
+// src/components/chat/ChatMessage.jsx
 import React from 'react'
 import { format } from 'date-fns'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Copy } from 'lucide-react'
+import { Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useChat } from '@/contexts/ChatContext'
 
 // Định dạng mã cược để hiển thị đẹp hơn
 const formatBetCode = (text) => {
@@ -33,12 +35,28 @@ const formatBetCode = (text) => {
 }
 
 const ChatMessage = ({ message }) => {
-  const { text, sender, timestamp, error, suggestion, betCodeInfo } = message
+  const {
+    text,
+    sender,
+    timestamp,
+    error,
+    detailedErrors,
+    betCodeInfo,
+    fixedCode,
+    suggestions,
+    formatted,
+  } = message
   const isUser = sender === 'user'
+  const { applyFixSuggestion } = useChat()
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text)
     toast.success('Đã sao chép nội dung!')
+  }
+
+  const handleApplyFix = () => {
+    applyFixSuggestion(fixedCode)
+    toast.success('Đã áp dụng sửa lỗi!')
   }
 
   return (
@@ -55,7 +73,7 @@ const ChatMessage = ({ message }) => {
 
       <Card
         className={cn(
-          'max-w-[80%]',
+          'max-w-[85%]',
           isUser ? 'bg-primary text-primary-foreground' : 'bg-card',
           error && !isUser ? 'border-destructive' : ''
         )}>
@@ -63,26 +81,81 @@ const ChatMessage = ({ message }) => {
           <div className='text-sm whitespace-pre-wrap'>
             {isUser ? formatBetCode(text) : text}
 
-            {error && !isUser && (
+            {/* Format optimization notice */}
+            {formatted && !isUser && (
+              <div className='mt-2 border-t pt-2'>
+                <Badge variant='outline' className='bg-blue-100 text-blue-800'>
+                  Tối ưu định dạng
+                </Badge>
+                <div className='mt-1 text-xs bg-blue-50 p-2 rounded'>
+                  <p>Mã cược đã được tối ưu định dạng:</p>
+                  <pre className='mt-1 bg-blue-100 p-2 rounded text-blue-800 overflow-x-auto'>
+                    {formatted}
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            {/* Error details */}
+            {detailedErrors && detailedErrors.length > 0 && !isUser && (
               <div className='mt-2 border-t pt-2'>
                 <Badge variant='destructive'>Lỗi</Badge>
-                <p className='mt-1'>{error}</p>
+                <div className='mt-1 space-y-2'>
+                  {detailedErrors.map((lineError, idx) => (
+                    <div key={idx} className='bg-red-50 p-2 rounded'>
+                      <p className='font-medium text-red-800'>
+                        {lineError.line}:
+                      </p>
+                      <ul className='list-disc pl-5 mt-1 space-y-1 text-xs'>
+                        {lineError.errors.map((err, errIdx) => (
+                          <li key={errIdx} className='text-red-700'>
+                            {err.message}
+                            {err.suggestion && (
+                              <p className='mt-0.5 text-red-600 italic'>
+                                Gợi ý: {err.suggestion}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
-            {suggestion && !isUser && (
-              <div className='mt-2 border-t border-dashed pt-2'>
-                <Badge variant='outline'>Gợi ý</Badge>
-                <p className='mt-1'>{suggestion}</p>
+            {/* Fix suggestions */}
+            {fixedCode && !isUser && (
+              <div className='mt-2 border-t pt-2'>
+                <Badge
+                  variant='outline'
+                  className='bg-green-100 text-green-800'>
+                  Đề xuất sửa lỗi
+                </Badge>
+                <div className='mt-1 text-xs bg-green-50 p-2 rounded'>
+                  <pre className='bg-green-100 p-2 rounded text-green-800 overflow-x-auto'>
+                    {fixedCode}
+                  </pre>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='mt-2 bg-green-200 text-green-800 hover:bg-green-300'
+                    onClick={handleApplyFix}>
+                    <Check className='h-3 w-3 mr-1' />
+                    Áp dụng sửa lỗi
+                  </Button>
+                </div>
               </div>
             )}
 
+            {/* Valid bet code info */}
             {betCodeInfo && !isUser && (
               <div className='mt-2 border-t pt-2'>
                 <Badge
                   variant='outline'
                   className='bg-green-100 text-green-800 hover:bg-green-200'>
-                  Hợp lệ
+                  <Check className='h-3 w-3 mr-1' />
+                  Mã cược hợp lệ
                 </Badge>
                 <div className='mt-1 grid grid-cols-2 gap-2 text-xs'>
                   <div>
@@ -102,6 +175,15 @@ const ChatMessage = ({ message }) => {
                     {betCodeInfo.potentialWin.toLocaleString()}đ
                   </div>
                 </div>
+
+                {betCodeInfo.formattedCode && (
+                  <div className='mt-2 text-xs bg-green-50 p-2 rounded'>
+                    <p>Mã cược đã được tối ưu định dạng:</p>
+                    <pre className='mt-1 bg-green-100 p-2 rounded text-green-800 overflow-x-auto'>
+                      {betCodeInfo.formattedCode}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
           </div>
