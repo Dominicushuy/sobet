@@ -400,40 +400,120 @@ export function ChatProvider({ children }) {
           )
         } else {
           // KHÔNG CÓ TRƯỜNG HỢP ĐẶC BIỆT -> XỬ LÝ BÌNH THƯỜNG
-          addMessage(
-            `Mã cược hợp lệ! Đã thêm vào danh sách mã cược.${
-              formattedBetCode !== text
-                ? '\n\nMã cược đã được tối ưu định dạng.'
-                : ''
-            }`,
-            'bot',
-            {
-              betCodeInfo: {
-                station: parseResult.station.name,
-                lineCount: parseResult.lines.length,
-                totalStake,
-                potentialWin: totalPotential,
-                formattedCode:
-                  formattedBetCode !== text ? formattedBetCode : null,
-              },
-              detailedCalculations: {
-                stakeDetails: stakeResult.details || [],
-                prizeDetails: prizeResult.details || [],
-              },
-            }
-          )
 
-          // Add to draft codes
-          addDraftCode({
-            station: parseResult.station,
-            lines: parseResult.lines,
-            originalText: text,
-            formattedText: formattedBetCode !== text ? formattedBetCode : text,
-            stakeAmount: totalStake,
-            potentialWinning: totalPotential,
-            stakeDetails: stakeResult.details || [],
-            prizeDetails: prizeResult.details || [],
-          })
+          // THAY ĐỔI: Split multi-line bet codes into individual bet codes
+          if (parseResult.lines.length > 1) {
+            // Multiple lines - split into individual bet codes
+
+            // Get station information
+            const station = parseResult.station
+            const stationText =
+              station.name ||
+              (station.multiStation
+                ? station.region === 'south'
+                  ? 'Miền Nam'
+                  : 'Miền Trung'
+                : 'Miền Bắc')
+
+            // For each line, create and add an individual bet code
+            for (const line of parseResult.lines) {
+              // Create a new bet code text with just this line
+              const singleLineBetCode = `${stationText}\n${line.originalLine}`
+
+              // Analyze this new bet code
+              const singleLineResult =
+                betCodeService.analyzeBetCode(singleLineBetCode)
+
+              if (singleLineResult.success) {
+                // Add the individual bet code to drafts
+                addDraftCode({
+                  station: singleLineResult.parseResult.station,
+                  lines: singleLineResult.parseResult.lines,
+                  originalText: singleLineBetCode,
+                  formattedText:
+                    singleLineResult.formattedText !== singleLineBetCode
+                      ? singleLineResult.formattedText
+                      : singleLineBetCode,
+                  stakeAmount:
+                    singleLineResult.calculationResults.stakeResult
+                      ?.totalStake || 0,
+                  potentialWinning:
+                    singleLineResult.calculationResults.prizeResult
+                      ?.totalPotential || 0,
+                  stakeDetails:
+                    singleLineResult.calculationResults.stakeResult?.details ||
+                    [],
+                  prizeDetails:
+                    singleLineResult.calculationResults.prizeResult?.details ||
+                    [],
+                })
+              }
+            }
+
+            // Update message to indicate the bet code was split
+            addMessage(
+              `Mã cược hợp lệ! Đã tách thành ${
+                parseResult.lines.length
+              } mã cược riêng biệt và thêm vào danh sách.${
+                formattedBetCode !== text
+                  ? '\n\nMã cược đã được tối ưu định dạng.'
+                  : ''
+              }`,
+              'bot',
+              {
+                betCodeInfo: {
+                  station: parseResult.station.name,
+                  lineCount: parseResult.lines.length,
+                  totalStake,
+                  potentialWin: totalPotential,
+                  formattedCode:
+                    formattedBetCode !== text ? formattedBetCode : null,
+                  splitIntoIndividuals: true,
+                },
+                detailedCalculations: {
+                  stakeDetails: stakeResult.details || [],
+                  prizeDetails: prizeResult.details || [],
+                },
+              }
+            )
+          } else {
+            // Single line - keep existing logic
+            addMessage(
+              `Mã cược hợp lệ! Đã thêm vào danh sách mã cược.${
+                formattedBetCode !== text
+                  ? '\n\nMã cược đã được tối ưu định dạng.'
+                  : ''
+              }`,
+              'bot',
+              {
+                betCodeInfo: {
+                  station: parseResult.station.name,
+                  lineCount: parseResult.lines.length,
+                  totalStake,
+                  potentialWin: totalPotential,
+                  formattedCode:
+                    formattedBetCode !== text ? formattedBetCode : null,
+                },
+                detailedCalculations: {
+                  stakeDetails: stakeResult.details || [],
+                  prizeDetails: prizeResult.details || [],
+                },
+              }
+            )
+
+            // Add to draft codes
+            addDraftCode({
+              station: parseResult.station,
+              lines: parseResult.lines,
+              originalText: text,
+              formattedText:
+                formattedBetCode !== text ? formattedBetCode : text,
+              stakeAmount: totalStake,
+              potentialWinning: totalPotential,
+              stakeDetails: stakeResult.details || [],
+              prizeDetails: prizeResult.details || [],
+            })
+          }
         }
       } else {
         // Check if we have any fix suggestions
