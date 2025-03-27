@@ -14,6 +14,7 @@ import { calculateStake } from '../services/calculator/stakeCalculator'
 import { calculatePotentialPrize } from '../services/calculator/prizeCalculator'
 import { useBetCode } from './BetCodeContext'
 import betCodeService from '@/services/betCodeService'
+import { uid } from 'uid'
 
 const ChatContext = createContext()
 
@@ -323,9 +324,7 @@ export function ChatProvider({ children }) {
 
             if (separateResult.success) {
               addDraftCode({
-                id: `${Date.now()}-${Math.random()
-                  .toString(36)
-                  .substr(2, 9)}-${i}`, // Ensure uniqueness
+                id: uid(),
                 station: separateResult.parseResult.station,
                 lines: separateResult.parseResult.lines,
                 originalText: separateCode,
