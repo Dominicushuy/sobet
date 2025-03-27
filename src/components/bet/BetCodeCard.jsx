@@ -32,6 +32,8 @@ import EditBetCodeModal from './EditBetCodeModal'
 import BetCodeDetailModal from './BetCodeDetailModal'
 import { formatMoney } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
+import { CheckCircle2Icon } from 'lucide-react'
+import { Copy } from 'lucide-react'
 
 const BetCodeCard = ({
   betCode,
@@ -46,6 +48,7 @@ const BetCodeCard = ({
   const [isPrintOpen, setIsPrintOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
 
   const handleRemove = () => {
     if (isDraft) {
@@ -62,6 +65,26 @@ const BetCodeCard = ({
   const handleConfirm = () => {
     confirmDraftCode(betCode.id)
     toast.success('Đã lưu mã cược')
+  }
+
+  const handleCopyText = () => {
+    try {
+      // Sử dụng Clipboard API
+      navigator.clipboard
+        .writeText(betCode.originalText || betText)
+        .then(() => {
+          setIsCopied(true)
+          toast.success('Đã sao chép mã cược')
+
+          // Tự động reset lại trạng thái sau 2 giây
+          setTimeout(() => {
+            setIsCopied(false)
+          }, 2000)
+        })
+    } catch (err) {
+      toast.error('Sao chép thất bại')
+      console.error('Copy failed', err)
+    }
   }
 
   const handleOpenPrint = () => setIsPrintOpen(true)
@@ -93,33 +116,13 @@ const BetCodeCard = ({
     return displayName
   }
 
-  // Get all numbers
-  const getAllNumbers = () => {
-    if (!betCode.lines || !Array.isArray(betCode.lines)) return []
-
-    const allNumbers = []
-    betCode.lines.forEach((line) => {
-      if (line.numbers && Array.isArray(line.numbers)) {
-        allNumbers.push(...line.numbers)
-      }
-    })
-
-    return [...new Set(allNumbers)] // Remove duplicates
-  }
-
   // Get original stake amount
   const getOriginalStakeAmount = () => {
     if (!betCode.stakeAmount) return 0
     return Math.round(betCode.stakeAmount / 0.8)
   }
 
-  // Truncate text with ellipsis
-  const truncateText = (text, maxLength = 50) => {
-    if (!text || text.length <= maxLength) return text
-    return text.substring(0, maxLength) + '...'
-  }
-
-  const numbers = getAllNumbers()
+  // const numbers = getAllNumbers()
   const betText = betCode.originalText || 'N/A'
 
   return (
@@ -179,7 +182,26 @@ const BetCodeCard = ({
         <CardContent className='px-4 py-0 pb-2 space-y-2'>
           {/* Simplified bet code - always visible */}
           <div className='text-xs bg-muted/50 p-2 rounded'>
-            {showFullCode ? betText : truncateText(betText, 60)}
+            <div className='text-xs bg-muted/50 p-2 rounded relative group'>
+              <pre
+                className='whitespace-pre-wrap pr-8'
+                onClick={handleCopyText}>
+                {betText}
+              </pre>
+
+              {/* Nút copy */}
+              <Button
+                variant='ghost'
+                size='icon'
+                className='absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity'
+                onClick={handleCopyText}>
+                {isCopied ? (
+                  <CheckCircle2Icon className='h-4 w-4 text-green-500' />
+                ) : (
+                  <Copy className='h-4 w-4' />
+                )}
+              </Button>
+            </div>
             {betText.length > 60 && (
               <Button
                 variant='link'
@@ -190,38 +212,6 @@ const BetCodeCard = ({
               </Button>
             )}
           </div>
-
-          {/* Highlighted numbers display */}
-          {numbers.length > 0 && (
-            <div className='flex flex-wrap gap-1'>
-              {numbers.length <= 12 ? (
-                numbers.map((number, idx) => (
-                  <Badge
-                    key={idx}
-                    variant='secondary'
-                    className='font-medium bg-blue-50 text-blue-700 hover:bg-blue-100'>
-                    {number}
-                  </Badge>
-                ))
-              ) : (
-                <>
-                  {numbers.slice(0, 10).map((number, idx) => (
-                    <Badge
-                      key={idx}
-                      variant='secondary'
-                      className='font-medium bg-blue-50 text-blue-700 hover:bg-blue-100'>
-                      {number}
-                    </Badge>
-                  ))}
-                  <Badge
-                    variant='secondary'
-                    className='font-medium bg-gray-200 text-gray-700'>
-                    +{numbers.length - 10}
-                  </Badge>
-                </>
-              )}
-            </div>
-          )}
 
           {/* Key information in a compact form */}
           <div className='grid grid-cols-2 gap-x-2 gap-y-1 mt-1 text-sm'>

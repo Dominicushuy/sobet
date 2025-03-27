@@ -44,7 +44,7 @@ export function calculateStake(parsedResult, userSettings = {}) {
       const stationInfo = getStationInfo(station, userSettings)
 
       // Lấy thông tin về kiểu cược chính
-      const betTypeInfo = getBetTypeInfo(line, userSettings)
+      const betTypeInfo = getBetTypeInfo(line, stationInfo, userSettings)
 
       // Lấy số lượng số và tổ hợp
       const numberInfo = getNumberInfo(line, betTypeInfo, station) // Truyền station
@@ -80,7 +80,11 @@ export function calculateStake(parsedResult, userSettings = {}) {
           }
 
           // Lấy thông tin kiểu cược bổ sung
-          const additionalBetTypeInfo = getBetTypeInfo(tempLine, userSettings)
+          const additionalBetTypeInfo = getBetTypeInfo(
+            tempLine,
+            stationInfo,
+            userSettings
+          )
           const additionalNumberInfo = getNumberInfo(
             tempLine,
             additionalBetTypeInfo,
@@ -135,7 +139,7 @@ export function calculateStake(parsedResult, userSettings = {}) {
 
 /**
  * Lấy thông tin về đài
- * @param {object} line - Dòng mã cược
+ * @param {object} station - Thông tin đài
  * @param {object} userSettings - Cài đặt người dùng
  * @returns {object} Thông tin về đài
  */
@@ -169,10 +173,11 @@ function getStationInfo(station, userSettings) {
 /**
  * Lấy thông tin về kiểu cược
  * @param {object} line - Dòng mã cược
+ * @param {object} stationInfo - Thông tin về đài
  * @param {object} userSettings - Cài đặt người dùng
  * @returns {object} Thông tin về kiểu cược
  */
-function getBetTypeInfo(line, userSettings) {
+function getBetTypeInfo(line, stationInfo, userSettings) {
   const betTypeId = line.betType?.id
   const betTypeAlias = line.betType?.alias?.toLowerCase()
 
@@ -206,10 +211,8 @@ function getBetTypeInfo(line, userSettings) {
   if (typeof payoutRate === 'object') {
     if (betTypeAlias === 'da' || betTypeAlias === 'dv') {
       // Kiểu đá (bridge)
-      const region = line.station?.region
-      const stationCount = line.multiStation
-        ? line.station?.count || 1
-        : line.station?.stations?.length || 1
+      const region = stationInfo.region
+      const stationCount = stationInfo.count || 1
 
       // Đặt tỉ lệ theo đúng quy tắc
       if (region === 'north') {
@@ -553,9 +556,9 @@ export function quickCalculateStake(parsedResult, userSettings = {}) {
   parsedResult.lines.forEach((line) => {
     if (line.valid && line.amount > 0) {
       // Lấy thông tin
-      const stationInfo = getStationInfo(line, userSettings)
-      const betTypeInfo = getBetTypeInfo(line, userSettings)
-      const numberInfo = getNumberInfo(line, betTypeInfo)
+      const stationInfo = getStationInfo(parsedResult.station, userSettings)
+      const betTypeInfo = getBetTypeInfo(line, stationInfo, userSettings)
+      const numberInfo = getNumberInfo(line, betTypeInfo, parsedResult.station)
 
       // Tính stake cho dòng
       const lineStake = calculateLineStake(
@@ -580,10 +583,15 @@ export function quickCalculateStake(parsedResult, userSettings = {}) {
           }
 
           // Lấy thông tin kiểu cược bổ sung
-          const additionalBetTypeInfo = getBetTypeInfo(tempLine, userSettings)
+          const additionalBetTypeInfo = getBetTypeInfo(
+            tempLine,
+            stationInfo,
+            userSettings
+          )
           const additionalNumberInfo = getNumberInfo(
             tempLine,
-            additionalBetTypeInfo
+            additionalBetTypeInfo,
+            parsedResult.station
           )
 
           // Tính tiền đặt cược cho kiểu cược bổ sung

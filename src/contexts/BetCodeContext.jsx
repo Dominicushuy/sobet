@@ -273,6 +273,8 @@ export function BetCodeProvider({ children }) {
   const [state, dispatch] = useReducer(betCodeReducer, initialState)
   const { betCodes, draftCodes, selectedCodeId, isInitialized } = state
 
+  // console.log('BetCodeProvider', state)
+
   // Load from session storage on mount
   useEffect(() => {
     try {
