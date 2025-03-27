@@ -21,6 +21,15 @@ export function formatBetCode(betCode) {
     return betCode;
   }
 
+  // Đoạn code quan trọng: Kiểm tra nếu chỉ có một dòng và có thể là tên đài
+  // Đây là chỗ nên xử lý trường hợp như "hn"
+  if (lines.length === 1) {
+    console.log("lines[0]: ", lines[0]);
+
+    // Không cần thay đổi gì nếu chỉ là tên đài
+    return betCode;
+  }
+
   const formattedLines = [];
 
   // Xử lý dòng đầu tiên (đài)

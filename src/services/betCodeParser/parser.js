@@ -12,6 +12,56 @@ export function parseBetCode(betCode) {
       return { success: false, errors: [{ message: "Mã cược không hợp lệ" }] };
     }
 
+    console.log("betCode", betCode);
+
+    // Trước khi bất kỳ xử lý nào, kiểm tra xem đây có phải chỉ là tên đài không
+    // Nếu là chỉ mỗi tên đài (như "hn"), xử lý đặc biệt
+    if (!betCode.includes("\n") && !betCode.includes(" ")) {
+      const potentialStation = betCode.trim().toLowerCase();
+
+      // Kiểm tra xem có phải là tên đài hợp lệ không
+      let isValidStation = false;
+      let stationData = null;
+
+      // Kiểm tra trong tất cả các đài và aliases
+      for (const station of defaultStations) {
+        if (
+          station.name.toLowerCase() === potentialStation ||
+          (station.aliases &&
+            station.aliases.some(
+              (alias) => alias.toLowerCase() === potentialStation
+            ))
+        ) {
+          isValidStation = true;
+          stationData = {
+            name: station.name,
+            region: station.region,
+            multiStation: false,
+          };
+          if (station.region === "north" && station.name === "Miền Bắc") {
+            stationData.multiStation = true;
+          }
+          break;
+        }
+      }
+
+      // Nếu là tên đài hợp lệ, trả về kết quả phù hợp
+      if (isValidStation && stationData) {
+        return {
+          success: false, // Không thành công vì không có mã cược
+          station: stationData,
+          lines: [],
+          message: "Đã xác định đài, nhưng chưa có mã cược",
+          errors: [
+            {
+              message: "Vui lòng thêm mã cược sau tên đài",
+              type: "MISSING_BET_INFO",
+            },
+          ],
+        };
+      }
+    }
+
     // Chuẩn hóa dấu xuống dòng và khoảng trắng
     betCode = betCode.trim();
 
