@@ -125,9 +125,14 @@ function containsNumbersOrBetTypes(line) {
 
   // Kiểm tra xem có kiểu cược nào xuất hiện không
   const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases)
-  const hasBetType = betTypeAliases.some(
-    (alias) => line.includes(alias) && !isPartOfStationName(alias, line)
-  )
+
+  // Cải tiến: Chỉ kiểm tra nếu alias là từ hoàn chỉnh hoặc theo sau bởi số
+  // Tránh trường hợp line "mb" có chứa alias "b"
+  const hasBetType = betTypeAliases.some((alias) => {
+    // Sử dụng regex để kiểm tra nếu alias là một từ hoàn chỉnh hoặc theo sau bởi số
+    const pattern = new RegExp(`\\b${alias}\\b|\\b${alias}\\d+`, 'i')
+    return pattern.test(line) && !isPartOfStationName(alias, line)
+  })
 
   return hasNumbers || hasBetType
 }
@@ -136,6 +141,19 @@ function containsNumbersOrBetTypes(line) {
  * Kiểm tra xem một alias có phải là một phần của tên đài
  */
 function isPartOfStationName(alias, line) {
+  // Kiểm tra nếu line chính là một tên đài/alias của đài
+  const isLineExactlyStation = defaultStations.some(
+    (station) =>
+      station.name.toLowerCase() === line.trim().toLowerCase() ||
+      station.aliases.some((a) => a === line.trim().toLowerCase())
+  )
+
+  // Nếu line chính xác là tên đài, trả về true cho bất kỳ alias nào
+  if (isLineExactlyStation) {
+    return true
+  }
+
+  // Ngược lại kiểm tra nếu alias là một phần của tên đài
   for (const station of defaultStations) {
     if (
       station.aliases.some(
@@ -513,7 +531,13 @@ function parseBetLine(line, station) {
 
     // Kiểm tra nếu có "xcdui" và sửa thành "xcduoi"
     normalizedLine = normalizedLine.replace(/xcdui/g, 'xcduoi')
+    // Kiểm tra nếu có "dui" và sửa thành "duoi"
+    normalizedLine = normalizedLine.replace(
+      /(\b|[^a-z])dui(\d+|$)/g,
+      '$1duoi$2'
+    )
 
+    // Cải tiến: Thử tìm kiểu cược trước khi phân tích chi tiết
     // Kiểm tra nếu có nhiều kiểu cược/số tiền trong cùng một dòng (dau20.duoi10)
     const multipleBetTypes = extractMultipleBetTypes(normalizedLine)
 
@@ -547,7 +571,21 @@ function parseBetLine(line, station) {
       }
     }
 
-    // Xử lý cách thông thường nếu không phát hiện nhiều kiểu cược
+    // Xử lý cho trường hợp đơn giản với một kiểu cược
+    if (multipleBetTypes.length === 1) {
+      const numbersPart = extractNumbersPart(normalizedLine)
+      const numbers = parseNumbers(numbersPart, station)
+
+      if (numbers.length > 0) {
+        result.numbers = numbers
+        result.betType = multipleBetTypes[0].betType
+        result.amount = multipleBetTypes[0].amount
+        result.valid = true
+        return result
+      }
+    }
+
+    // Xử lý cách thông thường nếu không phát hiện kiểu cược rõ ràng
     // Phân tích
     const numbers = []
     let currentNumber = ''
@@ -619,6 +657,7 @@ function parseBetLine(line, station) {
           currentBetType += char
         }
       } else if (isAlphabetChar(char)) {
+        // Cải tiến: Kiểm tra kỹ hơn khi gặp ký tự chữ cái
         // Ký tự chữ cái - có thể là phần của kiểu cược hoặc là phần của kéo
         if (
           parsingState === 'number' &&
@@ -734,20 +773,26 @@ function parseNumbers(numbersPart, station) {
 
 /**
  * Trích xuất nhiều kiểu cược từ một dòng
+ * @param {string} line - Dòng cược
+ * @returns {Array} Danh sách các kiểu cược với số tiền tương ứng
  */
 function extractMultipleBetTypes(line) {
   const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases)
   const result = []
 
   // Chuẩn hóa line
-  const normalizedLine = line.replace(/xcdui/g, 'xcduoi')
+  const normalizedLine = line
+    .replace(/xcdui/g, 'xcduoi')
+    .replace(/(\b|[^a-z])dui(\d+|$)/g, '$1duoi$2')
 
-  // Tạo pattern cho các kiểu cược, ưu tiên các kiểu dài hơn trước
+  // Cải tiến: Tạo pattern với word boundary (\b) để đảm bảo tìm đúng kiểu cược
+  // Sắp xếp các alias theo độ dài (dài nhất trước) để tránh trường hợp tìm thấy alias ngắn hơn trước
   const betTypePattern = betTypeAliases
     .sort((a, b) => b.length - a.length)
+    .map((alias) => `\\b${alias}\\b`)
     .join('|')
 
-  // Tìm tất cả các kiểu cược trong dòng
+  // Tìm tất cả các kiểu cược trong dòng với regex cải tiến
   const betTypeRegex = new RegExp(
     `(${betTypePattern})(\\d+(?:[,.n]\\d+)?)`,
     'gi'
@@ -772,16 +817,27 @@ function extractMultipleBetTypes(line) {
 
 /**
  * Kiểm tra xem chuỗi từ vị trí hiện tại có đủ thông tin cho kiểu cược và số tiền không
+ * @param {string} line - Dòng cần kiểm tra
+ * @param {number} currentPos - Vị trí hiện tại trong dòng
+ * @returns {boolean} Có đủ thông tin hay không
  */
 function hasCompleteBetTypeAndAmount(line, currentPos) {
   // Tìm kiểu cược ở phần còn lại của dòng
   const remainingLine = line.substring(currentPos)
+
+  // Cải tiến: Sử dụng regex chính xác hơn để tìm kiểu cược
+  // Tạo pattern regex từ các alias kiểu cược, sắp xếp theo độ dài để ưu tiên tìm kiếm các alias dài hơn trước
   const betTypePattern = defaultBetTypes
     .flatMap((bt) => bt.aliases)
-    .sort((a, b) => b.length - a.length) // Sắp xếp theo độ dài để tối ưu matching
+    .sort((a, b) => b.length - a.length)
     .join('|')
 
-  const betTypeRegex = new RegExp(`(${betTypePattern})\\d+(?:[,.n]\\d+)?$`, 'i')
+  // Tìm kiểu cược và số tiền ở phần sau của dòng
+  // Cải tiến: Sử dụng word boundary \b để đảm bảo tìm đúng kiểu cược hoàn chỉnh
+  const betTypeRegex = new RegExp(
+    `\\b(${betTypePattern})\\d+(?:[,.n]\\d+)?$`,
+    'i'
+  )
   return betTypeRegex.test(remainingLine)
 }
 
