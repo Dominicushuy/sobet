@@ -1,4 +1,3 @@
-// src/hooks/useSpecialCases.js
 import { useState, useCallback } from 'react'
 import { useBetCode } from '@/contexts/BetCodeContext'
 import { toast } from 'sonner'
@@ -63,6 +62,38 @@ export function useSpecialCases() {
     [expandSpecialCases, getBetCode]
   )
 
+  // Thêm hàm xử lý tất cả các trường hợp đặc biệt cùng lúc
+  const handleExpandAllSpecialCases = useCallback(
+    async (codeId) => {
+      try {
+        const betCode = getBetCode(codeId)
+        if (
+          !betCode ||
+          !betCode.specialCases ||
+          (betCode.specialCases.groupedNumbers.length === 0 &&
+            betCode.specialCases.multipleBetTypes.length === 0)
+        ) {
+          toast.error('Không tìm thấy trường hợp đặc biệt để tách')
+          return false
+        }
+
+        setExpanding(true)
+        await expandSpecialCases(codeId, 'all')
+        toast.success(
+          'Đã tách tất cả trường hợp đặc biệt thành các mã cược riêng biệt'
+        )
+        return true
+      } catch (error) {
+        console.error('Error expanding all special cases:', error)
+        toast.error('Lỗi khi tách trường hợp đặc biệt: ' + error.message)
+        return false
+      } finally {
+        setExpanding(false)
+      }
+    },
+    [expandSpecialCases, getBetCode]
+  )
+
   const hasSpecialCases = useCallback((betCode) => {
     if (!betCode || !betCode.specialCases) return false
 
@@ -85,6 +116,7 @@ export function useSpecialCases() {
     expanding,
     handleExpandGroupedNumbers,
     handleExpandMultipleBetTypes,
+    handleExpandAllSpecialCases,
     hasSpecialCases,
     getSpecialCasesCount,
   }

@@ -1,6 +1,55 @@
-Dựa vào tài liệu trong Project knowledge của dự án và Ví dụ cho các trường hợp đặc biệt ở dưới, có cách này phát hiện ra các kiểu đặc biệt này và tự động tách thành các dòng riêng biệt , kiểu cược riêng biệt hay không?
+Dựa vào tài liệu trong Project knowledge của dự án và Ví dụ cho các trường hợp đặc biệt ở dưới, hệ thống đã phần nào phát hiện, xử lý các trường hợp đặc biệt. Tuy nhiên vì quá phức tạp nên phần tính toán số liệu và đối soát có nhiều khó khăn. Vì vậy giải pháp là hệ thống hãy tự động tách 1 mã cược đặc biệt (1 dòng mã đặc biệt) thành nhiều dòng mã cược thông thường.
 
-Lưu ý quan trọng: Tôi đã cập nhật logic các files trong folder `betCodeParser` bao gồm (`errorDetector.js`, `errorFixer.js`, `formatter.js`, `parser.js`) và một vài component như `BetCodeContext.jsx`, `ChatContext.jsx` Hãy tiếp tục với những phần bạn cảm thấy cần bổ sung và nâng cấp cho tính năng đặc biệt trên, không cập nhật lại những phần đã hoàn thiện.
+Output: Sửa lại tất cả logic code và components hiện tại nếu cần, để hệ thống có thể tự động tách 1 mã cược đặc biệt thành nhiều dòng mã cược thông thường.
+
+Ví dụ 1:
+
+```
+2dmn
+1234.4567da1
+```
+
+=> Tách thành:
+
+```
+2dmn
+12.34da1
+45.67da1
+```
+
+Ví dụ 2:
+
+```
+2dmn
+0102.0304.0506da5
+```
+
+=> Tách thành:
+
+```
+2dmn
+01.02da5
+03.04da5
+05.06da5
+```
+
+Ví dụ 3:
+
+```
+2dmn
+23.45.67dd10.dau20.duoi5
+```
+
+=> Tách thành:
+
+```
+2dmn
+23.45.67dd10
+23.45.67dau20
+23.45.67duoi5
+```
+
+===========================
 
 Ví dụ cho các trường hợp đặc biệt
 

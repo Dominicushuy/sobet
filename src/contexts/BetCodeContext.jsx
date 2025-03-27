@@ -55,22 +55,17 @@ const betCodeReducer = (state, action) => {
         status: 'pending',
       }
 
-      // Xử lý các trường hợp đặc biệt - tách thành các mã cược riêng biệt nếu cần
-      if (
-        action.payload.specialCases &&
-        (action.payload.specialCases.groupedNumbers.length > 0 ||
-          action.payload.specialCases.multipleBetTypes.length > 0)
-      ) {
-        // Thêm mã cược gốc vào danh sách
-        const updatedDraftCodes = [...state.draftCodes, newCode]
+      // Nếu đây là mã cược đã được tự động tách, không cần lưu trữ thông tin specialCases
+      if (action.payload.autoExpanded) {
+        delete newCode.specialCases
 
         return {
           ...state,
-          draftCodes: updatedDraftCodes,
+          draftCodes: [...state.draftCodes, newCode],
           lastOperation: {
             type: 'add_draft',
             timestamp: new Date().toISOString(),
-            hasSpecialCases: true,
+            autoExpanded: true,
           },
         }
       }
@@ -85,7 +80,6 @@ const betCodeReducer = (state, action) => {
       }
     }
 
-    // Look for the EXPAND_SPECIAL_CASES case in the reducer
     case ACTION_TYPES.EXPAND_SPECIAL_CASES: {
       const { codeId, expandType } = action.payload
       const targetCode = state.draftCodes.find((code) => code.id === codeId)
@@ -94,108 +88,74 @@ const betCodeReducer = (state, action) => {
         return state
       }
 
-      // Tạo các mã cược mới dựa trên trường hợp đặc biệt
       const newDraftCodes = []
       const specialCases = targetCode.specialCases
+
+      const station = targetCode.station
+      const stationText =
+        station.name ||
+        (station.multiStation
+          ? station.region === 'south'
+            ? 'Miền Nam'
+            : 'Miền Trung'
+          : 'Miền Bắc')
+
+      let casesToExpand = []
 
       if (
         expandType === 'groupedNumbers' &&
         specialCases.groupedNumbers.length > 0
       ) {
-        specialCases.groupedNumbers.forEach((group) => {
-          group.separateLines.forEach((line) => {
-            // Tách mã cược thành các phần để xây dựng mã cược mới
-            const station = targetCode.station
-            const stationText =
-              station.name ||
-              (station.multiStation
-                ? station.region === 'south'
-                  ? 'Miền Nam'
-                  : 'Miền Trung'
-                : 'Miền Bắc')
-
-            // Tạo mã cược mới cho mỗi dòng đã tách
-            const fullText = `${stationText}\n${line}`
-            const result = betCodeService.analyzeBetCode(fullText)
-
-            if (result.success) {
-              newDraftCodes.push({
-                id:
-                  Date.now().toString() +
-                  Math.random().toString(36).substring(2, 9),
-                station: result.parseResult.station,
-                lines: result.parseResult.lines,
-                originalText: fullText,
-                formattedText:
-                  result.formattedText !== fullText
-                    ? result.formattedText
-                    : fullText,
-                stakeAmount:
-                  result.calculationResults.stakeResult?.totalStake || 0,
-                potentialWinning:
-                  result.calculationResults.prizeResult?.totalPotential || 0,
-                stakeDetails:
-                  result.calculationResults.stakeResult?.details || [],
-                prizeDetails:
-                  result.calculationResults.prizeResult?.details || [],
-                createdAt: new Date().toISOString(),
-                isDraft: true,
-                status: 'pending',
-                expandedFrom: codeId,
-              })
-            }
-          })
-        })
-      }
-
-      if (
+        casesToExpand = specialCases.groupedNumbers.flatMap(
+          (group) => group.separateLines
+        )
+      } else if (
         expandType === 'multipleBetTypes' &&
         specialCases.multipleBetTypes.length > 0
       ) {
-        specialCases.multipleBetTypes.forEach((betTypes) => {
-          betTypes.separateLines.forEach((line) => {
-            // Tách mã cược thành các phần để xây dựng mã cược mới
-            const station = targetCode.station
-            const stationText =
-              station.name ||
-              (station.multiStation
-                ? station.region === 'south'
-                  ? 'Miền Nam'
-                  : 'Miền Trung'
-                : 'Miền Bắc')
+        casesToExpand = specialCases.multipleBetTypes.flatMap(
+          (betTypes) => betTypes.separateLines
+        )
+      } else if (expandType === 'all') {
+        casesToExpand = [
+          ...specialCases.groupedNumbers.flatMap(
+            (group) => group.separateLines
+          ),
+          ...specialCases.multipleBetTypes.flatMap(
+            (betTypes) => betTypes.separateLines
+          ),
+        ]
+      }
 
-            // Tạo mã cược mới cho mỗi dòng đã tách
-            const fullText = `${stationText}\n${line}`
-            const result = betCodeService.analyzeBetCode(fullText)
+      for (const line of casesToExpand) {
+        const fullText = `${stationText}\n${line}`
+        const result = betCodeService.analyzeBetCode(fullText)
 
-            if (result.success) {
-              newDraftCodes.push({
-                id:
-                  Date.now().toString() +
-                  Math.random().toString(36).substring(2, 9),
-                station: result.parseResult.station,
-                lines: result.parseResult.lines,
-                originalText: fullText,
-                formattedText:
-                  result.formattedText !== fullText
-                    ? result.formattedText
-                    : fullText,
-                stakeAmount:
-                  result.calculationResults.stakeResult?.totalStake || 0,
-                potentialWinning:
-                  result.calculationResults.prizeResult?.totalPotential || 0,
-                stakeDetails:
-                  result.calculationResults.stakeResult?.details || [],
-                prizeDetails:
-                  result.calculationResults.prizeResult?.details || [],
-                createdAt: new Date().toISOString(),
-                isDraft: true,
-                status: 'pending',
-                expandedFrom: codeId,
-              })
-            }
+        if (result.success) {
+          newDraftCodes.push({
+            id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+            station: result.parseResult.station,
+            lines: result.parseResult.lines,
+            originalText: fullText,
+            formattedText:
+              result.formattedText !== fullText
+                ? result.formattedText
+                : fullText,
+            stakeAmount: result.calculationResults.stakeResult?.totalStake || 0,
+            potentialWinning:
+              result.calculationResults.prizeResult?.totalPotential || 0,
+            stakeDetails: result.calculationResults.stakeResult?.details || [],
+            prizeDetails: result.calculationResults.prizeResult?.details || [],
+            createdAt: new Date().toISOString(),
+            isDraft: true,
+            status: 'pending',
+            expandedFrom: codeId,
           })
-        })
+        }
+      }
+
+      if (newDraftCodes.length === 0) {
+        return state
       }
 
       return {
@@ -205,6 +165,7 @@ const betCodeReducer = (state, action) => {
           type: 'expand_special_cases',
           timestamp: new Date().toISOString(),
           expandedCount: newDraftCodes.length,
+          sourceId: codeId,
         },
       }
     }
