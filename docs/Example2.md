@@ -6,7 +6,7 @@
 
 Cách viết này giúp tách số thành các cặp 2 chữ số từ một chuỗi số liền nhau, phân tách bằng dấu chấm.
 
-### Ví dụ 1: `1234.4567da1`
+### Ví dụ 1: `1234.5678da1`
 
 - **Phân tách đúng**:
   - Nhóm 1: `1234` tách thành 12 và 34
