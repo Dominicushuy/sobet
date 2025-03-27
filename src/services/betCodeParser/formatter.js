@@ -97,6 +97,34 @@ function formatStation(stationLine) {
  * Tìm và sửa đài ghép liền nhau không dùng dấu phân cách
  */
 function findMergedStations(stationText) {
+  // Trường hợp đặc biệt: dnaictho, tp.dongthap
+  for (const station1 of defaultStations) {
+    // Thử tất cả các alias của đài 1
+    for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
+      if (stationText.startsWith(alias1)) {
+        const remainingText = stationText.substring(alias1.length)
+
+        // Tìm đài thứ 2 trong phần còn lại
+        for (const station2 of defaultStations) {
+          // Không xét ghép giữa đài với chính nó
+          if (station1.name === station2.name) continue
+
+          for (const alias2 of [
+            station2.name.toLowerCase(),
+            ...station2.aliases,
+          ]) {
+            if (remainingText === alias2 || remainingText.startsWith(alias2)) {
+              return {
+                found: true,
+                formatted: `${alias1}.${alias2}`,
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   for (const station1 of defaultStations) {
     for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
       for (const station2 of defaultStations) {
@@ -173,8 +201,14 @@ function formatBetLine(line) {
 
   let normalizedLine = line.trim()
 
+  // Loại bỏ dấu chấm ở đầu dòng
+  normalizedLine = normalizedLine.replace(/^\./, '')
+
   // Sửa lỗi "xcdui" thành "xcduoi"
   normalizedLine = normalizedLine.replace(/xcdui/g, 'xcduoi')
+
+  // Sửa lỗi "dui" thành "duoi"
+  normalizedLine = normalizedLine.replace(/(\b|[^a-z])dui(\d+|$)/g, '$1duoi$2')
 
   // Bước 2: Chuẩn hóa phần số cược
   // Thay thế các dấu phân cách không chuẩn bằng dấu chấm
@@ -219,10 +253,26 @@ function formatBetLine(line) {
       pattern,
       (match, betType, amount) => {
         // Chuẩn hóa số tiền (đổi dấu , thành .)
-        const normalizedAmount = amount.replace(/,/g, '.')
+        const normalizedAmount = amount ? amount.replace(/,/g, '.') : '10'
         return `${betType}${normalizedAmount}`
       }
     )
+  }
+
+  // Bước 5: Thêm số tiền mặc định cho kiểu cược thiếu số tiền
+  const betTypeWithoutAmount = normalizedLine.match(/([a-z]+)(?!\d)(\s|$)/i)
+  if (betTypeWithoutAmount) {
+    const betTypeAlias = betTypeWithoutAmount[1].toLowerCase()
+    const validBetType = defaultBetTypes.some((bt) =>
+      bt.aliases.includes(betTypeAlias)
+    )
+
+    if (validBetType) {
+      normalizedLine = normalizedLine.replace(
+        new RegExp(`${betTypeAlias}(\\s|$)`, 'i'),
+        `${betTypeAlias}10$1`
+      )
+    }
   }
 
   return normalizedLine
@@ -375,6 +425,16 @@ export function suggestBetCodeFixes(betCode) {
       })
     }
 
+    // Kiểm tra dòng bắt đầu bằng dấu chấm
+    if (/^\s*\./.test(line)) {
+      suggestions.push({
+        type: 'LEADING_DOTS',
+        message: `Không nên để dấu chấm ở đầu dòng "${line}"`,
+        original: line,
+        suggested: line.replace(/^\s*\./, ''),
+      })
+    }
+
     // Kiểm tra "xcdui" nên đổi thành "xcduoi"
     if (line.includes('xcdui')) {
       suggestions.push({
@@ -382,6 +442,16 @@ export function suggestBetCodeFixes(betCode) {
         message: `Kiểu cược "xcdui" nên được viết là "xcduoi"`,
         original: 'xcdui',
         suggested: 'xcduoi',
+      })
+    }
+
+    // Kiểm tra "dui" nên đổi thành "duoi"
+    if (/(\b|[^a-z])dui\d+/.test(line)) {
+      suggestions.push({
+        type: 'BET_TYPE_FORMAT',
+        message: `Kiểu cược "dui" nên được viết là "duoi"`,
+        original: 'dui',
+        suggested: 'duoi',
       })
     }
 
@@ -413,6 +483,34 @@ export function suggestBetCodeFixes(betCode) {
           suggested: replaced,
         })
       }
+    }
+
+    // Kiểm tra các kiểu cược không có số tiền
+    const betTypeWithoutAmount = line.match(/([a-z]+)(?!\d)(\s|$)/i)
+    if (betTypeWithoutAmount) {
+      const betTypeAlias = betTypeWithoutAmount[1].toLowerCase()
+      const validBetType = defaultBetTypes.some((bt) =>
+        bt.aliases.includes(betTypeAlias)
+      )
+
+      if (validBetType) {
+        suggestions.push({
+          type: 'MISSING_AMOUNT',
+          message: `Kiểu cược "${betTypeAlias}" không có số tiền, nên thêm số tiền. Ví dụ: ${betTypeAlias}10`,
+          original: betTypeAlias,
+          suggested: `${betTypeAlias}10`,
+        })
+      }
+    }
+
+    // Kiểm tra dấu gạch ngang thay vì dấu chấm
+    if (line.includes('-') && !/^\s*[a-z]+\s*$/i.test(line)) {
+      suggestions.push({
+        type: 'HYPHEN_SEPARATOR',
+        message: `Dấu gạch ngang được sử dụng làm dấu phân cách, nên sử dụng dấu chấm`,
+        original: line,
+        suggested: line.replace(/-/g, '.'),
+      })
     }
   }
 

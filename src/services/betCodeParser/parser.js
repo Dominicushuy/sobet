@@ -106,7 +106,7 @@ export function parseBetCode(betCode) {
  */
 function isStationLine(line) {
   // Loại bỏ dấu chấm cuối
-  const cleanLine = line.replace(/\.$/, '').trim()
+  const cleanLine = line.replace(/\.+$/, '').trim()
 
   // Kiểm tra xem dòng có phải là tên đài không
   return defaultStations.some(
@@ -181,7 +181,7 @@ function extractStationPart(line) {
  */
 function parseStation(stationString) {
   // Loại bỏ dấu chấm cuối cùng nếu có
-  const stationText = stationString.trim().toLowerCase().replace(/\.$/, '')
+  const stationText = stationString.trim().toLowerCase().replace(/\.+$/, '')
 
   // Trường hợp đặc biệt: chuỗi chứa cả số, có thể là đài + số cược
   if (/\d/.test(stationText)) {
@@ -235,7 +235,7 @@ function parseStation(stationString) {
       data: {
         name: northStation.name,
         region: 'north',
-        isMultiStation: false,
+        multiStation: false,
       },
     }
   }
@@ -305,6 +305,28 @@ function parseStation(stationString) {
         multiStation: true,
         count: 1, // Mặc định là 1 nếu không chỉ định
       },
+    }
+  }
+
+  // Kiểm tra đài với tên đầy đủ
+  for (const station of defaultStations) {
+    const fullName = station.name.toLowerCase()
+    const fullAliases = station.aliases.map((a) => a.toLowerCase())
+
+    if (
+      stationText === fullName ||
+      fullAliases.includes(stationText) ||
+      stationText.includes(fullName) ||
+      fullAliases.some((a) => stationText.includes(a))
+    ) {
+      return {
+        success: true,
+        data: {
+          name: station.name,
+          region: station.region,
+          multiStation: false,
+        },
+      }
     }
   }
 
@@ -388,6 +410,41 @@ function parseStation(stationString) {
 function findMergedStations(text) {
   const foundStations = []
 
+  // Trường hợp đặc biệt: dnaictho, tp.dongthap
+  for (const station1 of defaultStations) {
+    // Thử tất cả các alias của đài 1
+    for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
+      if (text.startsWith(alias1)) {
+        const remainingText = text.substring(alias1.length)
+
+        // Tìm đài thứ 2 trong phần còn lại
+        for (const station2 of defaultStations) {
+          // Không xét ghép giữa đài với chính nó
+          if (station1.name === station2.name) continue
+
+          for (const alias2 of [
+            station2.name.toLowerCase(),
+            ...station2.aliases,
+          ]) {
+            if (remainingText === alias2 || remainingText.startsWith(alias2)) {
+              foundStations.push({
+                name: station1.name,
+                region: station1.region,
+              })
+
+              foundStations.push({
+                name: station2.name,
+                region: station2.region,
+              })
+
+              return foundStations
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Thử tất cả các cách chia chuỗi thành 2 phần
   for (let i = 2; i < text.length - 1; i++) {
     const part1 = text.substring(0, i)
@@ -418,8 +475,16 @@ function findMergedStations(text) {
  * Tìm đài dựa trên alias
  */
 function findStationByAlias(alias) {
+  if (!alias) return null
+
+  // Chuyển alias về lowercase để so sánh không phân biệt chữ hoa/thường
+  const normalizedAlias = alias.toLowerCase()
+
   return defaultStations.find(
-    (s) => s.name.toLowerCase() === alias || s.aliases.some((a) => a === alias)
+    (s) =>
+      s.name.toLowerCase() === normalizedAlias ||
+      s.aliases.some((a) => a === normalizedAlias) ||
+      s.aliases.some((a) => normalizedAlias.includes(a))
   )
 }
 
@@ -440,8 +505,14 @@ function parseBetLine(line, station) {
   }
 
   try {
-    // Chuẩn hóa dấu phân cách
-    let normalizedLine = line.replace(/[,\- ]/g, '.')
+    // Chuẩn hóa dấu phân cách: dấu phẩy, dấu gạch ngang, dấu cách đều đổi thành dấu chấm
+    let normalizedLine = line.replace(/[,\- ]+/g, '.')
+
+    // Xử lý trường hợp dấu chấm ở đầu dòng
+    normalizedLine = normalizedLine.replace(/^\./, '')
+
+    // Kiểm tra nếu có "xcdui" và sửa thành "xcduoi"
+    normalizedLine = normalizedLine.replace(/xcdui/g, 'xcduoi')
 
     // Kiểm tra nếu có nhiều kiểu cược/số tiền trong cùng một dòng (dau20.duoi10)
     const multipleBetTypes = extractMultipleBetTypes(normalizedLine)
@@ -668,7 +739,10 @@ function extractMultipleBetTypes(line) {
   const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases)
   const result = []
 
-  // Tạo pattern cho các kiểu cược
+  // Chuẩn hóa line
+  const normalizedLine = line.replace(/xcdui/g, 'xcduoi')
+
+  // Tạo pattern cho các kiểu cược, ưu tiên các kiểu dài hơn trước
   const betTypePattern = betTypeAliases
     .sort((a, b) => b.length - a.length)
     .join('|')
@@ -680,7 +754,7 @@ function extractMultipleBetTypes(line) {
   )
 
   let match
-  while ((match = betTypeRegex.exec(line)) !== null) {
+  while ((match = betTypeRegex.exec(normalizedLine)) !== null) {
     const betTypeAlias = match[1].toLowerCase()
     const amountStr = match[2]
     const betType = identifyBetType(betTypeAlias)
@@ -728,6 +802,8 @@ function isBetTypeOrAmount(text) {
  * Phân tích số tiền cược
  */
 function parseAmount(amountString) {
+  if (!amountString) return 0
+
   // Loại bỏ ký tự không phải số hoặc dấu phân cách thập phân
   let cleaned = amountString.replace(/[^0-9,.]/g, '')
 
@@ -738,6 +814,12 @@ function parseAmount(amountString) {
 
   // Chuyển đổi sang số
   const amount = parseFloat(cleaned)
+  if (isNaN(amount)) return 0
+
+  // Xử lý đơn vị "n" (nghìn)
+  if (amountString.includes('n')) {
+    return amount
+  }
 
   // Nếu số nhỏ hơn 100, coi như đơn vị nghìn
   return amount < 100 ? amount * 1000 : amount
@@ -747,11 +829,32 @@ function parseAmount(amountString) {
  * Xác định kiểu cược từ chuỗi
  */
 function identifyBetType(betTypeString) {
+  if (!betTypeString) return null
+
   const normalized = betTypeString.toLowerCase()
+
+  // Xử lý các kiểu cược đặc biệt
+  if (normalized === 'dui') return identifyBetType('duoi')
+  if (normalized === 'xcdui') return identifyBetType('xcduoi')
+  if (normalized === 'b7lo') return identifyBetType('b7l')
+  if (normalized === 'b8lo') return identifyBetType('b8l')
 
   for (const betType of defaultBetTypes) {
     for (const alias of betType.aliases) {
       if (normalized === alias) {
+        return {
+          id: betType.name,
+          name: betType.name,
+          alias: alias,
+        }
+      }
+    }
+  }
+
+  // Kiểm tra partial match cho các trường hợp viết tắt/không chuẩn
+  for (const betType of defaultBetTypes) {
+    for (const alias of betType.aliases) {
+      if (alias.startsWith(normalized) || normalized.startsWith(alias)) {
         return {
           id: betType.name,
           name: betType.name,

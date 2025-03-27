@@ -91,6 +91,8 @@ function fixSpecialCases(lines, changes) {
   // Sửa trường hợp đài có dấu chấm cuối cùng
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
+
+    // Đài kết thúc bằng dấu chấm
     if (/^\s*[a-z]+\.+\s*$/i.test(line)) {
       // Dòng chỉ có tên đài và dấu chấm
       const newLine = line.replace(/\.+\s*$/, '')
@@ -102,11 +104,20 @@ function fixSpecialCases(lines, changes) {
       })
       lines[i] = newLine
     }
-  }
 
-  // Sửa trường hợp "xcdui" thành "xcduoi"
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+    // Dấu chấm ở đầu dòng
+    if (/^\s*\./.test(line)) {
+      const newLine = line.replace(/^\s*\./, '')
+      changes.push({
+        lineIndex: i,
+        oldLine: line,
+        newLine,
+        errorType: 'LEADING_DOTS',
+      })
+      lines[i] = newLine
+    }
+
+    // Sửa trường hợp "xcdui" thành "xcduoi"
     if (line.includes('xcdui')) {
       const newLine = line.replace(/xcdui/g, 'xcduoi')
       changes.push({
@@ -116,6 +127,41 @@ function fixSpecialCases(lines, changes) {
         errorType: 'INVALID_BET_TYPE_ALIAS',
       })
       lines[i] = newLine
+    }
+
+    // Sửa dấu gạch ngang thành dấu chấm
+    if (line.includes('-') && !/^\s*[a-z]+\s*$/i.test(line)) {
+      const newLine = line.replace(/-/g, '.')
+      changes.push({
+        lineIndex: i,
+        oldLine: line,
+        newLine,
+        errorType: 'HYPHEN_SEPARATOR',
+      })
+      lines[i] = newLine
+    }
+
+    // Thêm tiền mặc định nếu thiếu (vd: dd, b, da)
+    const betTypeWithoutAmount = /([a-z]+)(?!\d)(\s|$)/i.exec(line)
+    if (betTypeWithoutAmount) {
+      const betTypeAlias = betTypeWithoutAmount[1].toLowerCase()
+      const validBetType = defaultBetTypes.some((bt) =>
+        bt.aliases.includes(betTypeAlias)
+      )
+
+      if (validBetType) {
+        const newLine = line.replace(
+          new RegExp(`${betTypeAlias}(\\s|$)`, 'i'),
+          `${betTypeAlias}10$1`
+        )
+        changes.push({
+          lineIndex: i,
+          oldLine: line,
+          newLine,
+          errorType: 'MISSING_AMOUNT',
+        })
+        lines[i] = newLine
+      }
     }
   }
 
@@ -143,7 +189,39 @@ function fixSpecialCases(lines, changes) {
  * @returns {object} Kết quả tìm kiếm
  */
 function findMergedStations(line) {
+  // Chỉ xét dòng đầu tiên
+  if (line.includes(' ') || line.includes('.') || !containsLetters(line)) {
+    return { match: false }
+  }
+
   const stationAliases = getAllStationAliases()
+  const line_lower = line.toLowerCase()
+
+  // Tìm trường hợp đặc biệt như dnaictho, tpho.dongthap
+  for (const station1 of defaultStations) {
+    for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
+      if (line_lower.startsWith(alias1)) {
+        const remainingText = line_lower.substring(alias1.length)
+
+        for (const station2 of defaultStations) {
+          // Không xét ghép với chính nó
+          if (station1.name === station2.name) continue
+
+          for (const alias2 of [
+            station2.name.toLowerCase(),
+            ...station2.aliases,
+          ]) {
+            if (remainingText === alias2 || remainingText.startsWith(alias2)) {
+              return {
+                match: true,
+                newLine: line.replace(alias1 + alias2, `${alias1}.${alias2}`),
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Tìm 2 đài ghép liền nhau
   for (let i = 0; i < stationAliases.length; i++) {
@@ -168,6 +246,13 @@ function findMergedStations(line) {
 }
 
 /**
+ * Kiểm tra xem chuỗi có chứa chữ cái không
+ */
+function containsLetters(str) {
+  return /[a-z]/i.test(str)
+}
+
+/**
  * Lấy tất cả các alias của đài
  * @returns {Array} Danh sách alias
  */
@@ -177,7 +262,8 @@ function getAllStationAliases() {
     aliases.push(station.name.toLowerCase())
     aliases.push(...station.aliases)
   }
-  return aliases
+  // Sắp xếp để ưu tiên các alias dài hơn trước
+  return aliases.sort((a, b) => b.length - a.length)
 }
 
 /**
@@ -256,6 +342,22 @@ function generateSuggestion(error, betCode) {
       return {
         message: 'Không thể kết hợp các đài từ các miền khác nhau.',
         suggestion: 'Chỉ kết hợp các đài cùng miền với nhau.',
+      }
+    case 'LEADING_DOTS':
+      return {
+        message: 'Dòng có dấu chấm ở đầu, có thể gây nhầm lẫn.',
+        suggestion: 'Loại bỏ dấu chấm ở đầu dòng.',
+      }
+    case 'HYPHEN_SEPARATOR':
+      return {
+        message: 'Dấu gạch ngang được sử dụng làm dấu phân cách.',
+        suggestion:
+          'Sử dụng dấu chấm thay cho dấu gạch ngang. Ví dụ: 12.34 thay vì 12-34',
+      }
+    case 'MISSING_AMOUNT':
+      return {
+        message: 'Thiếu số tiền cược cho kiểu cược.',
+        suggestion: 'Thêm số tiền cược sau kiểu cược. Ví dụ: dd10 thay vì dd',
       }
     default:
       return {
@@ -389,6 +491,44 @@ function generateFix(error, lines) {
         }
       }
       break
+    case 'LEADING_DOTS':
+      // Loại bỏ dấu chấm ở đầu
+      if (line) {
+        return {
+          newLine: line.replace(/^\s*\./, ''),
+        }
+      }
+      break
+    case 'HYPHEN_SEPARATOR':
+      // Đổi dấu gạch ngang thành dấu chấm
+      if (line) {
+        return {
+          newLine: line.replace(/-/g, '.'),
+        }
+      }
+      break
+    case 'MISSING_AMOUNT':
+      // Thêm số tiền mặc định 10
+      if (line) {
+        const betTypeRegex = /([a-z]+)(?!\d)(\s|$)/i
+        const match = line.match(betTypeRegex)
+        if (match) {
+          const betType = match[1]
+          const validBetType = defaultBetTypes.some((bt) =>
+            bt.aliases.includes(betType.toLowerCase())
+          )
+
+          if (validBetType) {
+            return {
+              newLine: line.replace(
+                new RegExp(`${betType}(\\s|$)`, 'i'),
+                `${betType}10$1`
+              ),
+            }
+          }
+        }
+      }
+      break
     case 'MIXED_REGIONS':
       // Không thể sửa tự động, chỉ gợi ý
       break
@@ -492,6 +632,9 @@ function findSimilarBetType(invalidBetType) {
 
   // Trường hợp đặc biệt: xcdui -> xcduoi
   if (normalized === 'xcdui') return 'xcduoi'
+  if (normalized === 'dui') return 'duoi'
+  if (normalized === 'b7lo') return 'b7l'
+  if (normalized === 'b8lo') return 'b8l'
 
   // Tìm kiểu cược có alias gần giống nhất
   let bestMatch = null

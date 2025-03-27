@@ -1,4 +1,4 @@
-Kiểm tra lại logic xử lý đặc biệt là các file trong betCodeParser xem đã đủ xử lý được trường hợp thực thế này chưa hãy thử checking xem đã cover được hết các case dưới đây chưa nhé, nếu chỗ nào chưa rõ, tổ hợp mã nào lỗi hãy nói cho tôi biết, tôi sẽ chỉ cho bạn:
+Kiểm tra lại logic xử lý đặc biệt là các file trong betCodeParser xem đã đủ xử lý được trường hợp đặt mã cược thực thế này chưa, đã cover được hết các case dưới đây chưa nhé, nếu chỗ nào chưa rõ hay tổ hợp mã nào lỗi hãy nói cho tôi biết, tôi sẽ chỉ cho bạn để bạn cập nhật nâng cấp thêm nhé.
 
 Ví dụ thực tế user nhập input sau:
 
