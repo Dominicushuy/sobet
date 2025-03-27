@@ -300,14 +300,10 @@ export function ChatProvider({ children }) {
           specialCases.multipleBetTypes.length > 0
         ) {
           // CÓ TRƯỜNG HỢP ĐẶC BIỆT -> TỰ ĐỘNG TÁCH
-          const station = parseResult.station
-          const stationText =
-            station.name ||
-            (station.multiStation
-              ? station.region === 'south'
-                ? 'Miền Nam'
-                : 'Miền Trung'
-              : 'Miền Bắc')
+
+          // Get original station text
+          const originalLines = text.split('\n')
+          const originalStationText = originalLines[0].trim()
 
           // Thu thập tất cả các dòng đã tách
           const separateLines = [
@@ -320,12 +316,16 @@ export function ChatProvider({ children }) {
           ]
 
           // Thêm từng mã cược đã tách vào hệ thống
-          for (const line of separateLines) {
-            const separateCode = `${stationText}\n${line}`
+          for (let i = 0; i < separateLines.length; i++) {
+            const line = separateLines[i]
+            const separateCode = `${originalStationText}\n${line}`
             const separateResult = betCodeService.analyzeBetCode(separateCode)
 
             if (separateResult.success) {
               addDraftCode({
+                id: `${Date.now()}-${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}-${i}`, // Ensure uniqueness
                 station: separateResult.parseResult.station,
                 lines: separateResult.parseResult.lines,
                 originalText: separateCode,
@@ -343,90 +343,38 @@ export function ChatProvider({ children }) {
                   separateResult.calculationResults.stakeResult?.details || [],
                 prizeDetails:
                   separateResult.calculationResults.prizeResult?.details || [],
-                autoExpanded: true, // Đánh dấu mã cược được tách tự động
+                autoExpanded: true,
               })
             }
           }
-
-          // Thông báo cho người dùng về việc tự động tách mã cược
-          const groupCount = specialCases.groupedNumbers.length
-          const betTypeCount = specialCases.multipleBetTypes.length
-
-          let explanationMessage = 'Mã cược của bạn chứa '
-          if (groupCount > 0 && betTypeCount > 0) {
-            explanationMessage += `${groupCount} số gộp thành nhóm và ${betTypeCount} trường hợp nhiều kiểu cược.`
-          } else if (groupCount > 0) {
-            explanationMessage += `${groupCount} số gộp thành nhóm.`
-          } else {
-            explanationMessage += `${betTypeCount} trường hợp nhiều kiểu cược.`
-          }
-
-          explanationMessage +=
-            ' Hệ thống đã tự động tách thành các mã cược riêng biệt.'
-
-          let detailMessage = '\n\nChi tiết:\n'
-
-          if (groupCount > 0) {
-            specialCases.groupedNumbers.forEach((group, idx) => {
-              detailMessage += `- ${
-                group.explanation
-              }\n  Tách thành: ${group.separateLines.join(', ')}\n`
-            })
-          }
-
-          if (betTypeCount > 0) {
-            specialCases.multipleBetTypes.forEach((betTypes, idx) => {
-              detailMessage += `- ${
-                betTypes.explanation
-              }\n  Tách thành: ${betTypes.separateLines.join(', ')}\n`
-            })
-          }
-
-          addMessage(
-            `Mã cược hợp lệ! ${explanationMessage}${detailMessage}`,
-            'bot',
-            {
-              betCodeInfo: {
-                station: parseResult.station.name,
-                lineCount: parseResult.lines.length,
-                totalStake,
-                potentialWin: totalPotential,
-                formattedCode:
-                  formattedBetCode !== text ? formattedBetCode : null,
-                autoExpanded: true,
-              },
-              specialCases: specialCases,
-            }
-          )
         } else {
           // KHÔNG CÓ TRƯỜNG HỢP ĐẶC BIỆT -> XỬ LÝ BÌNH THƯỜNG
 
-          // THAY ĐỔI: Split multi-line bet codes into individual bet codes
+          // Update the multi-line handling (without special cases)
           if (parseResult.lines.length > 1) {
             // Multiple lines - split into individual bet codes
 
-            // Get station information
-            const station = parseResult.station
-            const stationText =
-              station.name ||
-              (station.multiStation
-                ? station.region === 'south'
-                  ? 'Miền Nam'
-                  : 'Miền Trung'
-                : 'Miền Bắc')
+            // Get original station text (first line of input)
+            const originalLines = text.split('\n')
+            const originalStationText = originalLines[0].trim()
 
             // For each line, create and add an individual bet code
-            for (const line of parseResult.lines) {
+            for (let i = 0; i < parseResult.lines.length; i++) {
+              const line = parseResult.lines[i]
+
               // Create a new bet code text with just this line
-              const singleLineBetCode = `${stationText}\n${line.originalLine}`
+              const singleLineBetCode = `${originalStationText}\n${line.originalLine}`
 
               // Analyze this new bet code
               const singleLineResult =
                 betCodeService.analyzeBetCode(singleLineBetCode)
 
               if (singleLineResult.success) {
-                // Add the individual bet code to drafts
+                // Add the individual bet code to drafts with a unique ID
                 addDraftCode({
+                  id: `${Date.now()}-${Math.random()
+                    .toString(36)
+                    .substr(2, 9)}-${i}`, // Ensure uniqueness
                   station: singleLineResult.parseResult.station,
                   lines: singleLineResult.parseResult.lines,
                   originalText: singleLineBetCode,
@@ -449,33 +397,6 @@ export function ChatProvider({ children }) {
                 })
               }
             }
-
-            // Update message to indicate the bet code was split
-            addMessage(
-              `Mã cược hợp lệ! Đã tách thành ${
-                parseResult.lines.length
-              } mã cược riêng biệt và thêm vào danh sách.${
-                formattedBetCode !== text
-                  ? '\n\nMã cược đã được tối ưu định dạng.'
-                  : ''
-              }`,
-              'bot',
-              {
-                betCodeInfo: {
-                  station: parseResult.station.name,
-                  lineCount: parseResult.lines.length,
-                  totalStake,
-                  potentialWin: totalPotential,
-                  formattedCode:
-                    formattedBetCode !== text ? formattedBetCode : null,
-                  splitIntoIndividuals: true,
-                },
-                detailedCalculations: {
-                  stakeDetails: stakeResult.details || [],
-                  prizeDetails: prizeResult.details || [],
-                },
-              }
-            )
           } else {
             // Single line - keep existing logic
             addMessage(

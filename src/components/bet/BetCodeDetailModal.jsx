@@ -141,7 +141,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
           defaultValue='general'
           value={activeTab}
           onValueChange={setActiveTab}>
-          <TabsList className={cn('grid', 'mb-4')}>
+          <TabsList className='grid grid-cols-3 mb-4'>
             <TabsTrigger value='general' className='flex items-center gap-1.5'>
               <FileText className='h-3.5 w-3.5' />
               Thông tin chung
