@@ -141,6 +141,49 @@ function fixSpecialCases(lines, changes) {
       lines[i] = newLine
     }
 
+    // Handle grouped numbers with "da" bet type specifically
+    if (/\d{4,}/.test(line) && line.match(/da\d+/i)) {
+      const parts = line.split(/([a-z]+\d+(?:[,.]\d+)?)/i)
+
+      if (parts.length >= 2) {
+        const numbersPart = parts[0]
+        const betTypePart = parts[1] || ''
+
+        // Find all 4+ digit numbers
+        const allParts = numbersPart.split('.')
+
+        // Process each part
+        const processedLines = []
+
+        for (const part of allParts) {
+          if (/^\d{4,}$/.test(part) && part.length % 2 === 0) {
+            // For "da" bet type, create pairs
+            for (let j = 0; j < part.length; j += 4) {
+              if (j + 4 <= part.length) {
+                const firstPair = part.substr(j, 2)
+                const secondPair = part.substr(j + 2, 2)
+                processedLines.push(`${firstPair}.${secondPair}${betTypePart}`)
+              }
+            }
+          }
+        }
+
+        if (processedLines.length > 0) {
+          changes.push({
+            lineIndex: i,
+            oldLine: line,
+            newLine: processedLines[0], // Replace with the first processed line
+            additionalLines: processedLines.slice(1), // Store additional lines if needed
+            errorType: 'GROUPED_NUMBERS_SPECIAL',
+          })
+
+          lines[i] = processedLines[0]
+          // If we need to add more lines, we'd need to expand the lines array
+          // This would require modifying the return structure
+        }
+      }
+    }
+
     // Thêm tiền mặc định nếu thiếu (vd: dd, b, da)
     const betTypeWithoutAmount = /([a-z]+)(?!\d)(\s|$)/i.exec(line)
     if (betTypeWithoutAmount) {

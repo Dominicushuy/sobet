@@ -154,25 +154,37 @@ export function ChatProvider({ children }) {
           groupedNumbers &&
           groupedNumbers.some((num) => num.length % 2 === 0)
         ) {
-          const numbers = []
+          const separateLines = []
+          const processedGroups = []
 
           groupedNumbers.forEach((group) => {
             if (group.length % 2 === 0) {
-              for (let i = 0; i < group.length; i += 2) {
-                numbers.push(group.substring(i, i + 2))
+              // For each 4-digit group, create a pair of the first 2 and last 2 digits
+              for (let i = 0; i < group.length; i += 4) {
+                if (i + 4 <= group.length) {
+                  const firstDigits = group.substring(i, i + 2)
+                  const lastDigits = group.substring(i + 2, i + 4)
+                  processedGroups.push(`${firstDigits}.${lastDigits}`)
+                } else if (i + 2 <= group.length) {
+                  // Handle leftover 2 digits
+                  processedGroups.push(group.substring(i, i + 2))
+                }
               }
             }
           })
 
-          if (numbers.length > 0 && line.betType) {
-            const betTypeStr = `${line.betType.alias}${line.amount || 10}`
-            const separateLines = numbers.map((num) => `${num}${betTypeStr}`)
+          // Add bet type to each processed group
+          const betTypeStr = `${line.betType.alias}${line.amount || 10}`
+          processedGroups.forEach((group) => {
+            separateLines.push(`${group}${betTypeStr}`)
+          })
 
+          if (separateLines.length > 0) {
             specialCases.groupedNumbers.push({
               originalLine: line.originalLine,
               explanation: `Số ${groupedNumbers.join(
                 ', '
-              )} được tách thành ${numbers.join(', ')}`,
+              )} được tách thành ${processedGroups.join(', ')}`,
               separateLines,
             })
           }
@@ -180,15 +192,39 @@ export function ChatProvider({ children }) {
 
         // Kiểm tra nhiều kiểu cược (ví dụ: 23.45.67dd10.dau20.duoi5)
         if (line.additionalBetTypes && line.additionalBetTypes.length > 0) {
+          // Extract the numbers (everything before the first bet type)
+          const numbersPart = line.numbers ? line.numbers.join('.') : ''
+
+          // Create separate lines for the main bet type and each additional bet type
           const mainBetType = `${line.betType.alias}${line.amount || 10}`
           const additionalTypes = line.additionalBetTypes.map(
             (bt) => `${bt.betType.alias}${bt.amount || 10}`
           )
 
           const allBetTypes = [mainBetType, ...additionalTypes]
-          const numbers = line.numbers ? line.numbers.join('.') : ''
+          let separateLines = []
 
-          const separateLines = allBetTypes.map((bt) => `${numbers}${bt}`)
+          // Special handling for "da" bet type with multiple numbers
+          if (
+            (line.betType.alias === 'da' || line.betType.alias === 'dv') &&
+            line.numbers &&
+            line.numbers.length >= 2
+          ) {
+            // For da bet type, keep all numbers together
+            separateLines.push(`${numbersPart}${mainBetType}`)
+
+            // For other bet types, create separate lines for each number
+            for (const betType of additionalTypes) {
+              for (const num of line.numbers) {
+                separateLines.push(`${num}${betType}`)
+              }
+            }
+          } else {
+            // For other bet types, just create a line for each bet type with all numbers
+            for (const betType of allBetTypes) {
+              separateLines.push(`${numbersPart}${betType}`)
+            }
+          }
 
           specialCases.multipleBetTypes.push({
             originalLine: line.originalLine,

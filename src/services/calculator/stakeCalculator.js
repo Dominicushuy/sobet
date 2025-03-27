@@ -427,9 +427,18 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
 
   // Kiểm tra nếu là kiểu đá (bridge)
   if (numberInfo.isBridge || betTypeInfo.specialCalc === 'bridge') {
+    // For da bet type, we need at least 2 numbers to create pairs
+    if (numberInfo.count < 2) {
+      return {
+        stake: 0,
+        valid: false,
+        error: 'Kiểu đá (da) cần ít nhất 2 số',
+      }
+    }
+
     // Tính bridge factor: C(n,2) = n*(n-1)/2
     const n = numberInfo.count
-    const bridgeFactor = n < 2 ? 0 : (n * (n - 1)) / 2
+    const bridgeFactor = (n * (n - 1)) / 2
 
     // Kiểu đá luôn sử dụng hệ số nhân 2
     const daMultiplier =

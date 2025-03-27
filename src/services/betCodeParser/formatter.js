@@ -534,26 +534,52 @@ function containsGroupNumbers(line) {
  * Tách dòng thành phần số và phần kiểu cược/tiền cược
  */
 function splitNumbersAndBetType(line) {
-  // Tạo pattern từ tất cả các alias kiểu cược
+  // Create sorted pattern from bet type aliases (longest first to avoid partial matches)
   const betTypeAliases = defaultBetTypes
     .flatMap((bt) => bt.aliases)
     .sort((a, b) => b.length - a.length)
     .join('|')
 
-  const regex = new RegExp(
-    `(.*?)(\\b(?:${betTypeAliases})\\d*(?:[,.n]\\d+)?)$`,
+  // Special handling for multiple bet types (like 66.88da1.b5)
+  const multipleBetTypesPattern = new RegExp(
+    `(.*?)\\b((?:${betTypeAliases})\\d*(?:[,.n]\\d+)?)(?:\\.((?:${betTypeAliases})\\d*(?:[,.n]\\d+)?))*$`,
     'i'
   )
-  const match = line.match(regex)
+
+  const match = line.match(multipleBetTypesPattern)
 
   if (match) {
+    // Extract numbers part and the first bet type
+    const numbersPart = match[1]?.trim() || ''
+    const firstBetType = match[2] || ''
+
+    // Extract all bet types (including additional ones)
+    const betTypesText = line.substring(line.indexOf(firstBetType))
+    const betTypes = betTypesText.split('.')
+
     return {
-      numbersPart: match[1].trim(),
-      betTypePart: match[2],
+      numbersPart,
+      betTypePart: firstBetType,
+      allBetTypes: betTypes,
     }
   }
 
-  return { numbersPart: line, betTypePart: '' }
+  // Fallback for simple cases
+  const simpleRegex = new RegExp(
+    `(.*?)(\\b(?:${betTypeAliases})\\d*(?:[,.n]\\d+)?)$`,
+    'i'
+  )
+  const simpleMatch = line.match(simpleRegex)
+
+  if (simpleMatch) {
+    return {
+      numbersPart: simpleMatch[1].trim(),
+      betTypePart: simpleMatch[2],
+      allBetTypes: [simpleMatch[2]],
+    }
+  }
+
+  return { numbersPart: line, betTypePart: '', allBetTypes: [] }
 }
 
 /**
@@ -565,9 +591,15 @@ function expandGroupedNumbers(numbersPart) {
 
   for (const part of parts) {
     if (/^\d{4,}$/.test(part) && part.length % 2 === 0) {
-      // Tách thành các cặp 2 chữ số
-      for (let i = 0; i < part.length; i += 2) {
-        expandedNumbers.push(part.substr(i, 2))
+      // Pair consecutive 2-digit numbers for special handling with "da" bet type
+      for (let i = 0; i < part.length; i += 4) {
+        if (i + 4 <= part.length) {
+          // Create pairs like "12.34" for each 4 digits
+          expandedNumbers.push(`${part.substr(i, 2)}.${part.substr(i + 2, 2)}`)
+        } else if (i + 2 <= part.length) {
+          // Handle any remaining 2 digits
+          expandedNumbers.push(part.substr(i, 2))
+        }
       }
     } else if (/^\d+$/.test(part)) {
       expandedNumbers.push(part)
