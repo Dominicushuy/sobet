@@ -31,18 +31,11 @@ import {
 import { format } from 'date-fns'
 import { formatMoney } from '@/utils/formatters'
 import { useBetCode } from '@/contexts/BetCodeContext'
-import { useSpecialCases } from '@/hooks/useSpecialCases'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
   const { confirmDraftCode, removeBetCode, removeDraftCode } = useBetCode()
-  const {
-    expanding,
-    handleExpandGroupedNumbers,
-    handleExpandMultipleBetTypes,
-    hasSpecialCases,
-  } = useSpecialCases()
 
   const [activeTab, setActiveTab] = useState('general')
 
@@ -112,9 +105,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
 
   const numbers = getAllNumbers()
 
-  // Check if betCode has special cases
-  const hasSpecialCasesData = hasSpecialCases(betCode)
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-3xl max-h-[90vh] overflow-y-auto'>
@@ -136,14 +126,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
                 Đã lưu
               </Badge>
             )}
-            {hasSpecialCasesData && (
-              <Badge
-                variant='outline'
-                className='bg-blue-100 text-blue-800 ml-2'>
-                <Sparkles className='h-3 w-3 mr-1' />
-                Đặc biệt
-              </Badge>
-            )}
           </DialogTitle>
           <div className='text-sm text-muted-foreground flex items-center gap-1'>
             <Clock className='h-3.5 w-3.5' />
@@ -159,12 +141,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
           defaultValue='general'
           value={activeTab}
           onValueChange={setActiveTab}>
-          <TabsList
-            className={cn(
-              'grid',
-              hasSpecialCasesData ? 'grid-cols-4' : 'grid-cols-3',
-              'mb-4'
-            )}>
+          <TabsList className={cn('grid', 'mb-4')}>
             <TabsTrigger value='general' className='flex items-center gap-1.5'>
               <FileText className='h-3.5 w-3.5' />
               Thông tin chung
@@ -179,15 +156,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
               <Calculator className='h-3.5 w-3.5' />
               Tính toán
             </TabsTrigger>
-
-            {hasSpecialCasesData && (
-              <TabsTrigger
-                value='specialCases'
-                className='flex items-center gap-1.5'>
-                <Sparkles className='h-3.5 w-3.5' />
-                Trường hợp đặc biệt
-              </TabsTrigger>
-            )}
           </TabsList>
 
           <TabsContent value='general'>
@@ -663,112 +631,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {hasSpecialCasesData && (
-            <TabsContent value='specialCases'>
-              <Card>
-                <CardContent className='p-6 space-y-5'>
-                  {betCode.specialCases.groupedNumbers.length > 0 && (
-                    <div className='space-y-3'>
-                      <h3 className='text-sm font-medium flex items-center gap-1.5'>
-                        <Scissors className='h-4 w-4 text-amber-600' />
-                        Số gộp thành nhóm
-                      </h3>
-
-                      <div className='space-y-3'>
-                        {betCode.specialCases.groupedNumbers.map(
-                          (group, index) => (
-                            <div
-                              key={index}
-                              className='bg-amber-50 p-3 rounded-lg border border-amber-200'>
-                              <div className='font-medium mb-1'>
-                                {group.explanation}
-                              </div>
-                              <div className='text-xs space-y-1 mt-2'>
-                                <div className='text-muted-foreground'>
-                                  Tách thành:
-                                </div>
-                                {group.separateLines.map((line, idx) => (
-                                  <div
-                                    key={idx}
-                                    className='bg-white p-2 rounded border'>
-                                    {line}
-                                  </div>
-                                ))}
-                              </div>
-
-                              <Button
-                                variant='outline'
-                                size='sm'
-                                className='mt-3'
-                                disabled={expanding}
-                                onClick={() =>
-                                  handleExpandGroupedNumbers(betCode.id)
-                                }>
-                                <Scissors className='h-3.5 w-3.5 mr-1.5' />
-                                {expanding
-                                  ? 'Đang tách...'
-                                  : 'Tách thành mã cược riêng'}
-                              </Button>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {betCode.specialCases.multipleBetTypes.length > 0 && (
-                    <div className='space-y-3'>
-                      <h3 className='text-sm font-medium flex items-center gap-1.5'>
-                        <Sparkles className='h-4 w-4 text-blue-600' />
-                        Nhiều kiểu cược
-                      </h3>
-
-                      <div className='space-y-3'>
-                        {betCode.specialCases.multipleBetTypes.map(
-                          (betTypes, index) => (
-                            <div
-                              key={index}
-                              className='bg-blue-50 p-3 rounded-lg border border-blue-200'>
-                              <div className='font-medium mb-1'>
-                                {betTypes.explanation}
-                              </div>
-                              <div className='text-xs space-y-1 mt-2'>
-                                <div className='text-muted-foreground'>
-                                  Tách thành:
-                                </div>
-                                {betTypes.separateLines.map((line, idx) => (
-                                  <div
-                                    key={idx}
-                                    className='bg-white p-2 rounded border'>
-                                    {line}
-                                  </div>
-                                ))}
-                              </div>
-
-                              <Button
-                                variant='outline'
-                                size='sm'
-                                className='mt-3'
-                                disabled={expanding}
-                                onClick={() =>
-                                  handleExpandMultipleBetTypes(betCode.id)
-                                }>
-                                <Sparkles className='h-3.5 w-3.5 mr-1.5' />
-                                {expanding
-                                  ? 'Đang tách...'
-                                  : 'Tách thành mã cược riêng'}
-                              </Button>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
         </Tabs>
 
         <DialogFooter className='space-x-2'>

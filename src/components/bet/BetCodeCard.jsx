@@ -28,7 +28,6 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { useBetCode } from '@/contexts/BetCodeContext'
-import { useSpecialCases } from '@/hooks/useSpecialCases'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import PrintBetCode from './PrintBetCode'
@@ -45,12 +44,6 @@ const BetCodeCard = ({
   onSelectChange = null,
 }) => {
   const { removeDraftCode, removeBetCode, confirmDraftCode } = useBetCode()
-  const {
-    expanding,
-    handleExpandGroupedNumbers,
-    handleExpandMultipleBetTypes,
-    hasSpecialCases,
-  } = useSpecialCases()
 
   const [showDetails, setShowDetails] = useState(false)
   const [showFullCode, setShowFullCode] = useState(false)
@@ -134,17 +127,13 @@ const BetCodeCard = ({
   // const numbers = getAllNumbers()
   const betText = betCode.originalText || 'N/A'
 
-  // Check if betCode has special cases
-  const hasSpecialCasesData = hasSpecialCases(betCode)
-
   return (
     <>
       <Card
         className={cn(
           'transition-all hover:shadow-md',
           isDraft ? 'border-dashed border-yellow-300' : 'border-solid',
-          selected ? 'ring-2 ring-primary' : '',
-          hasSpecialCasesData ? 'border-blue-300' : ''
+          selected ? 'ring-2 ring-primary' : ''
         )}>
         <CardHeader className='py-3 px-4'>
           <div className='flex justify-between items-center'>
@@ -168,13 +157,6 @@ const BetCodeCard = ({
                     <Badge className='bg-green-100 text-green-800 font-normal text-xs'>
                       <CheckCircle2 className='h-3 w-3 mr-1' />
                       Đã lưu
-                    </Badge>
-                  )}
-
-                  {hasSpecialCasesData && (
-                    <Badge className='bg-blue-100 text-blue-800 font-normal text-xs ml-1'>
-                      <Sparkles className='h-3 w-3 mr-1' />
-                      Đặc biệt
                     </Badge>
                   )}
                 </CardTitle>
@@ -262,51 +244,6 @@ const BetCodeCard = ({
               </span>
             </div>
           </div>
-
-          {/* Special cases notification */}
-          {hasSpecialCasesData && (
-            <div className='mt-2 space-y-2'>
-              {betCode.specialCases.groupedNumbers.length > 0 && (
-                <div className='bg-amber-50 p-2 rounded-md border border-amber-200'>
-                  <div className='flex justify-between items-center'>
-                    <span className='text-xs text-amber-800'>
-                      Có số gộp thành nhóm (
-                      {betCode.specialCases.groupedNumbers.length})
-                    </span>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className='h-7 text-xs'
-                      disabled={expanding}
-                      onClick={() => handleExpandGroupedNumbers(betCode.id)}>
-                      <Scissors className='h-3 w-3 mr-1' />
-                      {expanding ? 'Đang tách...' : 'Tách riêng'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {betCode.specialCases.multipleBetTypes.length > 0 && (
-                <div className='bg-blue-50 p-2 rounded-md border border-blue-200'>
-                  <div className='flex justify-between items-center'>
-                    <span className='text-xs text-blue-800'>
-                      Có nhiều kiểu cược (
-                      {betCode.specialCases.multipleBetTypes.length})
-                    </span>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className='h-7 text-xs'
-                      disabled={expanding}
-                      onClick={() => handleExpandMultipleBetTypes(betCode.id)}>
-                      <Sparkles className='h-3 w-3 mr-1' />
-                      {expanding ? 'Đang tách...' : 'Tách riêng'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Details - only visible when expanded */}
           {showDetails && (

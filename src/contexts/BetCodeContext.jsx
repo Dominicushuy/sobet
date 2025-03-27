@@ -23,7 +23,6 @@ const ACTION_TYPES = {
   BATCH_DELETE: 'BATCH_DELETE',
   SORT_CODES: 'SORT_CODES',
   FILTER_CODES: 'FILTER_CODES',
-  EXPAND_SPECIAL_CASES: 'EXPAND_SPECIAL_CASES',
 }
 
 // Reducer để quản lý state
@@ -76,96 +75,6 @@ const betCodeReducer = (state, action) => {
         lastOperation: {
           type: 'add_draft',
           timestamp: new Date().toISOString(),
-        },
-      }
-    }
-
-    case ACTION_TYPES.EXPAND_SPECIAL_CASES: {
-      const { codeId, expandType } = action.payload
-      const targetCode = state.draftCodes.find((code) => code.id === codeId)
-
-      if (!targetCode || !targetCode.specialCases) {
-        return state
-      }
-
-      const newDraftCodes = []
-      const specialCases = targetCode.specialCases
-
-      const station = targetCode.station
-      const stationText =
-        station.name ||
-        (station.multiStation
-          ? station.region === 'south'
-            ? 'Miền Nam'
-            : 'Miền Trung'
-          : 'Miền Bắc')
-
-      let casesToExpand = []
-
-      if (
-        expandType === 'groupedNumbers' &&
-        specialCases.groupedNumbers.length > 0
-      ) {
-        casesToExpand = specialCases.groupedNumbers.flatMap(
-          (group) => group.separateLines
-        )
-      } else if (
-        expandType === 'multipleBetTypes' &&
-        specialCases.multipleBetTypes.length > 0
-      ) {
-        casesToExpand = specialCases.multipleBetTypes.flatMap(
-          (betTypes) => betTypes.separateLines
-        )
-      } else if (expandType === 'all') {
-        casesToExpand = [
-          ...specialCases.groupedNumbers.flatMap(
-            (group) => group.separateLines
-          ),
-          ...specialCases.multipleBetTypes.flatMap(
-            (betTypes) => betTypes.separateLines
-          ),
-        ]
-      }
-
-      for (const line of casesToExpand) {
-        const fullText = `${stationText}\n${line}`
-        const result = betCodeService.analyzeBetCode(fullText)
-
-        if (result.success) {
-          newDraftCodes.push({
-            id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-            station: result.parseResult.station,
-            lines: result.parseResult.lines,
-            originalText: fullText,
-            formattedText:
-              result.formattedText !== fullText
-                ? result.formattedText
-                : fullText,
-            stakeAmount: result.calculationResults.stakeResult?.totalStake || 0,
-            potentialWinning:
-              result.calculationResults.prizeResult?.totalPotential || 0,
-            stakeDetails: result.calculationResults.stakeResult?.details || [],
-            prizeDetails: result.calculationResults.prizeResult?.details || [],
-            createdAt: new Date().toISOString(),
-            isDraft: true,
-            status: 'pending',
-            expandedFrom: codeId,
-          })
-        }
-      }
-
-      if (newDraftCodes.length === 0) {
-        return state
-      }
-
-      return {
-        ...state,
-        draftCodes: [...state.draftCodes, ...newDraftCodes],
-        lastOperation: {
-          type: 'expand_special_cases',
-          timestamp: new Date().toISOString(),
-          expandedCount: newDraftCodes.length,
-          sourceId: codeId,
         },
       }
     }
@@ -423,14 +332,6 @@ export function BetCodeProvider({ children }) {
     })
   }, [])
 
-  // Expand special cases into separate bet codes
-  const expandSpecialCases = useCallback((codeId, expandType) => {
-    dispatch({
-      type: ACTION_TYPES.EXPAND_SPECIAL_CASES,
-      payload: { codeId, expandType },
-    })
-  }, [])
-
   // Remove a draft code
   const removeDraftCode = useCallback((id) => {
     dispatch({
@@ -655,7 +556,6 @@ export function BetCodeProvider({ children }) {
     getStatistics,
     getFilteredCodes,
     analyzeBetCode,
-    expandSpecialCases,
   }
 
   return (
