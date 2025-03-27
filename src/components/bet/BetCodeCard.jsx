@@ -33,7 +33,6 @@ import BetCodeDetailModal from './BetCodeDetailModal'
 import { formatMoney } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
 import { CheckCircle2Icon } from 'lucide-react'
-import { Copy } from 'lucide-react'
 
 const BetCodeCard = ({
   betCode,

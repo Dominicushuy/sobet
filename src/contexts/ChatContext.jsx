@@ -136,6 +136,74 @@ export function ChatProvider({ children }) {
     return examples[errorKey]
   }
 
+  /**
+   * Tách và hiển thị các trường hợp đặc biệt trong mã cược
+   */
+  const extractSpecialCases = (betCode, parseResult) => {
+    const specialCases = {
+      groupedNumbers: [],
+      multipleBetTypes: [],
+    }
+
+    // Kiểm tra trường hợp số gộp thành nhóm (ví dụ: 1234.4567da1)
+    if (parseResult && parseResult.lines) {
+      parseResult.lines.forEach((line, index) => {
+        // Kiểm tra số gộp thành nhóm
+        const groupedNumbers = line.originalLine.match(/\d{4,}/g)
+        if (
+          groupedNumbers &&
+          groupedNumbers.some((num) => num.length % 2 === 0)
+        ) {
+          const numbers = []
+
+          groupedNumbers.forEach((group) => {
+            if (group.length % 2 === 0) {
+              for (let i = 0; i < group.length; i += 2) {
+                numbers.push(group.substring(i, i + 2))
+              }
+            }
+          })
+
+          if (numbers.length > 0 && line.betType) {
+            const betTypeStr = `${line.betType.alias}${line.amount || 10}`
+            const separateLines = numbers.map((num) => `${num}${betTypeStr}`)
+
+            specialCases.groupedNumbers.push({
+              originalLine: line.originalLine,
+              explanation: `Số ${groupedNumbers.join(
+                ', '
+              )} được tách thành ${numbers.join(', ')}`,
+              separateLines,
+            })
+          }
+        }
+
+        // Kiểm tra nhiều kiểu cược (ví dụ: 23.45.67dd10.dau20.duoi5)
+        if (line.additionalBetTypes && line.additionalBetTypes.length > 0) {
+          const mainBetType = `${line.betType.alias}${line.amount || 10}`
+          const additionalTypes = line.additionalBetTypes.map(
+            (bt) => `${bt.betType.alias}${bt.amount || 10}`
+          )
+
+          const allBetTypes = [mainBetType, ...additionalTypes]
+          const numbers = line.numbers ? line.numbers.join('.') : ''
+
+          const separateLines = allBetTypes.map((bt) => `${numbers}${bt}`)
+
+          specialCases.multipleBetTypes.push({
+            originalLine: line.originalLine,
+            explanation: `Kiểu cược ${allBetTypes.join(
+              ', '
+            )} được tách thành dòng riêng biệt`,
+            separateLines,
+          })
+        }
+      })
+    }
+
+    return specialCases
+  }
+
   const processUserMessage = async (text) => {
     setIsTyping(true)
 
@@ -152,20 +220,51 @@ export function ChatProvider({ children }) {
       // Detect any errors
       const errorResult = detectErrors(formattedBetCode, parseResult)
 
-      // console.log({ formattedBetCode, parseResult, errorResult })
-
       if (parseResult.success && !errorResult.hasErrors) {
         // Calculate stake and potential prize
-
         const stakeResult = calculateStake(parseResult)
         const prizeResult = calculatePotentialPrize(parseResult)
-
-        console.log({ parseResult, stakeResult, prizeResult })
 
         const totalStake = stakeResult.success ? stakeResult.totalStake : 0
         const totalPotential = prizeResult.success
           ? prizeResult.totalPotential
           : 0
+
+        // Phát hiện và xử lý các trường hợp đặc biệt
+        const specialCases = extractSpecialCases(formattedBetCode, parseResult)
+        const hasSpecialCases =
+          specialCases.groupedNumbers.length > 0 ||
+          specialCases.multipleBetTypes.length > 0
+
+        // Tạo thông báo giải thích các trường hợp đặc biệt
+        let specialCasesMessage = ''
+        if (hasSpecialCases) {
+          specialCasesMessage = '\n\n**Thông tin bổ sung về mã cược:**\n\n'
+
+          if (specialCases.groupedNumbers.length > 0) {
+            specialCasesMessage += '- **Số gộp thành nhóm:**\n'
+            specialCases.groupedNumbers.forEach((group, idx) => {
+              specialCasesMessage += `  + Dòng ${idx + 1}: ${
+                group.explanation
+              }\n`
+              specialCasesMessage += `    Tách thành: ${group.separateLines.join(
+                ', '
+              )}\n`
+            })
+          }
+
+          if (specialCases.multipleBetTypes.length > 0) {
+            specialCasesMessage += '- **Nhiều kiểu cược:**\n'
+            specialCases.multipleBetTypes.forEach((betTypes, idx) => {
+              specialCasesMessage += `  + Dòng ${idx + 1}: ${
+                betTypes.explanation
+              }\n`
+              specialCasesMessage += `    Tách thành:\n    ${betTypes.separateLines.join(
+                '\n    '
+              )}\n`
+            })
+          }
+        }
 
         // Valid bet code
         addMessage(
@@ -173,7 +272,7 @@ export function ChatProvider({ children }) {
             formattedBetCode !== text
               ? '\n\nMã cược đã được tối ưu định dạng.'
               : ''
-          }`,
+          }${specialCasesMessage}`,
           'bot',
           {
             betCodeInfo: {
@@ -188,6 +287,7 @@ export function ChatProvider({ children }) {
               stakeDetails: stakeResult.details || [],
               prizeDetails: prizeResult.details || [],
             },
+            specialCases: hasSpecialCases ? specialCases : null,
           }
         )
 
@@ -202,6 +302,7 @@ export function ChatProvider({ children }) {
             potentialWinning: totalPotential,
             stakeDetails: stakeResult.details || [],
             prizeDetails: prizeResult.details || [],
+            specialCases: hasSpecialCases ? specialCases : null,
           })
         }
       } else {
@@ -296,28 +397,43 @@ export function ChatProvider({ children }) {
               ? fixedPrizeResult.totalPotential
               : 0
 
+            // Phát hiện các trường hợp đặc biệt trong mã đã sửa
+            const fixedSpecialCases = extractSpecialCases(
+              fixResult.fixed,
+              fixedParseResult
+            )
+            const hasFixedSpecialCases =
+              fixedSpecialCases.groupedNumbers.length > 0 ||
+              fixedSpecialCases.multipleBetTypes.length > 0
+
+            let fixedSpecialCasesMessage = ''
+            if (hasFixedSpecialCases) {
+              fixedSpecialCasesMessage = '\n\n**Lưu ý về mã cược đã sửa:**\n'
+
+              if (fixedSpecialCases.groupedNumbers.length > 0) {
+                fixedSpecialCasesMessage +=
+                  '\n- Mã cược chứa số gộp thành nhóm sẽ được tách thành các dòng riêng biệt.'
+              }
+
+              if (fixedSpecialCases.multipleBetTypes.length > 0) {
+                fixedSpecialCasesMessage +=
+                  '\n- Mã cược chứa nhiều kiểu cược sẽ được tách thành các dòng riêng biệt.'
+              }
+            }
+
             fixedCodeMessage +=
               `\n\nTiền cược: ${fixedTotalStake.toLocaleString()}đ | ` +
-              `Tiềm năng thắng: ${fixedTotalPotential.toLocaleString()}đ\n\n` +
+              `Tiềm năng thắng: ${fixedTotalPotential.toLocaleString()}đ` +
+              `${fixedSpecialCasesMessage}\n\n` +
               'Bạn có thể sao chép mã trên và thử lại hoặc nhấn nút "Áp dụng mã đã sửa" bên dưới.'
           } else {
             fixedCodeMessage += '\n\nBạn có thể sao chép mã trên và thử lại.'
           }
         }
 
-        // Add common patterns explanation if more than one error
-        let commonPatternsExplanation = ''
-        // if (detailedErrors.length > 1) {
-        //   commonPatternsExplanation =
-        //     `\n\nMột số mẫu mã cược hợp lệ:\n` +
-        //     `- mb\\n23.45.67dd10 (Miền Bắc, số 23, 45, 67, kiểu đầu đuôi, 10.000đ)\n` +
-        //     `- vl.ct\\n12.34.56b10\\n78.90da5 (Vĩnh Long và Cần Thơ, nhiều dòng cược)\n` +
-        //     `- 2dmn\\n123.456.789xc2 (2 đài miền Nam, số 123, 456, 789, kiểu xỉu chủ, 2.000đ)`
-        // }
-
         // Response with error details and fix suggestions
         addMessage(
-          `${responseMessage}\n\nVui lòng kiểm tra lại mã cược và thử lại.${fixedCodeMessage}${commonPatternsExplanation}`,
+          `${responseMessage}\n\nVui lòng kiểm tra lại mã cược và thử lại.${fixedCodeMessage}`,
           'bot',
           {
             error: true,
