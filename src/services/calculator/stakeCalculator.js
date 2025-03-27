@@ -19,6 +19,7 @@ export function calculateStake(parsedResult, userSettings = {}) {
 
   try {
     const lines = parsedResult.lines
+    const station = parsedResult.station // Lấy station từ cấp cao hơn
     let totalStake = 0
     const details = []
     // Lấy hệ số nhân từ userSettings, mặc định là 0.8 nếu không có
@@ -39,14 +40,14 @@ export function calculateStake(parsedResult, userSettings = {}) {
         continue
       }
 
-      // Lấy thông tin về đài
-      const stationInfo = getStationInfo(line, userSettings)
+      // Truyền station từ parsedResult
+      const stationInfo = getStationInfo(station, userSettings)
 
       // Lấy thông tin về kiểu cược chính
       const betTypeInfo = getBetTypeInfo(line, userSettings)
 
       // Lấy số lượng số và tổ hợp
-      const numberInfo = getNumberInfo(line, betTypeInfo)
+      const numberInfo = getNumberInfo(line, betTypeInfo, station) // Truyền station
 
       // Tính tiền đặt cược cho dòng này với kiểu cược chính
       const lineStake = calculateLineStake(
@@ -82,8 +83,9 @@ export function calculateStake(parsedResult, userSettings = {}) {
           const additionalBetTypeInfo = getBetTypeInfo(tempLine, userSettings)
           const additionalNumberInfo = getNumberInfo(
             tempLine,
-            additionalBetTypeInfo
-          )
+            additionalBetTypeInfo,
+            station
+          ) // Truyền station
 
           // Tính tiền đặt cược cho kiểu cược bổ sung
           const additionalLineStake = calculateLineStake(
@@ -137,29 +139,29 @@ export function calculateStake(parsedResult, userSettings = {}) {
  * @param {object} userSettings - Cài đặt người dùng
  * @returns {object} Thông tin về đài
  */
-function getStationInfo(line, userSettings) {
+function getStationInfo(station, userSettings) {
   const stationMultiplier = userSettings.stationMultiplier || 1
 
-  if (line.multiStation) {
+  if (station.multiStation) {
     // Đài nhiều miền
     return {
-      count: line.station.count || 1,
+      count: station.count || 1,
       multiplier: stationMultiplier,
-      region: line.station.region,
+      region: station.region,
     }
-  } else if (line.station?.stations) {
+  } else if (station.stations) {
     // Nhiều đài (vl.ct)
     return {
-      count: line.station.stations.length || 1,
+      count: station.stations.length || 1,
       multiplier: stationMultiplier,
-      region: line.station.region,
+      region: station.region,
     }
   } else {
     // Đài đơn lẻ
     return {
       count: 1,
       multiplier: stationMultiplier,
-      region: line.station?.region,
+      region: station.region,
     }
   }
 }
@@ -272,12 +274,15 @@ function getDigitCount(line) {
  * Lấy thông tin về số và tổ hợp
  * @param {object} line - Dòng mã cược
  * @param {object} betTypeInfo - Thông tin về kiểu cược
+ * @param {object} station - Thông tin đài từ parsedResult
  * @returns {object} Thông tin về số và tổ hợp
  */
-function getNumberInfo(line, betTypeInfo) {
+
+function getNumberInfo(line, betTypeInfo, station) {
   const numbers = line.numbers || []
   const betTypeAlias = betTypeInfo.alias?.toLowerCase()
   const digitCount = getDigitCount(line)
+  const region = station.region || 'south'
 
   // Kiểm tra loại cược
   const isBridge =
@@ -306,49 +311,28 @@ function getNumberInfo(line, betTypeInfo) {
     betTypeAlias === 'b8ld' ||
     betTypeAlias === 'b8ldao'
 
-  // Tìm thông tin bet type từ defaults
-  const defaultBetType = defaultBetTypes.find(
-    (bt) =>
-      bt.name === betTypeInfo.id ||
-      bt.aliases.some((a) => a.toLowerCase() === betTypeAlias)
-  )
-
-  // Lấy số lượng tổ hợp dựa trên miền và bet type
+  // Khởi tạo combinationCount
   let combinationCount = 1
-  if (defaultBetType && defaultBetType.combinations) {
-    const region = line.station?.region || 'south'
 
-    if (typeof defaultBetType.combinations === 'object') {
-      // Kiểm tra nếu có direct mapping cho region
-      if (typeof defaultBetType.combinations[region] === 'number') {
-        combinationCount = defaultBetType.combinations[region]
-      }
-      // Kiểm tra nếu có nested structure cho số chữ số
-      else if (
-        typeof defaultBetType.combinations[`${digitCount} digits`] === 'object'
-      ) {
-        combinationCount =
-          defaultBetType.combinations[`${digitCount} digits`][region] || 1
-      }
-      // Kiểm tra nếu có direct mapping cho số chữ số
-      else if (
-        typeof defaultBetType.combinations[`${digitCount} digits`] === 'number'
-      ) {
-        combinationCount = defaultBetType.combinations[`${digitCount} digits`]
-      }
-    } else if (typeof defaultBetType.combinations === 'number') {
-      combinationCount = defaultBetType.combinations
-    }
-  }
-
+  // Xử lý các trường hợp đặc biệt trước
   if (
+    betTypeAlias === 'dd' ||
+    betTypeAlias === 'dau duoi' ||
+    betTypeAlias === 'đầu đuôi' ||
+    betTypeAlias === 'head and tail'
+  ) {
+    // Đầu đuôi - kiểm tra miền
+    if (region === 'north') {
+      combinationCount = 5 // 4 lô ở giải bảy (đầu) và 1 lô ở giải đặc biệt (đuôi)
+    } else {
+      combinationCount = 2 // 1 lô ở giải tám (đầu) và 1 lô ở giải đặc biệt (đuôi)
+    }
+  } else if (
     betTypeAlias === 'b' ||
     betTypeAlias === 'bao' ||
     betTypeAlias === 'baolo'
   ) {
     // Kiểu bao lô
-    const region = line.station?.region || 'south'
-
     if (digitCount === 2) {
       if (region === 'north') {
         combinationCount = 27
@@ -368,19 +352,6 @@ function getNumberInfo(line, betTypeInfo) {
         combinationCount = 16
       }
     }
-  } else if (
-    betTypeAlias === 'dd' ||
-    betTypeAlias === 'dau duoi' ||
-    betTypeAlias === 'đầu đuôi' ||
-    betTypeAlias === 'head and tail'
-  ) {
-    // Đầu đuôi - kiểm tra miền
-    const region = line.station?.region || 'south'
-    if (region === 'north') {
-      combinationCount = 5 // 4 lô ở giải bảy (đầu) và 1 lô ở giải đặc biệt (đuôi)
-    } else {
-      combinationCount = 2 // 1 lô ở giải tám (đầu) và 1 lô ở giải đặc biệt (đuôi)
-    }
   } else if (betTypeAlias === 'b7l' || betTypeAlias === 'baobay') {
     // Bao lô 7
     combinationCount = 7
@@ -394,6 +365,40 @@ function getNumberInfo(line, betTypeInfo) {
   ) {
     // Nhất to
     combinationCount = 1
+  } else {
+    // Tìm thông tin bet type từ defaults
+    const defaultBetType = defaultBetTypes.find(
+      (bt) =>
+        bt.name === betTypeInfo.id ||
+        bt.aliases.some((a) => a.toLowerCase() === betTypeAlias)
+    )
+
+    // Lấy số lượng tổ hợp dựa trên miền và bet type
+    if (defaultBetType && defaultBetType.combinations) {
+      if (typeof defaultBetType.combinations === 'object') {
+        // Kiểm tra nếu có direct mapping cho region
+        if (typeof defaultBetType.combinations[region] === 'number') {
+          combinationCount = defaultBetType.combinations[region]
+        }
+        // Kiểm tra nếu có nested structure cho số chữ số
+        else if (
+          typeof defaultBetType.combinations[`${digitCount} digits`] ===
+          'object'
+        ) {
+          combinationCount =
+            defaultBetType.combinations[`${digitCount} digits`][region] || 1
+        }
+        // Kiểm tra nếu có direct mapping cho số chữ số
+        else if (
+          typeof defaultBetType.combinations[`${digitCount} digits`] ===
+          'number'
+        ) {
+          combinationCount = defaultBetType.combinations[`${digitCount} digits`]
+        }
+      } else if (typeof defaultBetType.combinations === 'number') {
+        combinationCount = defaultBetType.combinations
+      }
+    }
   }
 
   return {
