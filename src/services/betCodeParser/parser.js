@@ -12,7 +12,67 @@ export function parseBetCode(betCode) {
       return { success: false, errors: [{ message: "Mã cược không hợp lệ" }] };
     }
 
-    // Chuẩn hóa mã cược
+    // Chuẩn hóa dấu xuống dòng và khoảng trắng
+    betCode = betCode.trim();
+
+    // Tiền xử lý: Tự động định dạng khi người dùng nhập đài và mã cược trên cùng một dòng
+    if (!betCode.includes("\n")) {
+      // Sử dụng split với regex mạnh hơn để xử lý tất cả loại khoảng trắng
+      const parts = betCode.split(/\s+/);
+
+      if (parts.length >= 2) {
+        const potentialStation = parts[0].toLowerCase();
+
+        // Xây dựng phần còn lại bằng cách loại bỏ phần đầu và khoảng trắng
+        // Đảm bảo lấy chính xác phần còn lại, không phụ thuộc vào split
+        const restOfText = betCode.substring(potentialStation.length).trim();
+
+        // Kiểm tra xem phần đầu có phải là tên đài không
+        let isValidStation = false;
+
+        // Kiểm tra trong tất cả các đài và aliases
+        for (const station of defaultStations) {
+          if (
+            station.name.toLowerCase() === potentialStation ||
+            (station.aliases &&
+              station.aliases.some(
+                (alias) => alias.toLowerCase() === potentialStation
+              ))
+          ) {
+            isValidStation = true;
+            break;
+          }
+        }
+
+        // Kiểm tra mẫu đài nhiều miền (như 2dmn, 3dmt)
+        if (/^\d+d(mn|mt|n|t)/i.test(potentialStation)) {
+          isValidStation = true;
+        }
+
+        // Nếu là đài hợp lệ và còn phần còn lại
+        if (isValidStation && restOfText.length > 0) {
+          // Kiểm tra nếu phần còn lại có số và kiểu cược
+          const hasNumbers = /\d/.test(restOfText);
+
+          // Danh sách kiểu cược phổ biến để kiểm tra
+          const commonBetTypes = ["b", "da", "dd", "xc", "dau", "duoi"];
+
+          for (const betType of commonBetTypes) {
+            const pattern = new RegExp(`${betType}\\d*`, "i");
+            if (pattern.test(restOfText)) {
+              break;
+            }
+          }
+
+          if (hasNumbers) {
+            // Tự động thêm xuống dòng giữa đài và mã cược
+            betCode = `${potentialStation}\n${restOfText}`;
+          }
+        }
+      }
+    }
+
+    // Tiếp tục xử lý như bình thường
     const normalizedBetCode = betCode.trim().toLowerCase();
 
     // Phân tách các dòng
@@ -23,7 +83,7 @@ export function parseBetCode(betCode) {
       return { success: false, errors: [{ message: "Mã cược trống" }] };
     }
 
-    // Xác định đài từ dòng đầu tiên
+    // (phần code còn lại giữ nguyên)
     const station = parseStation(lines[0]);
     if (!station.success) {
       return {
@@ -80,7 +140,7 @@ export function parseBetCode(betCode) {
     // Nếu chỉ có 1 dòng và không có số cược, có thể người dùng chỉ đang thử chọn đài
     if (lines.length === 1 && parsedLines.length === 0) {
       return {
-        success: false, // Thay đổi từ true thành false
+        success: false,
         station: station.data,
         lines: [],
         message: "Đã xác định đài, chưa có số cược",
@@ -96,10 +156,11 @@ export function parseBetCode(betCode) {
     }
 
     return {
-      success: hasValidLine, // Chỉ trả về true khi có ít nhất một dòng cược hợp lệ
+      success: hasValidLine,
       station: station.data,
       lines: parsedLines,
       hasValidLine,
+      wasReformatted: betCode !== normalizedBetCode,
     };
   } catch (error) {
     console.error("Lỗi khi phân tích mã cược:", error);
