@@ -1,297 +1,325 @@
 // src/services/export/pdfExporter.js
-import { jsPDF } from "jspdf";
-import "jspdf-autotable";
-import { formatMoney } from "@/utils/formatters";
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
+import { formatMoney } from '@/utils/formatters'
+import { format } from 'date-fns'
 
 /**
- * Xuất danh sách mã cược ra file PDF
- * @param {Array} betCodes - Danh sách mã cược
- * @param {string} title - Tiêu đề báo cáo
+ * Xuất thông tin mã cược ra file PDF
+ * @param {object} betCode - Mã cược cần xuất
  * @returns {Blob} File PDF
  */
-export function exportBetCodesToPDF(betCodes, title = "Danh sách mã cược") {
-  // Khởi tạo đối tượng PDF
-  const doc = new jsPDF();
+export function exportBetCodeToPDF(betCode) {
+  // Khởi tạo đối tượng PDF với font Unicode để hỗ trợ tiếng Việt
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a5',
+    compress: true,
+  })
 
-  // Đặt tiêu đề
-  doc.setFontSize(16);
-  doc.text(title, 14, 20);
+  const margin = 10
 
-  // Chuẩn bị dữ liệu cho bảng
-  const tableColumn = [
-    "STT",
-    "Mã cược",
-    "Tiền đóng",
-    "Tiềm năng",
-    "Trạng thái",
-    "Ngày tạo",
-  ];
-  const tableRows = betCodes.map((betCode, index) => [
-    index + 1,
-    betCode.content.length > 30
-      ? betCode.content.substring(0, 27) + "..."
-      : betCode.content,
-    formatMoney(betCode.stakeAmount),
-    formatMoney(betCode.potentialWinning),
-    getStatusText(betCode.status),
-    formatDate(betCode.createdAt),
-  ]);
+  try {
+    // Cấu hình font chữ
+    doc.setFont('helvetica')
 
-  // Tạo bảng
-  doc.autoTable({
-    head: [tableColumn],
-    body: tableRows,
-    startY: 25,
-    styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
-    columnStyles: {
-      0: { cellWidth: 10 }, // STT
-      1: { cellWidth: 50 }, // Mã cược
-      2: { cellWidth: 25 }, // Tiền đóng
-      3: { cellWidth: 25 }, // Tiềm năng
-      4: { cellWidth: 25 }, // Trạng thái
-      5: { cellWidth: 30 }, // Ngày tạo
-    },
-  });
+    // Tính toán vị trí dựa trên kích thước của trang
+    const pageWidth = doc.internal.pageSize.getWidth()
 
-  // Thêm thông tin tổng kết
-  const totalStakeAmount = betCodes.reduce(
-    (sum, betCode) => sum + (betCode.stakeAmount || 0),
-    0
-  );
-  const totalPotentialWinning = betCodes.reduce(
-    (sum, betCode) => sum + (betCode.potentialWinning || 0),
-    0
-  );
+    const contentWidth = pageWidth - 2 * margin
 
-  const tableY = doc.lastAutoTable.finalY + 10;
-  doc.setFontSize(10);
-  doc.text(`Tổng tiền đóng: ${formatMoney(totalStakeAmount)}`, 14, tableY);
-  doc.text(
-    `Tổng tiềm năng: ${formatMoney(totalPotentialWinning)}`,
-    14,
-    tableY + 7
-  );
-  doc.text(`Tổng số lượng: ${betCodes.length} mã cược`, 14, tableY + 14);
+    // Dựng Header
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.text('PHIẾU MÃ CƯỢC', pageWidth / 2, margin + 5, { align: 'center' })
 
-  // Thêm ngày giờ xuất báo cáo
-  doc.setFontSize(8);
-  doc.text(`Ngày xuất báo cáo: ${formatDateTime(new Date())}`, 14, tableY + 25);
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(
+      `Mã phiếu: ${betCode.id?.substring(0, 8) || 'N/A'}`,
+      margin,
+      margin + 15
+    )
+    doc.text(
+      `Ngày tạo: ${formatDateTime(betCode.createdAt)}`,
+      pageWidth - margin,
+      margin + 15,
+      { align: 'right' }
+    )
 
-  // Trả về blob
-  return doc.output("blob");
-}
+    // Thông tin cơ bản
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Thông tin cược:', margin, margin + 25)
 
-/**
- * Xuất kết quả đối soát ra file PDF
- * @param {Array} verificationResults - Danh sách kết quả đối soát
- * @param {string} title - Tiêu đề báo cáo
- * @returns {Blob} File PDF
- */
-export function exportVerificationResultsToPDF(
-  verificationResults,
-  title = "Kết quả đối soát"
-) {
-  // Khởi tạo đối tượng PDF
-  const doc = new jsPDF();
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(
+      `Đài: ${betCode.station?.name || 'Không xác định'}`,
+      margin,
+      margin + 30
+    )
 
-  // Đặt tiêu đề
-  doc.setFontSize(16);
-  doc.text(title, 14, 20);
+    if (betCode.station?.multiStation && betCode.station?.count) {
+      doc.text(
+        `Số lượng đài: ${betCode.station.count}`,
+        margin + 50,
+        margin + 30
+      )
+    } else if (
+      betCode.station?.stations &&
+      betCode.station?.stations.length > 0
+    ) {
+      doc.text(
+        `Đài: ${betCode.station.stations.map((s) => s.name).join(', ')}`,
+        margin,
+        margin + 30
+      )
+    }
 
-  // Chuẩn bị dữ liệu cho bảng
-  const tableColumn = [
-    "STT",
-    "Mã đối soát",
-    "Số lượng mã cược",
-    "Kết quả",
-    "Ngày đối soát",
-    "Ghi chú",
-  ];
-  const tableRows = verificationResults.map((result, index) => [
-    index + 1,
-    result.id,
-    result.betCodeIds.length,
-    result.result ? "Đã đối soát" : "Chưa đối soát",
-    formatDate(result.verifiedAt),
-    result.notes && result.notes.length > 20
-      ? result.notes.substring(0, 17) + "..."
-      : result.notes || "",
-  ]);
+    doc.text(`Tổng số dòng: ${betCode.lines?.length || 0}`, margin, margin + 35)
+    doc.text(
+      `Tiền cược: ${formatMoney(betCode.stakeAmount || 0)}đ`,
+      margin,
+      margin + 40
+    )
+    doc.text(
+      `Tiềm năng thắng: ${formatMoney(betCode.potentialWinning || 0)}đ`,
+      margin,
+      margin + 45
+    )
 
-  // Tạo bảng
-  doc.autoTable({
-    head: [tableColumn],
-    body: tableRows,
-    startY: 25,
-    styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
-    columnStyles: {
-      0: { cellWidth: 10 }, // STT
-      1: { cellWidth: 25 }, // Mã đối soát
-      2: { cellWidth: 30 }, // Số lượng mã cược
-      3: { cellWidth: 25 }, // Kết quả
-      4: { cellWidth: 30 }, // Ngày đối soát
-      5: { cellWidth: 50 }, // Ghi chú
-    },
-  });
+    // Vẽ đường kẻ ngăn cách
+    doc.setDrawColor(200, 200, 200)
+    doc.line(margin, margin + 50, pageWidth - margin, margin + 50)
 
-  // Thêm thông tin tổng kết
-  const tableY = doc.lastAutoTable.finalY + 10;
-  doc.setFontSize(10);
-  doc.text(
-    `Tổng số lượng: ${verificationResults.length} lần đối soát`,
-    14,
-    tableY
-  );
+    // Chi tiết các dòng cược
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Chi tiết các dòng cược:', margin, margin + 55)
 
-  // Thêm ngày giờ xuất báo cáo
-  doc.setFontSize(8);
-  doc.text(`Ngày xuất báo cáo: ${formatDateTime(new Date())}`, 14, tableY + 10);
+    // Tạo bảng cho các dòng cược
+    if (betCode.lines && betCode.lines.length > 0) {
+      const tableData = betCode.lines.map((line, index) => [
+        index + 1,
+        line.numbers?.join(', ') || 'N/A',
+        line.betType?.alias || 'N/A',
+        formatMoney(line.amount || 0) + 'đ',
+        formatMoney(
+          line.betType && line.amount
+            ? calculatePotential(line.betType.alias, line.amount)
+            : 0
+        ) + 'đ',
+      ])
 
-  // Trả về blob
-  return doc.output("blob");
-}
+      doc.autoTable({
+        startY: margin + 60,
+        head: [['STT', 'Số cược', 'Kiểu', 'Tiền cược', 'Tiềm năng']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255] },
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: {
+          0: { cellWidth: 10 },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 30 },
+        },
+        margin: { left: margin, right: margin },
+      })
+    }
 
-/**
- * Xuất kết quả xổ số ra file PDF
- * @param {Array} lotteryResults - Danh sách kết quả xổ số
- * @param {string} title - Tiêu đề báo cáo
- * @returns {Blob} File PDF
- */
-export function exportLotteryResultsToPDF(
-  lotteryResults,
-  title = "Kết quả xổ số"
-) {
-  // Khởi tạo đối tượng PDF
-  const doc = new jsPDF();
+    // Thêm mã cược gốc
+    const finalY = doc.lastAutoTable?.finalY || margin + 60
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Mã cược gốc:', margin, finalY + 10)
 
-  // Đặt tiêu đề
-  doc.setFontSize(16);
-  doc.text(title, 14, 20);
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
 
-  // Chuẩn bị dữ liệu cho bảng
-  const tableColumn = ["STT", "Miền", "Đài", "Ngày", "Giải đặc biệt"];
-  const tableRows = lotteryResults.map((result, index) => {
-    // Lấy giải đặc biệt
-    const specialPrize = result.results?.special?.join(", ") || "";
+    // Phân tách dòng mã cược để hiển thị
+    const betCodeLines = (
+      betCode.formattedText ||
+      betCode.originalText ||
+      ''
+    ).split('\n')
+    let currentY = finalY + 15
 
-    return [
-      index + 1,
-      getRegionName(result.region),
-      result.station,
-      formatDate(result.date),
-      specialPrize,
-    ];
-  });
+    betCodeLines.forEach((line, index) => {
+      doc.text(line, margin, currentY)
+      currentY += 4
+    })
 
-  // Tạo bảng
-  doc.autoTable({
-    head: [tableColumn],
-    body: tableRows,
-    startY: 25,
-    styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
-    columnStyles: {
-      0: { cellWidth: 10 }, // STT
-      1: { cellWidth: 25 }, // Miền
-      2: { cellWidth: 40 }, // Đài
-      3: { cellWidth: 25 }, // Ngày
-      4: { cellWidth: 70 }, // Giải đặc biệt
-    },
-  });
+    // Thêm chân trang
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'italic')
+    const footerText = 'Phiếu này chỉ có giá trị tham khảo.'
+    doc.text(
+      footerText,
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 10,
+      { align: 'center' }
+    )
 
-  // Thêm thông tin tổng kết
-  const tableY = doc.lastAutoTable.finalY + 10;
-  doc.setFontSize(10);
-  doc.text(`Tổng số lượng: ${lotteryResults.length} kết quả xổ số`, 14, tableY);
+    // Thêm thời gian in
+    doc.text(
+      `In lúc: ${formatDateTime(new Date())}`,
+      pageWidth - margin,
+      doc.internal.pageSize.getHeight() - 5,
+      { align: 'right' }
+    )
 
-  // Phân tích theo miền
-  const northCount = lotteryResults.filter((r) => r.region === "north").length;
-  const centralCount = lotteryResults.filter(
-    (r) => r.region === "central"
-  ).length;
-  const southCount = lotteryResults.filter((r) => r.region === "south").length;
+    // Trả về blob
+    return doc.output('blob')
+  } catch (error) {
+    console.error('Lỗi khi tạo PDF:', error)
 
-  doc.text(`Miền Bắc: ${northCount} kết quả`, 14, tableY + 7);
-  doc.text(`Miền Trung: ${centralCount} kết quả`, 14, tableY + 14);
-  doc.text(`Miền Nam: ${southCount} kết quả`, 14, tableY + 21);
+    // Tạo một trang PDF thông báo lỗi
+    doc.setFontSize(12)
+    doc.setTextColor(255, 0, 0)
+    doc.text(
+      'Đã xảy ra lỗi khi tạo PDF. Vui lòng thử lại.',
+      margin,
+      margin + 20
+    )
+    doc.text(`Lỗi: ${error.message}`, margin, margin + 30)
 
-  // Thêm ngày giờ xuất báo cáo
-  doc.setFontSize(8);
-  doc.text(`Ngày xuất báo cáo: ${formatDateTime(new Date())}`, 14, tableY + 32);
-
-  // Trả về blob
-  return doc.output("blob");
-}
-
-/**
- * Định dạng trạng thái thành text
- * @param {string} status - Trạng thái
- * @returns {string} Text hiển thị
- */
-function getStatusText(status) {
-  switch (status) {
-    case "pending":
-      return "Chờ đối soát";
-    case "verified":
-      return "Đã đối soát";
-    case "won":
-      return "Trúng thưởng";
-    case "lost":
-      return "Thua";
-    case "deleted":
-      return "Đã xóa";
-    default:
-      return status;
+    return doc.output('blob')
   }
 }
 
 /**
- * Định dạng tên miền
- * @param {string} region - Mã miền
- * @returns {string} Tên miền
+ * Tính tiềm năng thắng dựa trên kiểu cược và số tiền
+ * @param {string} betType - Kiểu cược
+ * @param {number} amount - Số tiền cược
+ * @returns {number} Tiềm năng thắng
  */
-function getRegionName(region) {
-  switch (region) {
-    case "north":
-      return "Miền Bắc";
-    case "central":
-      return "Miền Trung";
-    case "south":
-      return "Miền Nam";
-    default:
-      return region;
+function calculatePotential(betType, amount) {
+  // Tỉ lệ thắng cược dựa trên kiểu cược
+  const rates = {
+    dd: 75, // Đầu đuôi
+    b: 75, // Bao lô (2 chữ số)
+    xc: 650, // Xỉu chủ
+    dau: 75, // Đầu
+    duoi: 75, // Đuôi
+    da: 750, // Đá
+    xien: 350, // Xiên (2 số)
+    nt: 75, // Nhất to
+    b7l: 75, // Bao lô 7
+    b8l: 75, // Bao lô 8
   }
+
+  // Lấy tỉ lệ dựa trên kiểu cược, mặc định = 75
+  const rate = rates[betType.toLowerCase()] || 75
+
+  // Tính tiềm năng thắng
+  return amount * rate
 }
 
 /**
  * Định dạng ngày giờ
  * @param {Date|string} date - Ngày giờ
- * @returns {string} Ngày giờ đã định dạng
+ * @returns {string} Chuỗi ngày giờ đã định dạng
  */
 function formatDateTime(date) {
-  if (!date) return "";
+  if (!date) return 'N/A'
 
-  const d = new Date(date);
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}/${d.getFullYear()} ${d
-    .getHours()
-    .toString()
-    .padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d
-    .getSeconds()
-    .toString()
-    .padStart(2, "0")}`;
+  try {
+    return format(new Date(date), 'HH:mm:ss dd/MM/yyyy')
+  } catch (error) {
+    return 'N/A'
+  }
 }
 
 /**
- * Định dạng ngày
- * @param {Date|string} date - Ngày
- * @returns {string} Ngày đã định dạng
+ * Xuất nhiều mã cược ra một file PDF
+ * @param {Array} betCodes - Danh sách mã cược
+ * @param {string} title - Tiêu đề báo cáo
+ * @returns {Blob} File PDF
  */
-function formatDate(date) {
-  if (!date) return "";
+export function exportMultipleBetCodesToPDF(
+  betCodes,
+  title = 'Danh sách mã cược'
+) {
+  // Khởi tạo đối tượng PDF
+  const doc = new jsPDF()
 
-  const d = new Date(date);
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}/${d.getFullYear()}`;
+  // Đặt tiêu đề
+  doc.setFontSize(16)
+  doc.text(title, 14, 20)
+
+  // Chuẩn bị dữ liệu cho bảng
+  const tableColumn = [
+    'STT',
+    'Đài',
+    'Dòng',
+    'Tiền cược',
+    'Tiềm năng',
+    'Ngày tạo',
+  ]
+
+  const tableRows = betCodes.map((betCode, index) => [
+    index + 1,
+    betCode.station?.name || 'N/A',
+    betCode.lines?.length || 0,
+    formatMoney(betCode.stakeAmount || 0),
+    formatMoney(betCode.potentialWinning || 0),
+    formatDateTime(betCode.createdAt),
+  ])
+
+  // Tính tổng tiền
+  const totalStake = betCodes.reduce(
+    (sum, code) => sum + (code.stakeAmount || 0),
+    0
+  )
+  const totalPotential = betCodes.reduce(
+    (sum, code) => sum + (code.potentialWinning || 0),
+    0
+  )
+
+  // Tạo bảng
+  doc.autoTable({
+    head: [tableColumn],
+    body: tableRows,
+    startY: 25,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2 },
+    columnStyles: {
+      0: { cellWidth: 10 },
+      1: { cellWidth: 30 },
+      2: { cellWidth: 15 },
+      3: { cellWidth: 30 },
+      4: { cellWidth: 30 },
+      5: { cellWidth: 35 },
+    },
+  })
+
+  // Thêm tổng cộng
+  const finalY = doc.lastAutoTable.finalY
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.text(`Tổng cộng: ${betCodes.length} mã cược`, 14, finalY + 10)
+  doc.text(`Tổng tiền cược: ${formatMoney(totalStake)}đ`, 14, finalY + 16)
+  doc.text(
+    `Tổng tiềm năng thắng: ${formatMoney(totalPotential)}đ`,
+    14,
+    finalY + 22
+  )
+
+  // Thêm thời gian in
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.text(`In lúc: ${formatDateTime(new Date())}`, 14, finalY + 30)
+
+  // Trả về blob
+  return doc.output('blob')
+}
+
+export default {
+  exportBetCodeToPDF,
+  exportMultipleBetCodesToPDF,
+  exportBetCodesToPDF: exportBetCodeToPDF, // Compatibility with existing function
 }

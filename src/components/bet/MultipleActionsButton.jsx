@@ -1,4 +1,4 @@
-// src/components/bet/MultipleActionsButton.jsx
+// Update src/components/bet/MultipleActionsButton.jsx
 import { Button } from '@/components/ui/button'
 import {
   MoreHorizontal,
@@ -6,6 +6,7 @@ import {
   Trash2,
   RotateCcw,
   PrinterCheck,
+  Download,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -17,10 +18,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useBetCode } from '@/contexts/BetCodeContext'
 import { toast } from 'sonner'
+import { useState } from 'react'
+import { exportMultipleBetCodesToPDF } from '@/services/export/pdfExporter'
 
 const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
   const { confirmDraftCode, removeBetCode, removeDraftCode, getBetCode } =
     useBetCode()
+  const [printing, setPrinting] = useState(false)
 
   const handleConfirmSelected = () => {
     let confirmedCount = 0
@@ -70,8 +74,50 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     }
   }
 
-  const handlePrintSelected = () => {
-    toast.info('Chức năng in đang được phát triển')
+  const handlePrintSelected = async () => {
+    if (selectedIds.length === 0) {
+      toast.info('Chưa có mã cược nào được chọn để in')
+      return
+    }
+
+    try {
+      setPrinting(true)
+
+      // Get selected bet codes
+      const betCodes = selectedIds
+        .map((id) => getBetCode(id))
+        .filter((code) => code !== undefined)
+
+      if (betCodes.length === 0) {
+        toast.error('Không tìm thấy mã cược đã chọn')
+        return
+      }
+
+      // Create PDF with multiple bet codes
+      const pdfBlob = await exportMultipleBetCodesToPDF(
+        betCodes,
+        `Danh sách ${betCodes.length} mã cược`
+      )
+
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `DanhSachMaCuoc_${betCodes.length}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Free up URL object
+      setTimeout(() => URL.revokeObjectURL(url), 100)
+
+      toast.success(`Đã tạo PDF cho ${betCodes.length} mã cược`)
+    } catch (error) {
+      console.error('Lỗi khi in nhiều mã cược:', error)
+      toast.error('Lỗi khi tạo PDF: ' + error.message)
+    } finally {
+      setPrinting(false)
+    }
   }
 
   if (selectedIds.length === 0) {
@@ -93,9 +139,18 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
           <Save className='h-4 w-4 mr-2' />
           Lưu các mã đã chọn
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handlePrintSelected}>
-          <PrinterCheck className='h-4 w-4 mr-2' />
-          In các mã đã chọn
+        <DropdownMenuItem onClick={handlePrintSelected} disabled={printing}>
+          {printing ? (
+            <>
+              <span className='h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2'></span>
+              Đang tạo PDF...
+            </>
+          ) : (
+            <>
+              <Download className='h-4 w-4 mr-2' />
+              Tải PDF các mã đã chọn
+            </>
+          )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onClearSelection}>

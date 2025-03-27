@@ -3,7 +3,7 @@ import React from 'react'
 import { format } from 'date-fns'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, AlertTriangle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -34,8 +34,45 @@ const formatBetCode = (text) => {
   )
 }
 
+// Highlight error parts in bet code text
+const HighlightErrors = ({ text, errors }) => {
+  if (!text || !errors || errors.length === 0) return text
+
+  // For simplicity, just highlight the whole line with the error
+  const lines = text.split('\n')
+
+  return (
+    <div className='space-y-1'>
+      {lines.map((line, index) => {
+        const hasError = errors.some(
+          (err) =>
+            err.lineIndex === index ||
+            (err.line && err.line.includes(`Dòng ${index + 1}`))
+        )
+
+        return (
+          <div
+            key={index}
+            className={cn(
+              'pl-2 border-l-2',
+              hasError
+                ? 'border-destructive bg-destructive/10'
+                : 'border-primary-foreground/30'
+            )}>
+            {hasError && (
+              <AlertTriangle className='h-3 w-3 inline-block mr-1 text-destructive' />
+            )}
+            {line}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 const ChatMessage = ({ message }) => {
   const {
+    id,
     text,
     sender,
     timestamp,
@@ -45,6 +82,8 @@ const ChatMessage = ({ message }) => {
     fixedCode,
     suggestions,
     formatted,
+    changes,
+    original,
   } = message
   const isUser = sender === 'user'
   const { applyFixSuggestion } = useChat()
@@ -57,6 +96,13 @@ const ChatMessage = ({ message }) => {
   const handleApplyFix = () => {
     applyFixSuggestion(fixedCode)
     toast.success('Đã áp dụng sửa lỗi!')
+  }
+
+  const handleApplySuggestion = (suggestion) => {
+    if (suggestion) {
+      applyFixSuggestion(suggestion)
+      toast.success('Đã áp dụng gợi ý!')
+    }
   }
 
   return (
@@ -92,14 +138,32 @@ const ChatMessage = ({ message }) => {
                   <pre className='mt-1 bg-blue-100 p-2 rounded text-blue-800 overflow-x-auto'>
                     {formatted}
                   </pre>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='mt-2 bg-blue-200 text-blue-800 hover:bg-blue-300'
+                    onClick={() => handleApplySuggestion(formatted)}>
+                    <Check className='h-3 w-3 mr-1' />
+                    Sử dụng mã đã tối ưu
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Error details */}
+            {/* Show original code with highlighted errors */}
+            {error && !isUser && original && (
+              <div className='mt-2 border-t pt-2'>
+                <Badge variant='destructive'>Mã cược gốc</Badge>
+                <div className='mt-1 text-xs bg-red-50 p-2 rounded'>
+                  <HighlightErrors text={original} errors={detailedErrors} />
+                </div>
+              </div>
+            )}
+
+            {/* Error details with better explanation */}
             {detailedErrors && detailedErrors.length > 0 && !isUser && (
               <div className='mt-2 border-t pt-2'>
-                <Badge variant='destructive'>Lỗi</Badge>
+                <Badge variant='destructive'>Chi tiết lỗi</Badge>
                 <div className='mt-1 space-y-2'>
                   {detailedErrors.map((lineError, idx) => (
                     <div key={idx} className='bg-red-50 p-2 rounded'>
@@ -111,9 +175,16 @@ const ChatMessage = ({ message }) => {
                           <li key={errIdx} className='text-red-700'>
                             {err.message}
                             {err.suggestion && (
-                              <p className='mt-0.5 text-red-600 italic'>
-                                Gợi ý: {err.suggestion}
-                              </p>
+                              <div className='mt-0.5 text-red-600'>
+                                <p className='italic'>
+                                  Gợi ý: {err.suggestion}
+                                </p>
+                                {err.example && (
+                                  <div className='mt-1 bg-red-100 p-1 rounded'>
+                                    Ví dụ: <code>{err.example}</code>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </li>
                         ))}
@@ -124,13 +195,44 @@ const ChatMessage = ({ message }) => {
               </div>
             )}
 
+            {/* Changes made explanation */}
+            {changes && changes.length > 0 && !isUser && (
+              <div className='mt-2 border-t pt-2'>
+                <Badge
+                  variant='outline'
+                  className='bg-amber-100 text-amber-800'>
+                  Thay đổi đề xuất
+                </Badge>
+                <div className='mt-1 text-xs bg-amber-50 p-2 rounded'>
+                  <ul className='list-disc pl-5 space-y-1'>
+                    {changes.map((change, idx) => (
+                      <li key={idx} className='text-amber-800'>
+                        <span className='font-medium'>
+                          Dòng {change.lineIndex + 1}:
+                        </span>{' '}
+                        <div className='flex items-center gap-2 mt-1'>
+                          <div className='bg-amber-100 p-1 rounded line-through'>
+                            {change.oldLine}
+                          </div>
+                          <ArrowRight className='h-3 w-3 flex-shrink-0' />
+                          <div className='bg-green-100 p-1 rounded'>
+                            {change.newLine}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {/* Fix suggestions */}
             {fixedCode && !isUser && (
               <div className='mt-2 border-t pt-2'>
                 <Badge
                   variant='outline'
                   className='bg-green-100 text-green-800'>
-                  Đề xuất sửa lỗi
+                  Mã cược sửa lỗi
                 </Badge>
                 <div className='mt-1 text-xs bg-green-50 p-2 rounded'>
                   <pre className='bg-green-100 p-2 rounded text-green-800 overflow-x-auto'>
@@ -142,8 +244,39 @@ const ChatMessage = ({ message }) => {
                     className='mt-2 bg-green-200 text-green-800 hover:bg-green-300'
                     onClick={handleApplyFix}>
                     <Check className='h-3 w-3 mr-1' />
-                    Áp dụng sửa lỗi
+                    Áp dụng mã đã sửa
                   </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Generic suggestions */}
+            {suggestions && suggestions.length > 0 && !isUser && (
+              <div className='mt-2 border-t pt-2'>
+                <Badge variant='outline' className='bg-blue-100 text-blue-800'>
+                  Gợi ý
+                </Badge>
+                <div className='mt-1 text-xs bg-blue-50 p-2 rounded'>
+                  <ul className='list-disc pl-5 space-y-1'>
+                    {suggestions.map((suggestion, idx) => (
+                      <li key={idx} className='text-blue-700'>
+                        {suggestion.message}
+                        {suggestion.suggested && (
+                          <div className='flex items-center gap-2 mt-1'>
+                            <div className='bg-blue-100 p-1 rounded line-through'>
+                              {suggestion.original}
+                            </div>
+                            <ArrowRight className='h-3 w-3 flex-shrink-0' />
+                            <div className='bg-green-100 p-1 rounded'>
+                              {Array.isArray(suggestion.suggested)
+                                ? suggestion.suggested.join(' hoặc ')
+                                : suggestion.suggested}
+                            </div>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             )}
@@ -182,6 +315,16 @@ const ChatMessage = ({ message }) => {
                     <pre className='mt-1 bg-green-100 p-2 rounded text-green-800 overflow-x-auto'>
                       {betCodeInfo.formattedCode}
                     </pre>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      className='mt-2 bg-green-200 text-green-800 hover:bg-green-300'
+                      onClick={() =>
+                        handleApplySuggestion(betCodeInfo.formattedCode)
+                      }>
+                      <Check className='h-3 w-3 mr-1' />
+                      Sử dụng mã đã tối ưu
+                    </Button>
                   </div>
                 )}
               </div>
