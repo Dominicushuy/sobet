@@ -21,6 +21,7 @@ COMPONENTS=(
     "popover"
     "tooltip"
     "checkbox"
+    "progress"
 )  
 
 # Cài đặt từng component  

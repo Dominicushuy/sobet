@@ -6,6 +6,10 @@ import {
   RotateCcw,
   Download,
   BookmarkCheck,
+  CheckCircle,
+  AlertTriangle,
+  FileText,
+  Loader2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -20,6 +24,16 @@ import { useBetCode } from '@/contexts/BetCodeContext'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { exportMultipleBetCodesToPDF } from '@/services/export/pdfExporter'
+import { formatMoney } from '@/utils/formatters'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 
 const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
   const {
@@ -29,8 +43,11 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     getBetCode,
     getStatistics,
   } = useBetCode()
+
   const [printing, setPrinting] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteProgress, setDeleteProgress] = useState({ current: 0, total: 0 })
 
   const getDraftIds = () => {
     return selectedIds.filter((id) => {
@@ -48,6 +65,26 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
 
   const draftCount = getDraftIds().length
   const confirmedCount = getConfirmedIds().length
+
+  // Get selected bet codes summary
+  const getSelectionSummary = () => {
+    const betCodes = selectedIds
+      .map((id) => getBetCode(id))
+      .filter((code) => code !== undefined)
+
+    // Calculate totals
+    const totalStake = betCodes.reduce(
+      (sum, code) => sum + (code.stakeAmount || 0),
+      0
+    )
+
+    const totalPotential = betCodes.reduce(
+      (sum, code) => sum + (code.potentialWinning || 0),
+      0
+    )
+
+    return { count: betCodes.length, totalStake, totalPotential }
+  }
 
   const handleConfirmSelected = async () => {
     if (draftCount === 0) {
@@ -83,20 +120,14 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
   }
 
   const handleDeleteSelected = async () => {
+    setShowDeleteConfirm(false)
     if (selectedIds.length === 0) {
       toast.info('Chưa có mã cược nào được chọn để xóa')
       return
     }
 
-    if (
-      !window.confirm(
-        `Bạn có chắc chắn muốn xóa ${selectedIds.length} mã cược đã chọn?`
-      )
-    ) {
-      return
-    }
-
     try {
+      setDeleteProgress({ current: 0, total: selectedIds.length })
       let deletedCount = 0
 
       for (const id of selectedIds) {
@@ -108,7 +139,9 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
         } else {
           removeBetCode(id)
         }
+
         deletedCount++
+        setDeleteProgress({ current: deletedCount, total: selectedIds.length })
 
         // Nếu có nhiều mã cược, thêm delay nhỏ để không block UI
         if (selectedIds.length > 10) {
@@ -123,6 +156,8 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     } catch (error) {
       console.error('Lỗi khi xóa nhiều mã cược:', error)
       toast.error('Lỗi: ' + error.message)
+    } finally {
+      setDeleteProgress({ current: 0, total: 0 })
     }
   }
 
@@ -182,81 +217,159 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     }
   }
 
-  // Hiển thị số lượng mã đã lưu/chưa lưu đã chọn
-  const selectionSummary = () => {
-    if (draftCount > 0 && confirmedCount > 0) {
-      return `${selectedIds.length} (${draftCount} nháp, ${confirmedCount} đã lưu)`
-    }
-    return selectedIds.length
-  }
+  const summary = getSelectionSummary()
 
   if (selectedIds.length === 0) {
     return null
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant='outline' size='sm' className='ml-2'>
-          <MoreHorizontal className='h-4 w-4 mr-1' />
-          {selectionSummary()} đã chọn
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align='end' className='w-56'>
-        <DropdownMenuLabel>Thao tác hàng loạt</DropdownMenuLabel>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant='outline' size='sm' className='h-8'>
+            <MoreHorizontal className='h-3.5 w-3.5 mr-1.5' />
+            <span>
+              {selectedIds.length} đã chọn
+              {draftCount > 0 && confirmedCount > 0 && (
+                <span className='hidden sm:inline'>
+                  {' '}
+                  ({draftCount} nháp, {confirmedCount} đã lưu)
+                </span>
+              )}
+            </span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align='end' className='w-64'>
+          <DropdownMenuLabel className='flex justify-between items-center'>
+            <span>Tác vụ hàng loạt</span>
+            <Badge variant='outline' className='font-normal'>
+              {selectedIds.length} mã
+            </Badge>
+          </DropdownMenuLabel>
 
-        <DropdownMenuSeparator />
+          <DropdownMenuSeparator />
 
-        <DropdownMenuGroup>
-          {draftCount > 0 && (
-            <DropdownMenuItem
-              onClick={handleConfirmSelected}
-              disabled={saving}
-              className='text-green-700 focus:text-green-800'>
-              {saving ? (
+          <div className='px-2 py-1.5 text-xs'>
+            <div className='grid grid-cols-2 gap-1 text-muted-foreground'>
+              <div>Tiền đóng:</div>
+              <div className='text-right font-medium text-blue-600'>
+                {formatMoney(summary.totalStake)}đ
+              </div>
+              <div>Tiềm năng thắng:</div>
+              <div className='text-right font-medium text-green-600'>
+                {formatMoney(summary.totalPotential)}đ
+              </div>
+            </div>
+          </div>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuGroup>
+            {draftCount > 0 && (
+              <DropdownMenuItem
+                onClick={handleConfirmSelected}
+                disabled={saving}
+                className='text-green-700 focus:text-green-800'>
+                {saving ? (
+                  <>
+                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <BookmarkCheck className='h-4 w-4 mr-2' />
+                    Lưu {draftCount} mã cược nháp
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
+
+            <DropdownMenuItem onClick={handlePrintSelected} disabled={printing}>
+              {printing ? (
                 <>
-                  <span className='h-4 w-4 border-2 border-green-700 border-t-transparent rounded-full animate-spin mr-2'></span>
-                  Đang lưu...
+                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                  Đang tạo PDF...
                 </>
               ) : (
                 <>
-                  <BookmarkCheck className='h-4 w-4 mr-2' />
-                  Lưu {draftCount} mã cược nháp
+                  <Download className='h-4 w-4 mr-2' />
+                  Tải PDF {selectedIds.length} mã cược
                 </>
               )}
             </DropdownMenuItem>
+          </DropdownMenuGroup>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onClick={onClearSelection}>
+            <RotateCcw className='h-4 w-4 mr-2' />
+            Bỏ chọn tất cả
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            onClick={() => setShowDeleteConfirm(true)}
+            className='text-destructive focus:text-destructive'>
+            <Trash2 className='h-4 w-4 mr-2' />
+            Xóa {selectedIds.length} mã đã chọn
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <AlertTriangle className='h-5 w-5 text-destructive' />
+              Xác nhận xóa {selectedIds.length} mã cược
+            </DialogTitle>
+            <DialogDescription>
+              Bạn đang xóa {draftCount > 0 && `${draftCount} mã cược nháp`}
+              {draftCount > 0 && confirmedCount > 0 && ' và '}
+              {confirmedCount > 0 && `${confirmedCount} mã cược đã lưu`}. Thao
+              tác này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteProgress.total > 0 && (
+            <div className='space-y-2'>
+              <div className='flex justify-between text-sm'>
+                <span>Đang xóa...</span>
+                <span>
+                  {deleteProgress.current}/{deleteProgress.total}
+                </span>
+              </div>
+              <div className='w-full bg-muted rounded-full h-2.5'>
+                <div
+                  className='bg-destructive h-2.5 rounded-full'
+                  style={{
+                    width: `${
+                      (deleteProgress.current / deleteProgress.total) * 100
+                    }%`,
+                  }}></div>
+              </div>
+            </div>
           )}
 
-          <DropdownMenuItem onClick={handlePrintSelected} disabled={printing}>
-            {printing ? (
-              <>
-                <span className='h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2'></span>
-                Đang tạo PDF...
-              </>
-            ) : (
-              <>
-                <Download className='h-4 w-4 mr-2' />
-                Tải PDF {selectedIds.length} mã cược
-              </>
-            )}
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem onClick={onClearSelection}>
-          <RotateCcw className='h-4 w-4 mr-2' />
-          Bỏ chọn tất cả
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={handleDeleteSelected}
-          className='text-destructive focus:text-destructive'>
-          <Trash2 className='h-4 w-4 mr-2' />
-          Xóa {selectedIds.length} mã đã chọn
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={deleteProgress.total > 0}>
+              Hủy
+            </Button>
+            <Button
+              variant='destructive'
+              onClick={handleDeleteSelected}
+              disabled={deleteProgress.total > 0}>
+              <Trash2 className='h-4 w-4 mr-1.5' />
+              Xóa {selectedIds.length} mã cược
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

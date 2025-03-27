@@ -208,7 +208,7 @@ const ChatMessage = ({ message }) => {
                     {changes.map((change, idx) => (
                       <li key={idx} className='text-amber-800'>
                         <span className='font-medium'>
-                          Dòng {change.lineIndex + 1}:
+                          Mã {change.lineIndex + 1}:
                         </span>{' '}
                         <div className='flex items-center gap-2 mt-1'>
                           <div className='bg-amber-100 p-1 rounded line-through'>

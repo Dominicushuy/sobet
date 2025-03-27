@@ -1,4 +1,4 @@
-// src/components/bet/BetCodeCard.jsx (cập nhật lần cuối)
+// src/components/bet/BetCodeCard.jsx
 import React, { useState } from 'react'
 import {
   Card,
@@ -18,6 +18,11 @@ import {
   Printer,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Hash,
+  DollarSign,
+  Award,
+  Eye,
 } from 'lucide-react'
 import { useBetCode } from '@/contexts/BetCodeContext'
 import { format } from 'date-fns'
@@ -25,6 +30,8 @@ import { toast } from 'sonner'
 import PrintBetCode from './PrintBetCode'
 import EditBetCodeModal from './EditBetCodeModal'
 import BetCodeDetailModal from './BetCodeDetailModal'
+import { formatMoney } from '@/utils/formatters'
+import { cn } from '@/lib/utils'
 
 const BetCodeCard = ({
   betCode,
@@ -35,6 +42,7 @@ const BetCodeCard = ({
 }) => {
   const { removeDraftCode, removeBetCode, confirmDraftCode } = useBetCode()
   const [showDetails, setShowDetails] = useState(false)
+  const [showFullCode, setShowFullCode] = useState(false)
   const [isPrintOpen, setIsPrintOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -56,161 +64,259 @@ const BetCodeCard = ({
     toast.success('Đã lưu mã cược')
   }
 
-  const handleOpenPrint = () => {
-    setIsPrintOpen(true)
-  }
+  const handleOpenPrint = () => setIsPrintOpen(true)
+  const handleClosePrint = () => setIsPrintOpen(false)
+  const handleOpenEdit = () => setIsEditOpen(true)
+  const handleCloseEdit = () => setIsEditOpen(false)
+  const handleOpenDetail = () => setIsDetailOpen(true)
+  const handleCloseDetail = () => setIsDetailOpen(false)
 
-  const handleClosePrint = () => {
-    setIsPrintOpen(false)
-  }
-
-  const handleOpenEdit = () => {
-    setIsEditOpen(true)
-  }
-
-  const handleCloseEdit = () => {
-    setIsEditOpen(false)
-  }
-
-  const handleOpenDetail = () => {
-    setIsDetailOpen(true)
-  }
-
-  const handleCloseDetail = () => {
-    setIsDetailOpen(false)
-  }
-
-  // Format creation date
+  // Format date
   const formattedDate = betCode.createdAt
-    ? format(new Date(betCode.createdAt), 'HH:mm:ss dd/MM/yyyy')
+    ? format(new Date(betCode.createdAt), 'HH:mm dd/MM/yyyy')
     : 'N/A'
+
+  // Get station display name
+  const getStationDisplayName = () => {
+    if (!betCode.station) return 'Đài không xác định'
+
+    let displayName = betCode.station.name || 'Đài không xác định'
+
+    if (betCode.station.multiStation && betCode.station.count > 1) {
+      displayName = `${displayName} (${betCode.station.count})`
+    }
+
+    if (betCode.station.stations && betCode.station.stations.length > 0) {
+      displayName = betCode.station.stations.map((s) => s.name).join(', ')
+    }
+
+    return displayName
+  }
+
+  // Get all numbers
+  const getAllNumbers = () => {
+    if (!betCode.lines || !Array.isArray(betCode.lines)) return []
+
+    const allNumbers = []
+    betCode.lines.forEach((line) => {
+      if (line.numbers && Array.isArray(line.numbers)) {
+        allNumbers.push(...line.numbers)
+      }
+    })
+
+    return [...new Set(allNumbers)] // Remove duplicates
+  }
+
+  // Get original stake amount
+  const getOriginalStakeAmount = () => {
+    if (!betCode.stakeAmount) return 0
+    return Math.round(betCode.stakeAmount / 0.8)
+  }
+
+  // Truncate text with ellipsis
+  const truncateText = (text, maxLength = 50) => {
+    if (!text || text.length <= maxLength) return text
+    return text.substring(0, maxLength) + '...'
+  }
+
+  const numbers = getAllNumbers()
+  const betText = betCode.originalText || 'N/A'
 
   return (
     <>
       <Card
-        className={`transition-all ${
-          isDraft ? 'border-dashed border-yellow-500' : 'border-solid'
-        } ${selected ? 'ring-2 ring-primary' : ''}`}>
-        <CardHeader className='pb-2 flex flex-row items-center justify-between'>
-          <div className='flex items-center gap-2'>
-            {selectable && (
-              <Checkbox
-                checked={selected}
-                onCheckedChange={onSelectChange}
-                className='mr-1'
-              />
-            )}
+        className={cn(
+          'transition-all hover:shadow-md',
+          isDraft ? 'border-dashed border-yellow-300' : 'border-solid',
+          selected ? 'ring-2 ring-primary' : ''
+        )}>
+        <CardHeader className='py-3 px-4'>
+          <div className='flex justify-between items-center'>
+            <div className='flex items-start gap-2'>
+              {selectable && (
+                <Checkbox
+                  checked={selected}
+                  onCheckedChange={onSelectChange}
+                  className='mt-1'
+                />
+              )}
 
-            <div>
-              <CardTitle className='text-base flex items-center'>
-                {betCode.station?.name || 'Đài không xác định'}
-                {isDraft ? (
-                  <Badge
-                    variant='outline'
-                    className='ml-2 bg-yellow-100 text-yellow-800'>
-                    Nháp
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant='outline'
-                    className='ml-2 bg-green-100 text-green-800'>
-                    <CheckCircle2 className='h-3 w-3 mr-1' />
-                    Đã lưu
-                  </Badge>
-                )}
-              </CardTitle>
-              <div className='text-xs text-muted-foreground mt-1'>
-                Ngày tạo: {formattedDate}
+              <div>
+                <CardTitle className='text-base flex items-center gap-2'>
+                  {getStationDisplayName()}
+                  {isDraft ? (
+                    <Badge className='bg-yellow-100 text-yellow-800 font-normal text-xs'>
+                      Nháp
+                    </Badge>
+                  ) : (
+                    <Badge className='bg-green-100 text-green-800 font-normal text-xs'>
+                      <CheckCircle2 className='h-3 w-3 mr-1' />
+                      Đã lưu
+                    </Badge>
+                  )}
+                </CardTitle>
+                <div className='text-xs text-muted-foreground mt-1 flex items-center'>
+                  <Clock className='h-3 w-3 mr-1' />
+                  {formattedDate}
+                </div>
               </div>
             </div>
-          </div>
 
-          <Button
-            variant='ghost'
-            size='sm'
-            className='h-8 w-8 p-0'
-            onClick={() => setShowDetails(!showDetails)}>
-            {showDetails ? (
-              <ChevronUp className='h-4 w-4' />
-            ) : (
-              <ChevronDown className='h-4 w-4' />
-            )}
-          </Button>
+            <Button
+              variant='ghost'
+              size='sm'
+              className='h-8 w-8 p-0'
+              onClick={() => setShowDetails(!showDetails)}>
+              {showDetails ? (
+                <ChevronUp className='h-4 w-4' />
+              ) : (
+                <ChevronDown className='h-4 w-4' />
+              )}
+            </Button>
+          </div>
         </CardHeader>
 
-        <CardContent className='py-2'>
-          <div className='grid grid-cols-2 gap-2 text-sm'>
-            <div>
-              <span className='text-muted-foreground'>Số mã cược:</span>{' '}
-              {betCode.lines?.length || 0}
+        <CardContent className='px-4 py-0 pb-2 space-y-2'>
+          {/* Simplified bet code - always visible */}
+          <div className='text-xs bg-muted/50 p-2 rounded'>
+            {showFullCode ? betText : truncateText(betText, 60)}
+            {betText.length > 60 && (
+              <Button
+                variant='link'
+                size='sm'
+                className='px-1 h-5 text-xs'
+                onClick={() => setShowFullCode(!showFullCode)}>
+                {showFullCode ? 'Thu gọn' : 'Xem đầy đủ'}
+              </Button>
+            )}
+          </div>
+
+          {/* Highlighted numbers display */}
+          {numbers.length > 0 && (
+            <div className='flex flex-wrap gap-1'>
+              {numbers.length <= 12 ? (
+                numbers.map((number, idx) => (
+                  <Badge
+                    key={idx}
+                    variant='secondary'
+                    className='font-medium bg-blue-50 text-blue-700 hover:bg-blue-100'>
+                    {number}
+                  </Badge>
+                ))
+              ) : (
+                <>
+                  {numbers.slice(0, 10).map((number, idx) => (
+                    <Badge
+                      key={idx}
+                      variant='secondary'
+                      className='font-medium bg-blue-50 text-blue-700 hover:bg-blue-100'>
+                      {number}
+                    </Badge>
+                  ))}
+                  <Badge
+                    variant='secondary'
+                    className='font-medium bg-gray-200 text-gray-700'>
+                    +{numbers.length - 10}
+                  </Badge>
+                </>
+              )}
             </div>
-            <div>
-              <span className='text-muted-foreground'>Tiền cược:</span>{' '}
-              {(betCode.stakeAmount || 0).toLocaleString()}đ
+          )}
+
+          {/* Key information in a compact form */}
+          <div className='grid grid-cols-2 gap-x-2 gap-y-1 mt-1 text-sm'>
+            <div className='flex items-center gap-1'>
+              <Hash className='h-3.5 w-3.5 text-muted-foreground' />
+              <span className='text-muted-foreground'>Số mã:</span>{' '}
+              <span className='font-medium'>{betCode.lines?.length || 0}</span>
             </div>
-            <div className='col-span-2'>
-              <span className='text-muted-foreground'>Tiềm năng thắng:</span>{' '}
+            <div className='flex items-center gap-1'>
+              <DollarSign className='h-3.5 w-3.5 text-muted-foreground' />
+              <span className='text-muted-foreground'>Tiền đặt:</span>{' '}
+              <span className='font-medium'>
+                {formatMoney(getOriginalStakeAmount())}đ
+              </span>
+            </div>
+            <div className='flex items-center gap-1'>
+              <DollarSign className='h-3.5 w-3.5 text-blue-500' />
+              <span className='text-muted-foreground'>Tiền đóng:</span>{' '}
+              <span className='font-medium text-blue-600'>
+                {formatMoney(betCode.stakeAmount || 0)}đ
+              </span>
+            </div>
+            <div className='flex items-center gap-1'>
+              <Award className='h-3.5 w-3.5 text-green-500' />
+              <span className='text-muted-foreground'>Thắng:</span>{' '}
               <span className='font-medium text-green-600'>
-                {(betCode.potentialWinning || 0).toLocaleString()}đ
+                {formatMoney(betCode.potentialWinning || 0)}đ
               </span>
             </div>
           </div>
 
+          {/* Details - only visible when expanded */}
           {showDetails && (
-            <div className='mt-3 border-t pt-3 text-sm'>
-              <div className='font-medium mb-1'>Nội dung mã cược:</div>
-              <pre className='bg-muted p-2 rounded-md text-xs overflow-x-auto'>
-                {betCode.formattedText || betCode.originalText}
-              </pre>
-
+            <div className='mt-2 pt-2 border-t text-sm space-y-3'>
               {betCode.lines && betCode.lines.length > 0 && (
-                <div className='mt-3'>
-                  <div className='font-medium mb-1'>Chi tiết:</div>
-                  <div className='space-y-2'>
+                <div className='space-y-2'>
+                  <div className='font-medium text-xs flex items-center gap-1'>
+                    <Eye className='h-3.5 w-3.5' />
+                    Chi tiết dòng:
+                  </div>
+                  <div className='grid gap-1.5 max-h-60 overflow-y-auto pr-1'>
                     {betCode.lines.map((line, idx) => (
                       <div
                         key={idx}
-                        className='bg-muted p-2 rounded-md text-xs'>
-                        <div>
-                          <span className='text-muted-foreground'>
-                            Dòng {idx + 1}:
-                          </span>{' '}
-                          {line.originalLine}
+                        className='bg-muted/50 p-2 rounded-md text-xs grid grid-cols-2 gap-x-2 gap-y-0.5'>
+                        <div className='col-span-2 font-medium text-muted-foreground pb-1'>
+                          Dòng {idx + 1}: {line.originalLine}
                         </div>
                         <div>
-                          <span className='text-muted-foreground'>
-                            Kiểu cược:
-                          </span>{' '}
-                          {line.betType?.alias || 'N/A'}
+                          <span className='text-muted-foreground'>Kiểu:</span>{' '}
+                          <span className='font-medium'>
+                            {line.betType?.alias || 'N/A'}
+                          </span>
                         </div>
                         <div>
-                          <span className='text-muted-foreground'>
-                            Số lượng số:
-                          </span>{' '}
-                          {line.numbers?.length || 0}
+                          <span className='text-muted-foreground'>Tiền:</span>{' '}
+                          <span className='font-medium'>
+                            {formatMoney(line.amount || 0)}đ
+                          </span>
                         </div>
-                        <div>
-                          <span className='text-muted-foreground'>
-                            Số tiền:
-                          </span>{' '}
-                          {line.amount?.toLocaleString() || 0}đ
+                        <div className='col-span-2'>
+                          <span className='text-muted-foreground'>Số:</span>{' '}
+                          <span className='font-medium'>
+                            {line.numbers?.join(', ') || 'N/A'}
+                          </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
+
+              {betCode.formattedText &&
+                betCode.formattedText !== betCode.originalText && (
+                  <div>
+                    <div className='font-medium text-xs flex items-center gap-1 mb-1'>
+                      <FileText className='h-3.5 w-3.5' />
+                      Mã cược đã định dạng:
+                    </div>
+                    <pre className='bg-muted/50 p-2 rounded-md text-xs overflow-x-auto whitespace-pre-wrap'>
+                      {betCode.formattedText}
+                    </pre>
+                  </div>
+                )}
             </div>
           )}
         </CardContent>
 
-        <CardFooter className='pt-2 gap-2 flex-wrap'>
+        <CardFooter className='px-4 py-2 gap-2 flex-wrap border-t'>
           {isDraft ? (
             <>
               <Button
                 variant='outline'
                 size='sm'
-                className='bg-green-100 text-green-800 hover:bg-green-200 border-green-300'
+                className='bg-green-50 text-green-700 hover:bg-green-100 border-green-200'
                 onClick={handleConfirm}>
                 <CheckCircle2 className='h-3 w-3 mr-1' />
                 Lưu
@@ -223,7 +329,11 @@ const BetCodeCard = ({
                 <FileText className='h-3 w-3 mr-1' />
                 Chi tiết
               </Button>
-              <Button variant='outline' size='sm' onClick={handleRemove}>
+              <Button
+                variant='outline'
+                size='sm'
+                className='ml-auto text-rose-600 hover:bg-rose-50'
+                onClick={handleRemove}>
                 <Trash2 className='h-3 w-3 mr-1' />
                 Xóa
               </Button>
@@ -245,7 +355,7 @@ const BetCodeCard = ({
               <Button
                 variant='outline'
                 size='sm'
-                className='text-destructive hover:bg-destructive/10'
+                className='ml-auto text-rose-600 hover:bg-rose-50'
                 onClick={handleRemove}>
                 <Trash2 className='h-3 w-3 mr-1' />
                 Xóa
@@ -255,7 +365,7 @@ const BetCodeCard = ({
         </CardFooter>
       </Card>
 
-      {/* Print Preview Dialog */}
+      {/* Modal dialogs */}
       {isPrintOpen && (
         <PrintBetCode
           betCode={betCode}
@@ -263,8 +373,6 @@ const BetCodeCard = ({
           onClose={handleClosePrint}
         />
       )}
-
-      {/* Edit Dialog */}
       {isEditOpen && (
         <EditBetCodeModal
           betCode={betCode}
@@ -272,8 +380,6 @@ const BetCodeCard = ({
           onClose={handleCloseEdit}
         />
       )}
-
-      {/* Detail Dialog */}
       {isDetailOpen && (
         <BetCodeDetailModal
           betCode={betCode}

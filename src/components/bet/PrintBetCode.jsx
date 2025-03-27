@@ -8,23 +8,31 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Card, CardContent } from '@/components/ui/card'
-import { Printer, Download, CheckCircle2, FileText } from 'lucide-react'
+import {
+  Printer,
+  Download,
+  CheckCircle2,
+  FileText,
+  Loader2,
+  BarChart2,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { exportBetCodeToPDF } from '@/services/export/pdfExporter'
 import { toast } from 'sonner'
 import { formatMoney } from '@/utils/formatters'
+import { Badge } from '@/components/ui/badge'
 
 const PrintBetCode = ({ betCode, isOpen, onClose }) => {
   const [printing, setPrinting] = useState(false)
   const [activeTab, setActiveTab] = useState('preview')
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const handlePrint = async () => {
     if (!betCode) return
 
     try {
       setPrinting(true)
+      setIsGenerating(true)
       const pdfBlob = await exportBetCodeToPDF(betCode)
 
       // Create a download link and trigger download
@@ -40,12 +48,13 @@ const PrintBetCode = ({ betCode, isOpen, onClose }) => {
       setTimeout(() => URL.revokeObjectURL(url), 100)
 
       toast.success('Đã tạo PDF thành công!')
-      onClose()
+      setIsGenerating(false)
     } catch (error) {
       console.error('Lỗi khi in mã cược:', error)
       toast.error('Lỗi khi tạo PDF: ' + error.message)
+      setIsGenerating(false)
     } finally {
-      setPrinting(false)
+      setTimeout(() => setPrinting(false), 500) // Small delay to prevent UI flicker
     }
   }
 
@@ -55,235 +64,145 @@ const PrintBetCode = ({ betCode, isOpen, onClose }) => {
     ? format(new Date(betCode.createdAt), 'HH:mm:ss dd/MM/yyyy')
     : 'N/A'
 
+  // Get station display name
+  const getStationDisplayName = () => {
+    if (!betCode.station) return 'Đài không xác định'
+
+    let displayName = betCode.station.name || 'Đài không xác định'
+
+    if (betCode.station.multiStation && betCode.station.count > 1) {
+      displayName = `${displayName} (${betCode.station.count})`
+    }
+
+    if (betCode.station.stations && betCode.station.stations.length > 0) {
+      displayName = betCode.station.stations.map((s) => s.name).join(', ')
+    }
+
+    return displayName
+  }
+
+  // Calculate original stake amount (before applying coefficient)
+  const getOriginalStakeAmount = () => {
+    if (!betCode.stakeAmount) return 0
+    return Math.round(betCode.stakeAmount / 0.8)
+  }
+
+  // Get all numbers from all lines
+  const getAllNumbers = () => {
+    if (!betCode.lines || !Array.isArray(betCode.lines)) return []
+
+    const allNumbers = []
+    betCode.lines.forEach((line) => {
+      if (line.numbers && Array.isArray(line.numbers)) {
+        allNumbers.push(...line.numbers)
+      }
+    })
+
+    return [...new Set(allNumbers)] // Remove duplicates
+  }
+
+  const numbers = getAllNumbers()
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>In mã cược</DialogTitle>
+          <DialogTitle className='flex items-center gap-2'>
+            <Printer className='h-5 w-5 text-primary' />
+            In mã cược
+          </DialogTitle>
         </DialogHeader>
 
-        <Tabs
-          defaultValue='preview'
-          value={activeTab}
-          onValueChange={setActiveTab}>
-          <TabsList className='mb-4'>
-            <TabsTrigger value='preview'>Xem trước</TabsTrigger>
-            <TabsTrigger value='details'>Chi tiết</TabsTrigger>
-          </TabsList>
+        <div className='border rounded-md p-6 mb-4 bg-white'>
+          <div className='text-center mb-6'>
+            <h2 className='text-xl font-bold uppercase tracking-wide'>
+              PHIẾU MÃ CƯỢC
+            </h2>
+            <div className='flex justify-between text-xs mt-3 text-gray-600'>
+              <div>Mã phiếu: {betCode.id?.substring(0, 8) || 'N/A'}</div>
+              <div>Ngày tạo: {formattedDate}</div>
+            </div>
+          </div>
 
-          <TabsContent value='preview' className='min-h-[400px]'>
-            <div className='border rounded-md p-4 mb-4 bg-white'>
-              <div className='text-center mb-6'>
-                <h2 className='text-lg font-bold uppercase'>PHIẾU MÃ CƯỢC</h2>
-                <div className='flex justify-between text-xs mt-2'>
-                  <div>Mã phiếu: {betCode.id?.substring(0, 8) || 'N/A'}</div>
-                  <div>Ngày tạo: {formattedDate}</div>
+          <div className='mb-6 space-y-4'>
+            <div className='border-b pb-4'>
+              <h3 className='text-sm font-semibold mb-3 flex items-center gap-1.5'>
+                <FileText className='h-3.5 w-3.5' />
+                Thông tin chung
+              </h3>
+              <div className='grid grid-cols-2 gap-x-4 gap-y-2 text-sm'>
+                <div>
+                  <span className='font-medium'>Đài:</span>{' '}
+                  {getStationDisplayName()}
                 </div>
-              </div>
-
-              <div className='mb-4'>
-                <h3 className='text-sm font-semibold mb-2'>Thông tin cược:</h3>
-                <div className='grid grid-cols-2 gap-x-4 gap-y-2 text-sm'>
-                  <div>
-                    <span className='font-medium'>Đài:</span>{' '}
-                    {betCode.station?.name || 'Không xác định'}
-                  </div>
-                  {betCode.station?.multiStation && betCode.station?.count && (
-                    <div>
-                      <span className='font-medium'>Số lượng đài:</span>{' '}
-                      {betCode.station.count}
-                    </div>
-                  )}
-                  {betCode.station?.stations &&
-                    betCode.station?.stations.length > 0 && (
-                      <div className='col-span-2'>
-                        <span className='font-medium'>Đài:</span>{' '}
-                        {betCode.station.stations.map((s) => s.name).join(', ')}
-                      </div>
-                    )}
-                  <div>
-                    <span className='font-medium'>Tổng Số mã cược:</span>{' '}
-                    {betCode.lines?.length || 0}
-                  </div>
-                  <div>
-                    <span className='font-medium'>Tiền cược:</span>{' '}
-                    {formatMoney(betCode.stakeAmount || 0)}đ
-                  </div>
-                  <div>
-                    <span className='font-medium'>Tiềm năng thắng:</span>{' '}
+                <div>
+                  <span className='font-medium'>Số lượng dòng:</span>{' '}
+                  {betCode.lines?.length || 0}
+                </div>
+                <div>
+                  <span className='font-medium'>Tiền đặt:</span>{' '}
+                  {formatMoney(getOriginalStakeAmount())}đ
+                </div>
+                <div>
+                  <span className='font-medium'>Tiền đóng:</span>{' '}
+                  {formatMoney(betCode.stakeAmount || 0)}đ
+                </div>
+                <div className='col-span-2'>
+                  <span className='font-medium'>Tiềm năng thắng:</span>{' '}
+                  <span className='text-green-700'>
                     {formatMoney(betCode.potentialWinning || 0)}đ
-                  </div>
+                  </span>
                 </div>
-              </div>
-
-              <hr className='my-4' />
-
-              <div>
-                <h3 className='text-sm font-semibold mb-2'>
-                  Chi tiết các dòng cược:
-                </h3>
-                <table className='w-full text-xs'>
-                  <thead>
-                    <tr className='bg-muted'>
-                      <th className='p-1 text-left'>STT</th>
-                      <th className='p-1 text-left'>Số cược</th>
-                      <th className='p-1 text-left'>Kiểu</th>
-                      <th className='p-1 text-right'>Tiền cược</th>
-                      <th className='p-1 text-right'>Tiềm năng</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {betCode.lines &&
-                      betCode.lines.map((line, index) => (
-                        <tr key={index} className='border-b'>
-                          <td className='p-1'>{index + 1}</td>
-                          <td className='p-1'>
-                            {line.numbers?.join(', ') || 'N/A'}
-                          </td>
-                          <td className='p-1'>
-                            {line.betType?.alias || 'N/A'}
-                          </td>
-                          <td className='p-1 text-right'>
-                            {formatMoney(line.amount || 0)}đ
-                          </td>
-                          <td className='p-1 text-right'>
-                            {formatMoney(
-                              calculatePotential(
-                                line.betType?.alias,
-                                line.amount
-                              )
-                            )}
-                            đ
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className='mt-6'>
-                <h3 className='text-sm font-semibold mb-1'>Mã cược gốc:</h3>
-                <pre className='text-xs bg-muted p-2 rounded whitespace-pre-wrap break-all'>
-                  {betCode.formattedText || betCode.originalText || ''}
-                </pre>
-              </div>
-
-              <div className='flex justify-between mt-6 text-xs text-muted-foreground'>
-                <div>Phiếu này chỉ có giá trị tham khảo.</div>
-                <div>In lúc: {format(new Date(), 'HH:mm:ss dd/MM/yyyy')}</div>
               </div>
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value='details'>
-            <Card>
-              <CardContent className='pt-6'>
-                <div className='space-y-4'>
-                  <div>
-                    <h3 className='text-sm font-semibold mb-2'>
-                      Thông tin cược chi tiết:
-                    </h3>
-                    <div className='grid grid-cols-2 gap-2 text-sm'>
-                      <div>
-                        <span className='font-medium'>ID:</span>{' '}
-                        {betCode.id || 'N/A'}
-                      </div>
-                      <div>
-                        <span className='font-medium'>Ngày tạo:</span>{' '}
-                        {formattedDate}
-                      </div>
-                      <div>
-                        <span className='font-medium'>Đài:</span>{' '}
-                        {betCode.station?.name || 'Không xác định'}
-                      </div>
-                      <div>
-                        <span className='font-medium'>Vùng:</span>{' '}
-                        {mapRegionName(betCode.station?.region)}
-                      </div>
-                      <div>
-                        <span className='font-medium'>Trạng thái:</span>{' '}
-                        {mapStatusName(betCode.status)}
-                      </div>
-                      <div>
-                        <span className='font-medium'>Loại:</span>{' '}
-                        {betCode.isDraft ? 'Nháp' : 'Đã lưu'}
-                      </div>
-                      <div className='col-span-2'>
-                        <span className='font-medium'>Tiền cược:</span>{' '}
-                        {formatMoney(betCode.stakeAmount || 0)}đ
-                      </div>
-                      <div className='col-span-2'>
-                        <span className='font-medium'>Tiềm năng thắng:</span>{' '}
-                        {formatMoney(betCode.potentialWinning || 0)}đ
-                      </div>
-                    </div>
-                  </div>
+          <div className='mb-6'>
+            <h3 className='text-sm font-semibold mb-3'>
+              Chi tiết các dòng cược:
+            </h3>
+            <table className='w-full text-xs border-collapse'>
+              <thead>
+                <tr className='bg-gray-100'>
+                  <th className='p-2 text-left font-medium'>STT</th>
+                  <th className='p-2 text-left font-medium'>Số cược</th>
+                  <th className='p-2 text-left font-medium'>Kiểu</th>
+                  <th className='p-2 text-right font-medium'>Tiền cược</th>
+                  <th className='p-2 text-right font-medium'>Tiềm năng</th>
+                </tr>
+              </thead>
+              <tbody>
+                {betCode.lines &&
+                  betCode.lines.map((line, index) => (
+                    <tr key={index} className='border-b'>
+                      <td className='p-2'>{index + 1}</td>
+                      <td className='p-2'>
+                        {line.numbers?.join(', ') || 'N/A'}
+                      </td>
+                      <td className='p-2'>{line.betType?.alias || 'N/A'}</td>
+                      <td className='p-2 text-right'>
+                        {formatMoney(line.amount || 0)}đ
+                      </td>
+                      <td className='p-2 text-right'>
+                        {formatMoney(
+                          line.amount *
+                            (getBetTypeRate(line.betType?.alias) || 75)
+                        )}
+                        đ
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
 
-                  <div>
-                    <h3 className='text-sm font-semibold mb-2'>Mã cược gốc:</h3>
-                    <pre className='text-xs bg-muted p-2 rounded whitespace-pre-wrap break-all'>
-                      {betCode.originalText || ''}
-                    </pre>
-                  </div>
-
-                  {betCode.formattedText &&
-                    betCode.formattedText !== betCode.originalText && (
-                      <div>
-                        <h3 className='text-sm font-semibold mb-2'>
-                          Mã cược đã định dạng:
-                        </h3>
-                        <pre className='text-xs bg-muted p-2 rounded whitespace-pre-wrap break-all'>
-                          {betCode.formattedText}
-                        </pre>
-                      </div>
-                    )}
-
-                  <div>
-                    <h3 className='text-sm font-semibold mb-2'>
-                      Chi tiết dòng ({betCode.lines?.length || 0}):
-                    </h3>
-                    {betCode.lines &&
-                      betCode.lines.map((line, idx) => (
-                        <div
-                          key={idx}
-                          className='bg-muted p-2 rounded mb-2 text-xs'>
-                          <div className='font-medium'>Dòng {idx + 1}:</div>
-                          <div className='grid grid-cols-2 gap-1 mt-1'>
-                            <div>
-                              <span className='font-medium'>Số cược:</span>{' '}
-                              {line.numbers?.join(', ') || 'N/A'}
-                            </div>
-                            <div>
-                              <span className='font-medium'>Kiểu cược:</span>{' '}
-                              {line.betType?.alias || 'N/A'}
-                            </div>
-                            <div>
-                              <span className='font-medium'>Tiền cược:</span>{' '}
-                              {formatMoney(line.amount || 0)}đ
-                            </div>
-                            <div>
-                              <span className='font-medium'>Tiềm năng:</span>{' '}
-                              {formatMoney(
-                                calculatePotential(
-                                  line.betType?.alias,
-                                  line.amount
-                                )
-                              )}
-                              đ
-                            </div>
-                          </div>
-                          <div className='mt-1'>
-                            <span className='font-medium'>Dòng gốc:</span>{' '}
-                            {line.originalLine || 'N/A'}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          <div className='my-6 p-3 bg-gray-50 rounded-md'>
+            <h3 className='text-sm font-semibold mb-2'>Mã cược:</h3>
+            <pre className='text-xs bg-white p-2 rounded border whitespace-pre-wrap break-all'>
+              {betCode.formattedText || betCode.originalText || ''}
+            </pre>
+          </div>
+        </div>
 
         <DialogFooter className='flex justify-between'>
           <div>
@@ -294,7 +213,7 @@ const PrintBetCode = ({ betCode, isOpen, onClose }) => {
                 setActiveTab(activeTab === 'preview' ? 'details' : 'preview')
               }
               className='mr-2'>
-              <FileText className='h-4 w-4 mr-1' />
+              <FileText className='h-3.5 w-3.5 mr-1.5' />
               {activeTab === 'preview' ? 'Xem chi tiết' : 'Xem trước'}
             </Button>
           </div>
@@ -310,13 +229,22 @@ const PrintBetCode = ({ betCode, isOpen, onClose }) => {
 
             <Button onClick={handlePrint} disabled={printing} size='sm'>
               {printing ? (
-                <span className='flex items-center'>
-                  <span className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1'></span>
-                  Đang tạo...
-                </span>
+                <>
+                  {isGenerating ? (
+                    <span className='flex items-center'>
+                      <Loader2 className='h-3.5 w-3.5 mr-1.5 animate-spin' />
+                      Đang tạo...
+                    </span>
+                  ) : (
+                    <span className='flex items-center'>
+                      <CheckCircle2 className='h-3.5 w-3.5 mr-1.5' />
+                      Đã tạo xong
+                    </span>
+                  )}
+                </>
               ) : (
                 <>
-                  <Download className='h-4 w-4 mr-1' />
+                  <Download className='h-3.5 w-3.5 mr-1.5' />
                   Tải PDF
                 </>
               )}
@@ -329,57 +257,34 @@ const PrintBetCode = ({ betCode, isOpen, onClose }) => {
 }
 
 /**
- * Tính tiềm năng thắng dựa trên kiểu cược và số tiền
+ * Hàm này trả về tỉ lệ thắng cược dựa vào kiểu cược
  */
-function calculatePotential(betType, amount) {
-  if (!betType || !amount) return 0
+function getBetTypeRate(betType) {
+  if (!betType) return 75 // Default
 
-  // Tỉ lệ thắng cược dựa trên kiểu cược
+  // Tỉ lệ thắng cược cơ bản
   const rates = {
     dd: 75, // Đầu đuôi
     b: 75, // Bao lô (2 chữ số)
+    bao: 75,
     xc: 650, // Xỉu chủ
+    x: 650,
     dau: 75, // Đầu
     duoi: 75, // Đuôi
+    dui: 75,
     da: 750, // Đá
+    dv: 750,
     xien: 350, // Xiên (2 số)
+    xienmb: 350,
     nt: 75, // Nhất to
+    nto: 75,
     b7l: 75, // Bao lô 7
+    baobay: 75,
     b8l: 75, // Bao lô 8
+    baotam: 75,
   }
 
-  // Lấy tỉ lệ dựa trên kiểu cược, mặc định = 75
-  const rate = rates[betType.toLowerCase()] || 75
-
-  // Tính tiềm năng thắng
-  return amount * rate
-}
-
-/**
- * Map trạng thái thành tên hiển thị
- */
-function mapStatusName(status) {
-  const statusMap = {
-    pending: 'Chờ xử lý',
-    confirmed: 'Đã xác nhận',
-    verified: 'Đã đối soát',
-    deleted: 'Đã xóa',
-  }
-
-  return statusMap[status] || status || 'Chờ xử lý'
-}
-
-/**
- * Map vùng thành tên hiển thị
- */
-function mapRegionName(region) {
-  const regionMap = {
-    north: 'Miền Bắc',
-    central: 'Miền Trung',
-    south: 'Miền Nam',
-  }
-
-  return regionMap[region] || region || 'Không xác định'
+  return rates[betType.toLowerCase()] || 75
 }
 
 export default PrintBetCode
