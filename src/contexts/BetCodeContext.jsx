@@ -85,6 +85,7 @@ const betCodeReducer = (state, action) => {
       }
     }
 
+    // Look for the EXPAND_SPECIAL_CASES case in the reducer
     case ACTION_TYPES.EXPAND_SPECIAL_CASES: {
       const { codeId, expandType } = action.payload
       const targetCode = state.draftCodes.find((code) => code.id === codeId)

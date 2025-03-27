@@ -173,8 +173,9 @@ export function ChatProvider({ children }) {
             }
           })
 
-          // Add bet type to each processed group
-          const betTypeStr = `${line.betType.alias}${line.amount || 10}`
+          // Add bet type to each processed group - FIXED: Divide amount by 1000
+          const formattedAmount = Math.floor((line.amount || 10000) / 1000)
+          const betTypeStr = `${line.betType.alias}${formattedAmount}`
           processedGroups.forEach((group) => {
             separateLines.push(`${group}${betTypeStr}`)
           })
@@ -196,9 +197,12 @@ export function ChatProvider({ children }) {
           const numbersPart = line.numbers ? line.numbers.join('.') : ''
 
           // Create separate lines for the main bet type and each additional bet type
-          const mainBetType = `${line.betType.alias}${line.amount || 10}`
+          // FIXED: Divide amount by 1000
+          const formattedMainAmount = Math.floor((line.amount || 10000) / 1000)
+          const mainBetType = `${line.betType.alias}${formattedMainAmount}`
           const additionalTypes = line.additionalBetTypes.map(
-            (bt) => `${bt.betType.alias}${bt.amount || 10}`
+            (bt) =>
+              `${bt.betType.alias}${Math.floor((bt.amount || 10000) / 1000)}`
           )
 
           const allBetTypes = [mainBetType, ...additionalTypes]
