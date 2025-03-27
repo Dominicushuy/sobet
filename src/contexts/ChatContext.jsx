@@ -152,6 +152,8 @@ export function ChatProvider({ children }) {
       // Detect any errors
       const errorResult = detectErrors(formattedBetCode, parseResult)
 
+      console.log({ formattedBetCode, parseResult, errorResult })
+
       if (parseResult.success && !errorResult.hasErrors) {
         // Calculate stake and potential prize
 

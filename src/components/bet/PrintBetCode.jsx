@@ -102,7 +102,7 @@ const PrintBetCode = ({ betCode, isOpen, onClose }) => {
                       </div>
                     )}
                   <div>
-                    <span className='font-medium'>Tổng số dòng:</span>{' '}
+                    <span className='font-medium'>Tổng Số mã cược:</span>{' '}
                     {betCode.lines?.length || 0}
                   </div>
                   <div>

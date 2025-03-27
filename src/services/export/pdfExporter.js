@@ -78,7 +78,11 @@ export function exportBetCodeToPDF(betCode) {
       )
     }
 
-    doc.text(`Tổng số dòng: ${betCode.lines?.length || 0}`, margin, margin + 35)
+    doc.text(
+      `Tổng Số mã cược: ${betCode.lines?.length || 0}`,
+      margin,
+      margin + 35
+    )
     doc.text(
       `Tiền cược: ${formatMoney(betCode.stakeAmount || 0)}đ`,
       margin,

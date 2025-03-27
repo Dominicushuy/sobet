@@ -33,7 +33,7 @@ export function parseBetCode(betCode) {
     }
 
     // Nếu chỉ có 1 dòng và không có số cược, có thể người dùng chỉ đang thử chọn đài
-    if (lines.length === 1 && !containsNumbersOrBetTypes(lines[0])) {
+    if (lines.length === 1) {
       return {
         success: true,
         station: station.data,
@@ -46,30 +46,38 @@ export function parseBetCode(betCode) {
     const parsedLines = []
     let hasValidLine = false
 
-    // Bắt đầu từ dòng thứ 2 hoặc dòng 1 nếu dòng 1 chứa cả đài và số cược
-    const startIndex = containsNumbersOrBetTypes(lines[0]) ? 0 : 1
+    // Kiểm tra xem dòng đầu tiên có chứa cả đài và số cược không
+    const stationPart = extractStationPart(lines[0])
+    const hasBetInfo =
+      stationPart.length < lines[0].length && !isStationOnly(lines[0])
 
-    for (let i = startIndex; i < lines.length; i++) {
+    // Xử lý phần số cược từ dòng đầu nếu có
+    if (hasBetInfo) {
+      const betPart = lines[0].substring(stationPart.length).trim()
+      if (betPart) {
+        const parsedLine = parseBetLine(betPart, station.data)
+        parsedLine.originalLine = lines[0]
+        parsedLine.lineIndex = 0
+
+        parsedLines.push(parsedLine)
+        if (parsedLine.valid) {
+          hasValidLine = true
+        }
+      }
+    }
+
+    // Xử lý các dòng còn lại (bắt đầu từ dòng 1)
+    for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim()
       if (line === '') continue
 
-      // Nếu dòng đầu tiên chứa cả đài và số cược, cần tách thành đài và phần số cược
-      let lineToParse = line
-      if (i === 0 && startIndex === 0) {
-        // Tách phần đài và phần số cược
-        const stationPart = extractStationPart(line)
-        const betPart = line.substring(stationPart.length).trim()
-        lineToParse = betPart
-      }
-
-      // Tách các đài nếu có dòng chỉ chứa tên đài
-      if (isStationLine(lineToParse) && i > startIndex) {
-        // Bỏ qua dòng đài trung gian
+      // Bỏ qua các dòng chỉ chứa tên đài
+      if (isStationLine(line)) {
         continue
       }
 
       // Phân tích dòng
-      const parsedLine = parseBetLine(lineToParse, station.data)
+      const parsedLine = parseBetLine(line, station.data)
       parsedLine.originalLine = line
       parsedLine.lineIndex = i
 
@@ -117,6 +125,30 @@ function isStationLine(line) {
 }
 
 /**
+ * Kiểm tra xem dòng có phải chỉ chứa thông tin đài không (không có thông tin cược)
+ */
+function isStationOnly(line) {
+  // Kiểm tra các mẫu đài miền nhiều đài (vd: 2dmn, 3mt)
+  const multiStationPattern = /^\d+d(mn|mt|n|t|nam|trung)$/i
+  if (multiStationPattern.test(line)) {
+    return true
+  }
+
+  // Kiểm tra tên đài đơn lẻ
+  if (isStationLine(line)) {
+    return true
+  }
+
+  // Kiểm tra mẫu "mb", "mt", "mn" và biến thể của chúng
+  const regionPattern = /^(mb|mt|mn|mienbac|mientrung|miennam|hanoi|hn)$/i
+  if (regionPattern.test(line)) {
+    return true
+  }
+
+  return false
+}
+
+/**
  * Kiểm tra xem dòng có chứa số hoặc kiểu cược hay không
  */
 function containsNumbersOrBetTypes(line) {
@@ -133,6 +165,12 @@ function containsNumbersOrBetTypes(line) {
     const pattern = new RegExp(`\\b${alias}\\b|\\b${alias}\\d+`, 'i')
     return pattern.test(line) && !isPartOfStationName(alias, line)
   })
+
+  // Kiểm tra đặc biệt cho mẫu đài nhiều miền như "2dmn"
+  const isMultiStationPattern = /^\d+d(mn|mt|n|t)/i
+  if (isMultiStationPattern.test(line)) {
+    return false // Đây là đài, không phải số cược
+  }
 
   return hasNumbers || hasBetType
 }
@@ -174,10 +212,18 @@ function extractStationPart(line) {
   // Tìm vị trí của số đầu tiên hoặc kiểu cược
   let index = line.length
 
+  // Xử lý đặc biệt cho trường hợp như "2dmn"
+  const multiStationMatch = line.match(
+    /^(\d+)(dmn|dmt|dn|dt|dnam|dtrung|mn|mt|mnam|mtrung)/i
+  )
+  if (multiStationMatch) {
+    return line
+  }
+
   // Tìm vị trí số đầu tiên
-  const numberMatch = line.match(/\d/)
+  const numberMatch = line.match(/(?<!\d[a-z])\d/)
   if (numberMatch) {
-    index = Math.min(index, line.indexOf(numberMatch[0]))
+    index = Math.min(index, numberMatch.index)
   }
 
   // Tìm vị trí kiểu cược đầu tiên

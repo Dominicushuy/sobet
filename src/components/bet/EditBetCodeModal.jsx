@@ -193,7 +193,7 @@ const EditBetCodeModal = ({ betCode, isOpen, onClose }) => {
                   {analysisResult.parseResult.station?.name || 'Không xác định'}
                 </div>
                 <div>
-                  <span className='font-medium'>Số dòng:</span>{' '}
+                  <span className='font-medium'>Số mã cược:</span>{' '}
                   {analysisResult.parseResult.lines?.length || 0}
                 </div>
                 <div>

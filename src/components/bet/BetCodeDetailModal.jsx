@@ -152,7 +152,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
                   </div>
 
                   <div>
-                    <span className='font-medium text-sm'>Số dòng:</span>
+                    <span className='font-medium text-sm'>Số mã cược:</span>
                     <div className='text-sm text-muted-foreground'>
                       {betCode.lines?.length || 0}
                     </div>

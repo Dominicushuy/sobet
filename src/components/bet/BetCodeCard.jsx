@@ -141,7 +141,7 @@ const BetCodeCard = ({
         <CardContent className='py-2'>
           <div className='grid grid-cols-2 gap-2 text-sm'>
             <div>
-              <span className='text-muted-foreground'>Số dòng:</span>{' '}
+              <span className='text-muted-foreground'>Số mã cược:</span>{' '}
               {betCode.lines?.length || 0}
             </div>
             <div>
