@@ -1,4 +1,4 @@
-// Update src/components/bet/BetCodeCard.jsx
+// src/components/bet/BetCodeCard.jsx (cập nhật lần cuối)
 import React, { useState } from 'react'
 import {
   Card,
@@ -23,6 +23,8 @@ import { useBetCode } from '@/contexts/BetCodeContext'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import PrintBetCode from './PrintBetCode'
+import EditBetCodeModal from './EditBetCodeModal'
+import BetCodeDetailModal from './BetCodeDetailModal'
 
 const BetCodeCard = ({
   betCode,
@@ -34,6 +36,8 @@ const BetCodeCard = ({
   const { removeDraftCode, removeBetCode, confirmDraftCode } = useBetCode()
   const [showDetails, setShowDetails] = useState(false)
   const [isPrintOpen, setIsPrintOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   const handleRemove = () => {
     if (isDraft) {
@@ -58,6 +62,22 @@ const BetCodeCard = ({
 
   const handleClosePrint = () => {
     setIsPrintOpen(false)
+  }
+
+  const handleOpenEdit = () => {
+    setIsEditOpen(true)
+  }
+
+  const handleCloseEdit = () => {
+    setIsEditOpen(false)
+  }
+
+  const handleOpenDetail = () => {
+    setIsDetailOpen(true)
+  }
+
+  const handleCloseDetail = () => {
+    setIsDetailOpen(false)
   }
 
   // Format creation date
@@ -195,6 +215,14 @@ const BetCodeCard = ({
                 <CheckCircle2 className='h-3 w-3 mr-1' />
                 Lưu
               </Button>
+              <Button variant='outline' size='sm' onClick={handleOpenEdit}>
+                <Edit className='h-3 w-3 mr-1' />
+                Sửa
+              </Button>
+              <Button variant='outline' size='sm' onClick={handleOpenDetail}>
+                <FileText className='h-3 w-3 mr-1' />
+                Chi tiết
+              </Button>
               <Button variant='outline' size='sm' onClick={handleRemove}>
                 <Trash2 className='h-3 w-3 mr-1' />
                 Xóa
@@ -202,11 +230,11 @@ const BetCodeCard = ({
             </>
           ) : (
             <>
-              <Button variant='outline' size='sm'>
+              <Button variant='outline' size='sm' onClick={handleOpenEdit}>
                 <Edit className='h-3 w-3 mr-1' />
                 Sửa
               </Button>
-              <Button variant='outline' size='sm'>
+              <Button variant='outline' size='sm' onClick={handleOpenDetail}>
                 <FileText className='h-3 w-3 mr-1' />
                 Chi tiết
               </Button>
@@ -233,6 +261,26 @@ const BetCodeCard = ({
           betCode={betCode}
           isOpen={isPrintOpen}
           onClose={handleClosePrint}
+        />
+      )}
+
+      {/* Edit Dialog */}
+      {isEditOpen && (
+        <EditBetCodeModal
+          betCode={betCode}
+          isOpen={isEditOpen}
+          onClose={handleCloseEdit}
+        />
+      )}
+
+      {/* Detail Dialog */}
+      {isDetailOpen && (
+        <BetCodeDetailModal
+          betCode={betCode}
+          isOpen={isDetailOpen}
+          onClose={handleCloseDetail}
+          onEdit={handleOpenEdit}
+          onPrint={handleOpenPrint}
         />
       )}
     </>

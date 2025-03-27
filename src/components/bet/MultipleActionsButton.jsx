@@ -1,12 +1,11 @@
-// Update src/components/bet/MultipleActionsButton.jsx
+// src/components/bet/MultipleActionsButton.jsx
 import { Button } from '@/components/ui/button'
 import {
   MoreHorizontal,
-  Save,
   Trash2,
   RotateCcw,
-  PrinterCheck,
   Download,
+  BookmarkCheck,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -15,6 +14,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu'
 import { useBetCode } from '@/contexts/BetCodeContext'
 import { toast } from 'sonner'
@@ -22,30 +22,72 @@ import { useState } from 'react'
 import { exportMultipleBetCodesToPDF } from '@/services/export/pdfExporter'
 
 const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
-  const { confirmDraftCode, removeBetCode, removeDraftCode, getBetCode } =
-    useBetCode()
+  const {
+    confirmDraftCode,
+    removeBetCode,
+    removeDraftCode,
+    getBetCode,
+    getStatistics,
+  } = useBetCode()
   const [printing, setPrinting] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  const handleConfirmSelected = () => {
-    let confirmedCount = 0
-
-    selectedIds.forEach((id) => {
+  const getDraftIds = () => {
+    return selectedIds.filter((id) => {
       const code = getBetCode(id)
-      if (code && code.isDraft) {
+      return code && code.isDraft
+    })
+  }
+
+  const getConfirmedIds = () => {
+    return selectedIds.filter((id) => {
+      const code = getBetCode(id)
+      return code && !code.isDraft
+    })
+  }
+
+  const draftCount = getDraftIds().length
+  const confirmedCount = getConfirmedIds().length
+
+  const handleConfirmSelected = async () => {
+    if (draftCount === 0) {
+      toast.info('Không có mã cược nháp nào được chọn để lưu')
+      return
+    }
+
+    try {
+      setSaving(true)
+      const draftIds = getDraftIds()
+      let confirmedCount = 0
+
+      for (const id of draftIds) {
         confirmDraftCode(id)
         confirmedCount++
-      }
-    })
 
-    if (confirmedCount > 0) {
-      toast.success(`Đã lưu ${confirmedCount} mã cược`)
-      onClearSelection()
-    } else {
-      toast.info('Không có mã cược nháp nào được chọn để lưu')
+        // Nếu có nhiều mã cược, thêm delay nhỏ để không block UI
+        if (draftIds.length > 10) {
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+      }
+
+      if (confirmedCount > 0) {
+        toast.success(`Đã lưu ${confirmedCount} mã cược`)
+        onClearSelection()
+      }
+    } catch (error) {
+      console.error('Lỗi khi lưu nhiều mã cược:', error)
+      toast.error('Lỗi: ' + error.message)
+    } finally {
+      setSaving(false)
     }
   }
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) {
+      toast.info('Chưa có mã cược nào được chọn để xóa')
+      return
+    }
+
     if (
       !window.confirm(
         `Bạn có chắc chắn muốn xóa ${selectedIds.length} mã cược đã chọn?`
@@ -54,23 +96,33 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
       return
     }
 
-    let deletedCount = 0
+    try {
+      let deletedCount = 0
 
-    selectedIds.forEach((id) => {
-      const code = getBetCode(id)
-      if (!code) return
+      for (const id of selectedIds) {
+        const code = getBetCode(id)
+        if (!code) continue
 
-      if (code.isDraft) {
-        removeDraftCode(id)
-      } else {
-        removeBetCode(id)
+        if (code.isDraft) {
+          removeDraftCode(id)
+        } else {
+          removeBetCode(id)
+        }
+        deletedCount++
+
+        // Nếu có nhiều mã cược, thêm delay nhỏ để không block UI
+        if (selectedIds.length > 10) {
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
       }
-      deletedCount++
-    })
 
-    if (deletedCount > 0) {
-      toast.success(`Đã xóa ${deletedCount} mã cược`)
-      onClearSelection()
+      if (deletedCount > 0) {
+        toast.success(`Đã xóa ${deletedCount} mã cược`)
+        onClearSelection()
+      }
+    } catch (error) {
+      console.error('Lỗi khi xóa nhiều mã cược:', error)
+      toast.error('Lỗi: ' + error.message)
     }
   }
 
@@ -93,10 +145,20 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
         return
       }
 
+      // Tính tổng tiền và tiềm năng
+      const totalStake = betCodes.reduce(
+        (sum, code) => sum + (code.stakeAmount || 0),
+        0
+      )
+      const totalPotential = betCodes.reduce(
+        (sum, code) => sum + (code.potentialWinning || 0),
+        0
+      )
+
       // Create PDF with multiple bet codes
       const pdfBlob = await exportMultipleBetCodesToPDF(
         betCodes,
-        `Danh sách ${betCodes.length} mã cược`
+        `Danh sách ${betCodes.length} mã cược (${totalStake.toLocaleString()}đ)`
       )
 
       // Create download link
@@ -120,6 +182,14 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     }
   }
 
+  // Hiển thị số lượng mã đã lưu/chưa lưu đã chọn
+  const selectionSummary = () => {
+    if (draftCount > 0 && confirmedCount > 0) {
+      return `${selectedIds.length} (${draftCount} nháp, ${confirmedCount} đã lưu)`
+    }
+    return selectedIds.length
+  }
+
   if (selectedIds.length === 0) {
     return null
   }
@@ -129,39 +199,61 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
       <DropdownMenuTrigger asChild>
         <Button variant='outline' size='sm' className='ml-2'>
           <MoreHorizontal className='h-4 w-4 mr-1' />
-          {selectedIds.length} đã chọn
+          {selectionSummary()} đã chọn
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align='end'>
+      <DropdownMenuContent align='end' className='w-56'>
         <DropdownMenuLabel>Thao tác hàng loạt</DropdownMenuLabel>
+
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleConfirmSelected}>
-          <Save className='h-4 w-4 mr-2' />
-          Lưu các mã đã chọn
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handlePrintSelected} disabled={printing}>
-          {printing ? (
-            <>
-              <span className='h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2'></span>
-              Đang tạo PDF...
-            </>
-          ) : (
-            <>
-              <Download className='h-4 w-4 mr-2' />
-              Tải PDF các mã đã chọn
-            </>
+
+        <DropdownMenuGroup>
+          {draftCount > 0 && (
+            <DropdownMenuItem
+              onClick={handleConfirmSelected}
+              disabled={saving}
+              className='text-green-700 focus:text-green-800'>
+              {saving ? (
+                <>
+                  <span className='h-4 w-4 border-2 border-green-700 border-t-transparent rounded-full animate-spin mr-2'></span>
+                  Đang lưu...
+                </>
+              ) : (
+                <>
+                  <BookmarkCheck className='h-4 w-4 mr-2' />
+                  Lưu {draftCount} mã cược nháp
+                </>
+              )}
+            </DropdownMenuItem>
           )}
-        </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={handlePrintSelected} disabled={printing}>
+            {printing ? (
+              <>
+                <span className='h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2'></span>
+                Đang tạo PDF...
+              </>
+            ) : (
+              <>
+                <Download className='h-4 w-4 mr-2' />
+                Tải PDF {selectedIds.length} mã cược
+              </>
+            )}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+
         <DropdownMenuSeparator />
+
         <DropdownMenuItem onClick={onClearSelection}>
           <RotateCcw className='h-4 w-4 mr-2' />
           Bỏ chọn tất cả
         </DropdownMenuItem>
+
         <DropdownMenuItem
           onClick={handleDeleteSelected}
           className='text-destructive focus:text-destructive'>
           <Trash2 className='h-4 w-4 mr-2' />
-          Xóa các mã đã chọn
+          Xóa {selectedIds.length} mã đã chọn
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
