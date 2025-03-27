@@ -34,6 +34,61 @@ export function formatBetCode(betCode) {
       continue
     }
 
+    // Cải tiến: Kiểm tra và xử lý các trường hợp đặc biệt
+
+    // 1. Trường hợp nhiều kiểu cược trong một dòng (vd: 23.45.67dd10.dau20.duoi5)
+    const multipleBetTypes = extractMultipleBetTypes(lines[i])
+    if (multipleBetTypes.length > 1) {
+      // Trích xuất phần số
+      const numbersPart = extractNumbersPart(lines[i])
+      const numbers = parseNumbersPart(numbersPart)
+
+      // Cải tiến: Xử lý từ khóa đặc biệt (tai, xiu, v.v.)
+      const specialKeywords = [
+        'tai',
+        'xiu',
+        'chan',
+        'le',
+        'chanchan',
+        'lele',
+        'chanle',
+        'lechan',
+      ]
+      let hasSpecialKeyword = false
+
+      for (const keyword of specialKeywords) {
+        if (new RegExp(`\\b${keyword}\\b`, 'i').test(numbersPart)) {
+          hasSpecialKeyword = true
+          break
+        }
+      }
+
+      // Tạo dòng riêng cho mỗi kiểu cược
+      for (const betType of multipleBetTypes) {
+        const formattedLine = `${numbers.join('.')}${betType}`
+        formattedLines.push(formattedLine)
+      }
+
+      continue
+    }
+
+    // 2. Trường hợp số gộp thành nhóm (vd: 1234.5678da1)
+    if (containsGroupNumbers(lines[i])) {
+      const parts = splitNumbersAndBetType(lines[i])
+      if (parts.numbersPart && parts.betTypePart) {
+        // Tách các số thành nhóm 2 chữ số nếu có 4 chữ số trở lên
+        const expandedNumbers = expandGroupedNumbers(parts.numbersPart)
+
+        if (expandedNumbers.length > 0) {
+          const formattedLine = `${expandedNumbers.join('.')}${
+            parts.betTypePart
+          }`
+          formattedLines.push(formattedLine)
+          continue
+        }
+      }
+    }
+
     const formattedLine = formatBetLine(lines[i])
     formattedLines.push(formattedLine)
   }
@@ -42,11 +97,11 @@ export function formatBetCode(betCode) {
 }
 
 /**
- * Kiểm tra xem dòng có phải chỉ chứa tên đài không
+ * Kiểm tra xem dòng có phải là dòng chỉ chứa tên đài không
  */
 function isStationOnlyLine(line) {
   // Loại bỏ dấu chấm cuối
-  const cleanLine = line.replace(/\.$/, '').trim().toLowerCase()
+  const cleanLine = line.replace(/\.+$/, '').trim().toLowerCase()
 
   // Kiểm tra xem là tên đài đơn thuần không
   return defaultStations.some(
@@ -63,7 +118,7 @@ function isStationOnlyLine(line) {
  */
 function formatStation(stationLine) {
   // Loại bỏ dấu chấm cuối
-  let formattedLine = stationLine.trim().replace(/\.$/, '')
+  let formattedLine = stationLine.trim().replace(/\.+$/, '')
 
   // Nếu đã có số cược, tách phần đài ra
   if (/\d/.test(formattedLine) && !formattedLine.match(/^\d+d/)) {
@@ -369,6 +424,160 @@ export function decomposeBetCode(betCode) {
 }
 
 /**
+ * Trích xuất nhiều kiểu cược từ một dòng
+ */
+function extractMultipleBetTypes(line) {
+  const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases)
+  const result = []
+
+  // Chuẩn hóa line
+  const normalizedLine = line
+    .replace(/xcdui/g, 'xcduoi')
+    .replace(/(\b|[^a-z])dui(\d+|$)/g, '$1duoi$2')
+    .replace(/[,\- ]+/g, '.')
+
+  // Tạo pattern với word boundary (\b) để đảm bảo tìm đúng kiểu cược
+  // Sắp xếp alias theo độ dài (dài nhất trước)
+  const betTypePattern = betTypeAliases
+    .sort((a, b) => b.length - a.length)
+    .map((alias) => `\\b${alias}\\b`)
+    .join('|')
+
+  // Tìm tất cả các kiểu cược
+  const betTypeRegex = new RegExp(
+    `(${betTypePattern})(\\d+(?:[,.n]\\d+)?)`,
+    'gi'
+  )
+
+  let match
+  while ((match = betTypeRegex.exec(normalizedLine)) !== null) {
+    const betTypeAlias = match[1].toLowerCase()
+    const amountStr = match[2] || '10'
+
+    result.push(betTypeAlias + amountStr)
+  }
+
+  return result
+}
+
+/**
+ * Trích xuất phần số từ dòng cược
+ */
+function extractNumbersPart(line) {
+  // Tìm vị trí kiểu cược đầu tiên
+  const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases)
+  let betTypeIndex = line.length
+
+  for (const alias of betTypeAliases) {
+    const regex = new RegExp(`\\b${alias}\\d*`, 'i')
+    const match = regex.exec(line)
+    if (match && match.index < betTypeIndex) {
+      betTypeIndex = match.index
+      break
+    }
+  }
+
+  return line.substring(0, betTypeIndex).trim()
+}
+
+/**
+ * Phân tích phần số thành chuỗi chuẩn
+ */
+function parseNumbersPart(numbersPart) {
+  const parts = numbersPart.split('.')
+  const result = []
+
+  const specialKeywords = [
+    'tai',
+    'xiu',
+    'chan',
+    'le',
+    'chanchan',
+    'lele',
+    'chanle',
+    'lechan',
+  ]
+
+  for (const part of parts) {
+    if (part.trim() === '') continue
+
+    if (specialKeywords.includes(part.toLowerCase())) {
+      // Giữ nguyên từ khóa đặc biệt
+      result.push(part.toLowerCase())
+    } else if (/^\d{4,}$/.test(part) && part.length % 2 === 0) {
+      // Phân tách số có 4 chữ số trở lên thành các cặp 2 chữ số
+      for (let i = 0; i < part.length; i += 2) {
+        if (i + 2 <= part.length) {
+          result.push(part.substr(i, 2))
+        }
+      }
+    } else {
+      result.push(part)
+    }
+  }
+
+  return result
+}
+
+/**
+ * Kiểm tra xem dòng có chứa số gộp thành nhóm không
+ */
+function containsGroupNumbers(line) {
+  // Tìm các số có 4 chữ số trở lên
+  const groupedNumberPattern = /\d{4,}/g
+  const matches = line.match(groupedNumberPattern)
+
+  return matches !== null && matches.some((match) => match.length % 2 === 0)
+}
+
+/**
+ * Tách dòng thành phần số và phần kiểu cược/tiền cược
+ */
+function splitNumbersAndBetType(line) {
+  // Tạo pattern từ tất cả các alias kiểu cược
+  const betTypeAliases = defaultBetTypes
+    .flatMap((bt) => bt.aliases)
+    .sort((a, b) => b.length - a.length)
+    .join('|')
+
+  const regex = new RegExp(
+    `(.*?)(\\b(?:${betTypeAliases})\\d*(?:[,.n]\\d+)?)$`,
+    'i'
+  )
+  const match = line.match(regex)
+
+  if (match) {
+    return {
+      numbersPart: match[1].trim(),
+      betTypePart: match[2],
+    }
+  }
+
+  return { numbersPart: line, betTypePart: '' }
+}
+
+/**
+ * Mở rộng các số gộp thành các cặp 2 chữ số
+ */
+function expandGroupedNumbers(numbersPart) {
+  const parts = numbersPart.split('.')
+  const expandedNumbers = []
+
+  for (const part of parts) {
+    if (/^\d{4,}$/.test(part) && part.length % 2 === 0) {
+      // Tách thành các cặp 2 chữ số
+      for (let i = 0; i < part.length; i += 2) {
+        expandedNumbers.push(part.substr(i, 2))
+      }
+    } else if (/^\d+$/.test(part)) {
+      expandedNumbers.push(part)
+    }
+  }
+
+  return expandedNumbers
+}
+
+/**
  * Tìm và gợi ý sửa lỗi cú pháp mã cược
  * @param {string} betCode - Mã cược đầu vào
  * @returns {object} Các gợi ý sửa lỗi
@@ -511,6 +720,37 @@ export function suggestBetCodeFixes(betCode) {
         original: line,
         suggested: line.replace(/-/g, '.'),
       })
+    }
+
+    // Cải tiến: Kiểm tra nhiều kiểu cược trong một dòng
+    const multipleBetTypes = extractMultipleBetTypes(line)
+    if (multipleBetTypes.length > 1) {
+      suggestions.push({
+        type: 'MULTIPLE_BET_TYPES',
+        message: `Dòng có nhiều kiểu cược "${multipleBetTypes.join(
+          ', '
+        )}" sẽ được tách thành các dòng riêng biệt`,
+        original: line,
+        suggested: 'Tách thành nhiều dòng',
+      })
+    }
+
+    // Cải tiến: Kiểm tra số gộp thành nhóm
+    if (containsGroupNumbers(line)) {
+      const parts = splitNumbersAndBetType(line)
+      if (parts.numbersPart) {
+        const expandedNumbers = expandGroupedNumbers(parts.numbersPart)
+        if (expandedNumbers.length > 0) {
+          suggestions.push({
+            type: 'GROUPED_NUMBERS',
+            message: `Các số liền nhau sẽ được tách thành các cặp 2 chữ số: "${expandedNumbers.join(
+              '.'
+            )}"`,
+            original: parts.numbersPart,
+            suggested: expandedNumbers.join('.'),
+          })
+        }
+      }
     }
   }
 

@@ -54,6 +54,20 @@ export function detectErrors(betCode, parsedResult) {
     } else if (line.valid) {
       hasValidLine = true
     }
+
+    // Cải tiến: Phát hiện các trường hợp đặc biệt
+
+    // 1. Phát hiện nhiều kiểu cược trong một dòng
+    const specialErrors = detectSpecialCases(line)
+    if (specialErrors.length > 0) {
+      errors.push(
+        ...specialErrors.map((error) => ({
+          ...error,
+          lineIndex: i,
+          line: line.originalLine,
+        }))
+      )
+    }
   }
 
   // Kiểm tra nếu không có dòng nào hợp lệ
@@ -69,6 +83,43 @@ export function detectErrors(betCode, parsedResult) {
     hasErrors: errors.length > 0,
     errors,
   }
+}
+
+/**
+ * Phát hiện các trường hợp đặc biệt trong dòng cược
+ */
+function detectSpecialCases(line) {
+  const errors = []
+
+  // Nếu dòng không hợp lệ, không cần kiểm tra thêm
+  if (!line.valid) return errors
+
+  // 1. Kiểm tra nhiều kiểu cược trong một dòng
+  if (line.additionalBetTypes && line.additionalBetTypes.length > 0) {
+    errors.push({
+      type: 'MULTIPLE_BET_TYPES',
+      message: `Dòng có nhiều kiểu cược (${
+        line.additionalBetTypes.length + 1
+      }) nên được tách thành các dòng riêng biệt`,
+      scope: 'line',
+      severity: 'warning', // Đánh dấu là cảnh báo, không phải lỗi
+    })
+  }
+
+  // 2. Kiểm tra số gộp thành nhóm (1234 -> 12.34)
+  for (const number of line.numbers || []) {
+    if (/^\d{4,}$/.test(number) && number.length % 2 === 0) {
+      errors.push({
+        type: 'GROUPED_NUMBERS',
+        message: `Số "${number}" nên được tách thành các cặp 2 chữ số`,
+        scope: 'number',
+        severity: 'warning',
+      })
+      break // Chỉ báo một lỗi cho tất cả các số trong dòng
+    }
+  }
+
+  return errors
 }
 
 /**
@@ -215,6 +266,24 @@ function getMaxStationsForRegionOnDay(region, day) {
   }
 
   return stationCounts[region]?.[day] || 1
+}
+
+/**
+ * Lấy tên ngày từ số ngày trong tuần
+ * @param {number} day - Số ngày trong tuần (0: Chủ nhật, 1-6: Thứ 2 - Thứ 7)
+ * @returns {string} Tên ngày
+ */
+function getDayName(day) {
+  const days = [
+    'Chủ nhật',
+    'Thứ hai',
+    'Thứ ba',
+    'Thứ tư',
+    'Thứ năm',
+    'Thứ sáu',
+    'Thứ bảy',
+  ]
+  return days[day]
 }
 
 /**
@@ -428,24 +497,6 @@ function getRegionName(region) {
  */
 function getCurrentDayOfWeek() {
   return new Date().getDay()
-}
-
-/**
- * Lấy tên ngày từ số ngày trong tuần
- * @param {number} day - Số ngày trong tuần (0: Chủ nhật, 1-6: Thứ 2 - Thứ 7)
- * @returns {string} Tên ngày
- */
-function getDayName(day) {
-  const days = [
-    'Chủ nhật',
-    'Thứ hai',
-    'Thứ ba',
-    'Thứ tư',
-    'Thứ năm',
-    'Thứ sáu',
-    'Thứ bảy',
-  ]
-  return days[day]
 }
 
 /**

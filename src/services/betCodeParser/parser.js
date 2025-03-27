@@ -583,51 +583,127 @@ function parseBetLine(line, station) {
       '$1duoi$2'
     )
 
-    // Cải tiến: Thử tìm kiểu cược trước khi phân tích chi tiết
-    // Kiểm tra nếu có nhiều kiểu cược/số tiền trong cùng một dòng (dau20.duoi10)
+    // Cải tiến: Xử lý các trường hợp đặc biệt
+
+    // 1. Xử lý nhiều kiểu cược trong một dòng (ví dụ: 23.45dd10.dau5)
     const multipleBetTypes = extractMultipleBetTypes(normalizedLine)
 
     if (multipleBetTypes.length > 1) {
-      // Xử lý trường hợp nhiều kiểu cược trong một dòng
-      // Lấy numbers từ phần đầu của dòng
+      // Lấy phần số từ đầu dòng
       const numbersPart = extractNumbersPart(normalizedLine)
-      const numbers = parseNumbers(numbersPart, station)
+      let numbers = parseNumbers(numbersPart, station)
 
-      if (numbers.length > 0) {
-        // Thiết lập kiểu cược chính (đầu tiên)
-        result.numbers = numbers
-        result.betType = {
-          id: multipleBetTypes[0].betType.id,
-          name: multipleBetTypes[0].betType.name,
-          alias: multipleBetTypes[0].betType.alias,
+      // Xử lý từ khóa đặc biệt như tai, xiu, chanchan, v.v.
+      const specialKeywords = [
+        'tai',
+        'xiu',
+        'chan',
+        'le',
+        'chanchan',
+        'lele',
+        'chanle',
+        'lechan',
+      ]
+      let hasSpecialKeyword = false
+
+      for (const keyword of specialKeywords) {
+        if (new RegExp(`\\b${keyword}\\b`, 'i').test(numbersPart)) {
+          hasSpecialKeyword = true
+          break
         }
+      }
+
+      if (hasSpecialKeyword) {
+        // Lưu ý: Hàm processNumber đã xử lý các từ khóa đặc biệt
+        numbers = []
+        const parts = numbersPart.split('.')
+        for (const part of parts) {
+          if (specialKeywords.includes(part)) {
+            const specialNumbers = processSpecialKeyword(part)
+            numbers.push(...specialNumbers)
+          } else if (/^\d+$/.test(part)) {
+            numbers.push(part)
+          }
+        }
+      }
+
+      // Kiểm tra và xử lý các số dạng nhóm (1234, 0102, v.v.)
+      const processedNumbers = []
+      for (const num of numbers) {
+        if (/^\d{4,}$/.test(num) && num.length % 2 === 0) {
+          // Phân tách thành các cặp 2 chữ số
+          for (let i = 0; i < num.length; i += 2) {
+            processedNumbers.push(num.substring(i, i + 2))
+          }
+        } else {
+          processedNumbers.push(num)
+        }
+      }
+
+      if (processedNumbers.length > 0) {
+        result.numbers = processedNumbers
+        result.betType = multipleBetTypes[0].betType
         result.amount = multipleBetTypes[0].amount
+        result.valid = true
 
         // Thêm các kiểu cược bổ sung
         for (let i = 1; i < multipleBetTypes.length; i++) {
           result.additionalBetTypes.push({
             betType: multipleBetTypes[i].betType,
             amount: multipleBetTypes[i].amount,
-            numbers: numbers, // Cùng dùng một danh sách số
+            numbers: processedNumbers, // Dùng chung danh sách số
           })
         }
 
-        result.valid = true
         return result
       }
     }
 
-    // Xử lý cho trường hợp đơn giản với một kiểu cược
-    if (multipleBetTypes.length === 1) {
-      const numbersPart = extractNumbersPart(normalizedLine)
-      const numbers = parseNumbers(numbersPart, station)
+    // 2. Xử lý số gộp thành nhóm (ví dụ: 1234.5678da1)
+    // Kiểm tra xem có số nào có 4 chữ số trở lên không
+    const groupedNumberPatterns = normalizedLine.match(/\d{4,}/g)
+    if (
+      groupedNumberPatterns &&
+      groupedNumberPatterns.some((p) => p.length % 2 === 0)
+    ) {
+      // Tách phần kiểu cược
+      const parts = normalizedLine.split(/([a-z]+\d+(?:[,.]\d+)?)/i)
 
-      if (numbers.length > 0) {
-        result.numbers = numbers
-        result.betType = multipleBetTypes[0].betType
-        result.amount = multipleBetTypes[0].amount
-        result.valid = true
-        return result
+      if (parts.length >= 2) {
+        const numbersPart = parts[0]
+        const betTypePart = parts[1]
+
+        const betTypeMatch = betTypePart.match(/([a-z]+)(\d+(?:[,.]\d+)?)/i)
+        if (betTypeMatch) {
+          const betTypeAlias = betTypeMatch[1].toLowerCase()
+          const betType = identifyBetType(betTypeAlias)
+          const amount = parseAmount(betTypeMatch[2] || '10')
+
+          if (betType) {
+            // Phân tích phần số
+            const numParts = numbersPart.split('.')
+            const processedNumbers = []
+
+            for (const part of numParts) {
+              if (/^\d{4,}$/.test(part) && part.length % 2 === 0) {
+                // Tách thành các cặp 2 chữ số
+                for (let i = 0; i < part.length; i += 2) {
+                  processedNumbers.push(part.substring(i, i + 2))
+                }
+              } else if (/^\d+$/.test(part)) {
+                processedNumbers.push(part)
+              }
+            }
+
+            if (processedNumbers.length > 0) {
+              result.numbers = processedNumbers
+              result.betType = betType
+              result.amount = amount
+              result.valid = true
+              return result
+            }
+          }
+        }
       }
     }
 
@@ -1006,8 +1082,43 @@ function processNumber(numberString, station) {
     return specialKeywords[numberString]
   }
 
+  // Cải tiến: Xử lý số gộp thành nhóm (1234 -> 12, 34)
+  if (/^\d{4,}$/.test(numberString) && numberString.length % 2 === 0) {
+    const numbers = []
+    for (let i = 0; i < numberString.length; i += 2) {
+      numbers.push(numberString.substring(i, i + 2))
+    }
+    return numbers
+  }
+
   // Trường hợp bình thường
   return [numberString]
+}
+
+/**
+ * Xử lý từ khóa đặc biệt và trả về danh sách số
+ */
+function processSpecialKeyword(keyword) {
+  switch (keyword.toLowerCase()) {
+    case 'tai':
+      return generateTaiNumbers()
+    case 'xiu':
+      return generateXiuNumbers()
+    case 'chan':
+      return generateChanNumbers()
+    case 'le':
+      return generateLeNumbers()
+    case 'chanchan':
+      return generateChanChanNumbers()
+    case 'lele':
+      return generateLeLeNumbers()
+    case 'chanle':
+      return generateChanLeNumbers()
+    case 'lechan':
+      return generateLeChanNumbers()
+    default:
+      return []
+  }
 }
 
 /**
