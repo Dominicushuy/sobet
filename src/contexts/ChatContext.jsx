@@ -154,8 +154,11 @@ export function ChatProvider({ children }) {
 
       if (parseResult.success && !errorResult.hasErrors) {
         // Calculate stake and potential prize
+
         const stakeResult = calculateStake(parseResult)
         const prizeResult = calculatePotentialPrize(parseResult)
+
+        console.log({ parseResult, stakeResult, prizeResult })
 
         const totalStake = stakeResult.success ? stakeResult.totalStake : 0
         const totalPotential = prizeResult.success

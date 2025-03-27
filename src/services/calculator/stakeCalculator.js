@@ -217,20 +217,6 @@ function getBetTypeInfo(line, userSettings) {
       } else {
         payoutRate = payoutRate.bridgeOneStation || 750
       }
-    } else if (
-      betTypeAlias === 'xien' ||
-      betTypeAlias === 'xienmb' ||
-      betTypeAlias === 'xienmbac'
-    ) {
-      // Kiểu xiên
-      const numberCount = line.numbers?.length || 0
-      if (numberCount === 2) {
-        payoutRate = payoutRate.crossTwo || 350
-      } else if (numberCount === 3) {
-        payoutRate = payoutRate.crossThree || 1000
-      } else if (numberCount >= 4) {
-        payoutRate = payoutRate.crossFour || 3000
-      }
     } else {
       // Các kiểu khác
       if (digitCount === 2) {
@@ -485,29 +471,7 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       formula: `${stationInfo.count} × ${totalPermutations} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
       betTypeAlias: betTypeAlias,
     }
-  }
-  // Kiểu xiên
-  else if (
-    betTypeAlias === 'xien' ||
-    betTypeAlias === 'xienmb' ||
-    betTypeAlias === 'xienmbac'
-  ) {
-    // Với xiên miền bắc, chỉ tính một lần số tiền cược, không nhân với số lượng số
-    const stake = stationInfo.count * betAmount * stationInfo.multiplier
-
-    return {
-      stake,
-      valid: true,
-      stationCount: stationInfo.count,
-      numberCount: numberInfo.count,
-      betAmount,
-      multiplier: stationInfo.multiplier,
-      formula: `${stationInfo.count} × ${betAmount} × ${stationInfo.multiplier}`,
-      betTypeAlias: betTypeAlias,
-    }
-  }
-  // Trường hợp thông thường
-  else {
+  } else {
     const stake =
       stationInfo.count *
       numberInfo.count *
