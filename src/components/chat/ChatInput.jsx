@@ -91,7 +91,7 @@ const ChatInput = () => {
             onPaste={handlePaste}
             onCompositionStart={() => setIsComposing(true)}
             onCompositionEnd={() => setIsComposing(false)}
-            placeholder='Nhập mã cược hoặc tin nhắn...'
+            placeholder='Nhập mã cược...'
             className='min-h-[40px] max-h-[200px] resize-none pr-10'
             disabled={isTyping}
           />

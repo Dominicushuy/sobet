@@ -773,37 +773,6 @@ function calculateBridgePrize(line, matchedNumbers, payoutRate, betAmount) {
 }
 
 /**
- * Tính tiền thưởng cho kiểu xiên
- */
-function calculateCrossPrize(line, matchedNumbers, payoutRate, betAmount) {
-  // Kiểu xiên cần tất cả các số đều trúng
-  if (matchedNumbers.length < line.numbers.length) {
-    return {
-      prize: 0,
-      valid: true,
-      matched: false,
-      matchedNumbers,
-      matchedCount: matchedNumbers.length,
-      payoutRate,
-    }
-  }
-
-  // Nếu đủ số trúng thì nhận đủ giải thưởng
-  const prize = betAmount * payoutRate
-
-  return {
-    prize,
-    valid: true,
-    matched: true,
-    matchedNumbers,
-    matchedCount: matchedNumbers.length,
-    betAmount,
-    payoutRate,
-    formula: `${betAmount} × ${payoutRate}`,
-  }
-}
-
-/**
  * Tìm các số trúng thưởng
  * @param {object} line - Dòng cược
  * @param {array} matchingResults - Kết quả xổ số tương ứng
@@ -1110,42 +1079,6 @@ function generatePermutations(number) {
   return [...new Set(result)]
 }
 
-/**
- * Tính nhanh tiềm năng thắng cược
- * @param {object} parsedResult - Kết quả phân tích mã cược
- * @param {object} userSettings - Cài đặt người dùng
- * @returns {number} Tổng tiềm năng thắng cược
- */
-export function quickCalculatePotential(parsedResult, userSettings = {}) {
-  if (!parsedResult || !parsedResult.success || !parsedResult.lines) return 0
-
-  let totalPotential = 0
-
-  // Duyệt qua từng dòng
-  parsedResult.lines.forEach((line) => {
-    if (line.valid && line.amount > 0) {
-      // Lấy thông tin
-      const stationInfo = getStationInfo(line, userSettings)
-      const betTypeInfo = getBetTypeInfo(line, userSettings)
-      const numberInfo = getNumberInfo(line, betTypeInfo)
-
-      // Tính potential cho dòng
-      const linePotential = calculateLinePotential(
-        line,
-        stationInfo,
-        betTypeInfo,
-        numberInfo
-      )
-
-      totalPotential += linePotential.potentialPrize
-    }
-  })
-
-  return totalPotential
-}
-
 export default {
   calculatePotentialPrize,
-  calculateActualPrize,
-  quickCalculatePotential,
 }
