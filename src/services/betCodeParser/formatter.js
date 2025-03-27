@@ -54,11 +54,9 @@ export function formatBetCode(betCode) {
         "chanle",
         "lechan",
       ];
-      let hasSpecialKeyword = false;
 
       for (const keyword of specialKeywords) {
         if (new RegExp(`\\b${keyword}\\b`, "i").test(numbersPart)) {
-          hasSpecialKeyword = true;
           break;
         }
       }

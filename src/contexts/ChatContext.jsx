@@ -306,6 +306,8 @@ export function ChatProvider({ children }) {
       // Format the bet code first for better parsing
       const formattedBetCode = formatBetCode(text);
 
+      // console.log("Formatted bet code:", formattedBetCode);
+
       // Parse the bet code
       const parseResult = parseBetCode(formattedBetCode);
 
