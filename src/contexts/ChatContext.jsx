@@ -307,13 +307,13 @@ export function ChatProvider({ children }) {
 
         // Add common patterns explanation if more than one error
         let commonPatternsExplanation = ''
-        if (detailedErrors.length > 1) {
-          commonPatternsExplanation =
-            `\n\nMột số mẫu mã cược hợp lệ:\n` +
-            `- mb\\n23.45.67dd10 (Miền Bắc, số 23, 45, 67, kiểu đầu đuôi, 10.000đ)\n` +
-            `- vl.ct\\n12.34.56b10\\n78.90da5 (Vĩnh Long và Cần Thơ, nhiều dòng cược)\n` +
-            `- 2dmn\\n123.456.789xc2 (2 đài miền Nam, số 123, 456, 789, kiểu xỉu chủ, 2.000đ)`
-        }
+        // if (detailedErrors.length > 1) {
+        //   commonPatternsExplanation =
+        //     `\n\nMột số mẫu mã cược hợp lệ:\n` +
+        //     `- mb\\n23.45.67dd10 (Miền Bắc, số 23, 45, 67, kiểu đầu đuôi, 10.000đ)\n` +
+        //     `- vl.ct\\n12.34.56b10\\n78.90da5 (Vĩnh Long và Cần Thơ, nhiều dòng cược)\n` +
+        //     `- 2dmn\\n123.456.789xc2 (2 đài miền Nam, số 123, 456, 789, kiểu xỉu chủ, 2.000đ)`
+        // }
 
         // Response with error details and fix suggestions
         addMessage(
@@ -351,7 +351,7 @@ export function ChatProvider({ children }) {
   const addSystemExample = () => {
     const exampleMessage = {
       id: Date.now().toString(),
-      text: 'Dưới đây là một số ví dụ về mã cược:\n\n1. Cược đơn giản:\nmb\n25.36.47dd10\n\n\n2. Nhiều kiểu cược:\nvl.ct\n25.36b10\n47.58da5\n\n\n3. Cược nhiều đài:\n2dmn\n123.456.789xc2\n\n\n**Cấu trúc mã cược:**\n- Dòng đầu: Tên đài (vd: mb, vl.ct, 2dmn)\n- Các dòng sau: Số cược + Kiểu cược + Tiền cược\n\nKiểu cược phổ biến:\n- dd: Đầu đuôi\n- b: Bao lô\n- xc: Xỉu chủ\n- dau: Đầu\n- duoi: Đuôi\n- da: Đá',
+      text: 'Dưới đây là một số ví dụ về mã cược:\n\n1. Cược đơn giản:\nmb\n25.36.47dd10\n\n\n2. Nhiều kiểu cược:\nvl.ct\n25.36b10\n47.58da5\n\n\n3. Cược nhiều đài:\n2dmn\n123.456.789xc2\n\n\n4. Định dạng đặc biệt:\ntp\n1234.5678da10 (Viết gọn cho 12.34 và 56.78)\n66.88da1.b5 (Đặt cược đá và bao lô cho cùng số)\n\n\n**Cấu trúc mã cược:**\n- Dòng đầu: Tên đài (vd: mb, vl.ct, 2dmn)\n- Các dòng sau: Số cược + Kiểu cược + Tiền cược\n\nKiểu cược phổ biến:\n- dd: Đầu đuôi\n- b: Bao lô\n- xc: Xỉu chủ\n- dau: Đầu\n- duoi: Đuôi\n- da: Đá',
       sender: 'bot',
       timestamp: new Date().toISOString(),
     }
