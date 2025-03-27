@@ -923,13 +923,13 @@ Tổng tiềm năng thắng tất cả = 15.150.000đ
 
 ```
 mb
-23.45.67b5dd10xc2
+123.456.789b5dd10xc2
 ```
 
 **Giải thích:**
 
 - Đài: Miền Bắc (mb)
-- Số cược: 23, 45, 67
+- Số cược: 123, 456, 789
 - Kiểu cược: Bao lô (b) 5.000đ/số, đầu đuôi (dd) 10.000đ/số, xỉu chủ (xc) 2.000đ/số
 
 **Tính tiền đóng:**
