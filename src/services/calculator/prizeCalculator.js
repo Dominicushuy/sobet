@@ -1,5 +1,5 @@
 // src/services/calculator/prizeCalculator.js
-import { defaultBetTypes } from "@/config/defaults";
+import { defaultBetTypes } from '@/config/defaults'
 
 /**
  * Tính toán tiềm năng thắng cược dựa trên mã cược đã phân tích
@@ -13,18 +13,18 @@ export function calculatePotentialPrize(parsedResult, userSettings = {}) {
       success: false,
       totalPotential: 0,
       details: [],
-      error: "Dữ liệu mã cược không hợp lệ",
-    };
+      error: 'Dữ liệu mã cược không hợp lệ',
+    }
   }
 
   try {
-    const lines = parsedResult.lines;
-    let totalPotential = 0;
-    const details = [];
+    const lines = parsedResult.lines
+    let totalPotential = 0
+    const details = []
 
     // Xử lý từng dòng trong mã cược
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i]
 
       if (!line.valid || !line.amount || line.amount <= 0) {
         details.push({
@@ -32,19 +32,19 @@ export function calculatePotentialPrize(parsedResult, userSettings = {}) {
           originalLine: line.originalLine,
           potentialPrize: 0,
           valid: false,
-          error: "Dòng không hợp lệ hoặc không có số tiền",
-        });
-        continue;
+          error: 'Dòng không hợp lệ hoặc không có số tiền',
+        })
+        continue
       }
 
       // Lấy thông tin về đài
-      const stationInfo = getStationInfo(line, userSettings);
+      const stationInfo = getStationInfo(line, userSettings)
 
       // Lấy thông tin về kiểu cược
-      const betTypeInfo = getBetTypeInfo(line, userSettings);
+      const betTypeInfo = getBetTypeInfo(line, userSettings)
 
       // Lấy số lượng số và tổ hợp
-      const numberInfo = getNumberInfo(line, betTypeInfo);
+      const numberInfo = getNumberInfo(line, betTypeInfo)
 
       // Tính tiềm năng thắng cược cho dòng này
       const linePotential = calculateLinePotential(
@@ -52,14 +52,14 @@ export function calculatePotentialPrize(parsedResult, userSettings = {}) {
         stationInfo,
         betTypeInfo,
         numberInfo
-      );
+      )
 
-      totalPotential += linePotential.potentialPrize;
+      totalPotential += linePotential.potentialPrize
       details.push({
         lineIndex: i,
         originalLine: line.originalLine,
         ...linePotential,
-      });
+      })
     }
 
     return {
@@ -67,16 +67,16 @@ export function calculatePotentialPrize(parsedResult, userSettings = {}) {
       totalPotential,
       details,
       error: null,
-    };
+    }
   } catch (error) {
-    console.error("Lỗi khi tính tiềm năng thắng cược:", error);
+    console.error('Lỗi khi tính tiềm năng thắng cược:', error)
     return {
       success: false,
       totalPotential: 0,
       details: [],
       error:
-        error.message || "Lỗi không xác định khi tính tiềm năng thắng cược",
-    };
+        error.message || 'Lỗi không xác định khi tính tiềm năng thắng cược',
+    }
   }
 }
 
@@ -87,7 +87,7 @@ export function calculatePotentialPrize(parsedResult, userSettings = {}) {
  * @returns {object} Thông tin về đài
  */
 function getStationInfo(line, userSettings) {
-  const stationMultiplier = userSettings.stationMultiplier || 1;
+  const stationMultiplier = userSettings.stationMultiplier || 1
 
   if (line.multiStation) {
     // Đài nhiều miền
@@ -95,21 +95,21 @@ function getStationInfo(line, userSettings) {
       count: line.station.count || 1,
       multiplier: stationMultiplier,
       region: line.station.region,
-    };
+    }
   } else if (line.station?.stations) {
     // Nhiều đài (vl.ct)
     return {
       count: line.station.stations.length || 1,
       multiplier: stationMultiplier,
       region: line.station.region,
-    };
+    }
   } else {
     // Đài đơn lẻ
     return {
       count: 1,
       multiplier: stationMultiplier,
       region: line.station?.region,
-    };
+    }
   }
 }
 
@@ -120,65 +120,65 @@ function getStationInfo(line, userSettings) {
  * @returns {object} Thông tin về kiểu cược
  */
 function getBetTypeInfo(line, userSettings) {
-  const betTypeId = line.betType?.id;
-  const betTypeAlias = line.betType?.alias?.toLowerCase();
+  const betTypeId = line.betType?.id
+  const betTypeAlias = line.betType?.alias?.toLowerCase()
 
   // Tìm bet type dựa trên ID hoặc alias
   const defaultBetType = defaultBetTypes.find(
     (bt) =>
       bt.name === betTypeId ||
       bt.aliases.some((a) => a.toLowerCase() === betTypeAlias)
-  );
+  )
 
   if (!defaultBetType) {
     return {
       id: betTypeId,
-      name: line.betType?.name || "Unknown",
-      alias: betTypeAlias || "",
+      name: line.betType?.name || 'Unknown',
+      alias: betTypeAlias || '',
       payoutRate: 0,
       combined: false,
-    };
+    }
   }
 
   // Lấy payoutRate mặc định
-  let payoutRate = defaultBetType.payoutRate || 0;
+  let payoutRate = defaultBetType.payoutRate || 0
   if (userSettings.payoutRates && userSettings.payoutRates[betTypeId]) {
-    payoutRate = userSettings.payoutRates[betTypeId];
+    payoutRate = userSettings.payoutRates[betTypeId]
   }
 
   // Xác định số chữ số để lấy tỉ lệ chính xác
-  const digitCount = getDigitCount(line);
+  const digitCount = getDigitCount(line)
 
   // Xử lý payoutRate phức tạp (dạng object)
-  if (typeof payoutRate === "object") {
-    if (betTypeAlias === "da" || betTypeAlias === "dv") {
+  if (typeof payoutRate === 'object') {
+    if (betTypeAlias === 'da' || betTypeAlias === 'dv') {
       // Kiểu đá (bridge)
-      const region = line.station?.region;
+      const region = line.station?.region
       const stationCount = line.multiStation
         ? line.station?.count || 1
-        : line.station?.stations?.length || 1;
+        : line.station?.stations?.length || 1
 
       // Đặt tỉ lệ theo đúng quy tắc
-      if (region === "north") {
-        payoutRate = payoutRate.bridgeNorth || 650;
+      if (region === 'north') {
+        payoutRate = payoutRate.bridgeNorth || 650
       } else if (stationCount === 2) {
-        payoutRate = payoutRate.bridgeTwoStations || 550;
+        payoutRate = payoutRate.bridgeTwoStations || 550
       } else {
-        payoutRate = payoutRate.bridgeOneStation || 750;
+        payoutRate = payoutRate.bridgeOneStation || 750
       }
     } else if (
-      betTypeAlias === "xien" ||
-      betTypeAlias === "xienmb" ||
-      betTypeAlias === "xienmbac"
+      betTypeAlias === 'xien' ||
+      betTypeAlias === 'xienmb' ||
+      betTypeAlias === 'xienmbac'
     ) {
       // Kiểu xiên
-      const numberCount = line.numbers?.length || 0;
+      const numberCount = line.numbers?.length || 0
       if (numberCount === 2) {
-        payoutRate = payoutRate.crossTwo || 350;
+        payoutRate = payoutRate.crossTwo || 350
       } else if (numberCount === 3) {
-        payoutRate = payoutRate.crossThree || 1000;
+        payoutRate = payoutRate.crossThree || 1000
       } else if (numberCount >= 4) {
-        payoutRate = payoutRate.crossFour || 3000;
+        payoutRate = payoutRate.crossFour || 3000
       }
     } else {
       // Các kiểu khác
@@ -186,25 +186,25 @@ function getBetTypeInfo(line, userSettings) {
         payoutRate =
           payoutRate.twoDigits?.standard ||
           payoutRate.standard ||
-          payoutRate["2 digits"] ||
-          75;
+          payoutRate['2 digits'] ||
+          75
       } else if (digitCount === 3) {
-        payoutRate = payoutRate.threeDigits || payoutRate["3 digits"] || 650;
+        payoutRate = payoutRate.threeDigits || payoutRate['3 digits'] || 650
       } else if (digitCount === 4) {
-        payoutRate = payoutRate.fourDigits || payoutRate["4 digits"] || 5500;
+        payoutRate = payoutRate.fourDigits || payoutRate['4 digits'] || 5500
       }
     }
   } else {
     // Kiểm tra cụ thể với xỉu chủ (Ba Càng)
-    if (betTypeAlias === "xc" || betTypeAlias === "x") {
-      payoutRate = 650; // Ghi đè đảm bảo giá trị đúng
+    if (betTypeAlias === 'xc' || betTypeAlias === 'x') {
+      payoutRate = 650 // Ghi đè đảm bảo giá trị đúng
     }
 
     // Kiểm tra số chữ số cho các loại cược khác
     if (digitCount === 3 && payoutRate === 75) {
-      payoutRate = 650; // Nếu là số 3 chữ số mà tỉ lệ là 75, sửa thành 650
+      payoutRate = 650 // Nếu là số 3 chữ số mà tỉ lệ là 75, sửa thành 650
     } else if (digitCount === 4 && payoutRate === 75) {
-      payoutRate = 5500; // Nếu là số 4 chữ số, tỉ lệ là 5500
+      payoutRate = 5500 // Nếu là số 4 chữ số, tỉ lệ là 5500
     }
   }
 
@@ -215,7 +215,7 @@ function getBetTypeInfo(line, userSettings) {
     payoutRate,
     combined: defaultBetType.combined || false,
     specialCalc: defaultBetType.specialCalc || null,
-  };
+  }
 }
 
 /**
@@ -223,10 +223,10 @@ function getBetTypeInfo(line, userSettings) {
  */
 function getDigitCount(line) {
   if (line.numbers && line.numbers.length > 0) {
-    const firstNumber = line.numbers[0];
-    return firstNumber ? firstNumber.length : 2;
+    const firstNumber = line.numbers[0]
+    return firstNumber ? firstNumber.length : 2
   }
-  return 2; // Mặc định là 2 chữ số
+  return 2 // Mặc định là 2 chữ số
 }
 
 /**
@@ -236,113 +236,113 @@ function getDigitCount(line) {
  * @returns {object} Thông tin về số và tổ hợp
  */
 function getNumberInfo(line, betTypeInfo) {
-  const numbers = line.numbers || [];
-  const betTypeAlias = betTypeInfo.alias?.toLowerCase();
-  const digitCount = getDigitCount(line);
+  const numbers = line.numbers || []
+  const betTypeAlias = betTypeInfo.alias?.toLowerCase()
+  const digitCount = getDigitCount(line)
 
   // Kiểm tra loại cược
   const isBridge =
-    betTypeAlias === "da" ||
-    betTypeAlias === "dv" ||
-    betTypeInfo.specialCalc === "bridge";
+    betTypeAlias === 'da' ||
+    betTypeAlias === 'dv' ||
+    betTypeInfo.specialCalc === 'bridge'
   const isPermutation =
-    betTypeAlias === "dao" ||
-    betTypeAlias === "xcd" ||
-    betTypeAlias === "daob" ||
-    betTypeAlias === "bdao" ||
-    betTypeAlias === "daoxc" ||
-    betTypeAlias === "dxc" ||
-    betTypeAlias === "daodau" ||
-    betTypeAlias === "ddau" ||
-    betTypeAlias === "daoduoi" ||
-    betTypeAlias === "daodui" ||
-    betTypeAlias === "dduoi" ||
-    betTypeAlias === "ddui" ||
-    betTypeAlias === "dxcdau" ||
-    betTypeAlias === "dxcduoi" ||
-    betTypeAlias === "baobaydao" ||
-    betTypeAlias === "b7ld" ||
-    betTypeAlias === "b7ldao" ||
-    betTypeAlias === "baotamdao" ||
-    betTypeAlias === "b8ld" ||
-    betTypeAlias === "b8ldao";
+    betTypeAlias === 'dao' ||
+    betTypeAlias === 'xcd' ||
+    betTypeAlias === 'daob' ||
+    betTypeAlias === 'bdao' ||
+    betTypeAlias === 'daoxc' ||
+    betTypeAlias === 'dxc' ||
+    betTypeAlias === 'daodau' ||
+    betTypeAlias === 'ddau' ||
+    betTypeAlias === 'daoduoi' ||
+    betTypeAlias === 'daodui' ||
+    betTypeAlias === 'dduoi' ||
+    betTypeAlias === 'ddui' ||
+    betTypeAlias === 'dxcdau' ||
+    betTypeAlias === 'dxcduoi' ||
+    betTypeAlias === 'baobaydao' ||
+    betTypeAlias === 'b7ld' ||
+    betTypeAlias === 'b7ldao' ||
+    betTypeAlias === 'baotamdao' ||
+    betTypeAlias === 'b8ld' ||
+    betTypeAlias === 'b8ldao'
 
   // Tìm thông tin bet type từ defaults
   const defaultBetType = defaultBetTypes.find(
     (bt) =>
       bt.name === betTypeInfo.id ||
       bt.aliases.some((a) => a.toLowerCase() === betTypeAlias)
-  );
+  )
 
   // Lấy số lượng tổ hợp dựa trên miền và bet type
-  let combinationCount = 1;
+  let combinationCount = 1
   if (defaultBetType && defaultBetType.combinations) {
-    const region = line.station?.region || "south";
+    const region = line.station?.region || 'south'
 
-    if (typeof defaultBetType.combinations === "object") {
+    if (typeof defaultBetType.combinations === 'object') {
+      // Kiểm tra nếu có direct mapping cho region
+      if (typeof defaultBetType.combinations[region] === 'number') {
+        combinationCount = defaultBetType.combinations[region]
+      }
       // Kiểm tra nếu có nested structure cho số chữ số
-      if (
-        typeof defaultBetType.combinations[`${digitCount} digits`] === "object"
+      else if (
+        typeof defaultBetType.combinations[`${digitCount} digits`] === 'object'
       ) {
         combinationCount =
-          defaultBetType.combinations[`${digitCount} digits`][region] || 1;
-      }
-      // Kiểm tra nếu có direct mapping cho region
-      else if (typeof defaultBetType.combinations[region] === "number") {
-        combinationCount = defaultBetType.combinations[region];
+          defaultBetType.combinations[`${digitCount} digits`][region] || 1
       }
       // Kiểm tra nếu có direct mapping cho số chữ số
       else if (
-        typeof defaultBetType.combinations[`${digitCount} digits`] === "number"
+        typeof defaultBetType.combinations[`${digitCount} digits`] === 'number'
       ) {
-        combinationCount = defaultBetType.combinations[`${digitCount} digits`];
+        combinationCount = defaultBetType.combinations[`${digitCount} digits`]
       }
-    } else if (typeof defaultBetType.combinations === "number") {
-      combinationCount = defaultBetType.combinations;
+    } else if (typeof defaultBetType.combinations === 'number') {
+      combinationCount = defaultBetType.combinations
     }
   }
 
   // Xử lý các trường hợp đặc biệt
   if (
-    betTypeAlias === "b" ||
-    betTypeAlias === "bao" ||
-    betTypeAlias === "baolo"
+    betTypeAlias === 'b' ||
+    betTypeAlias === 'bao' ||
+    betTypeAlias === 'baolo'
   ) {
     // Kiểu bao lô
-    const region = line.station?.region || "south";
+    const region = line.station?.region || 'south'
 
     if (digitCount === 2) {
-      if (region === "north") {
-        combinationCount = 27;
+      if (region === 'north') {
+        combinationCount = 27
       } else {
-        combinationCount = 18;
+        combinationCount = 18
       }
     } else if (digitCount === 3) {
-      if (region === "north") {
-        combinationCount = 23;
+      if (region === 'north') {
+        combinationCount = 23
       } else {
-        combinationCount = 17;
+        combinationCount = 17
       }
     } else if (digitCount === 4) {
-      if (region === "north") {
-        combinationCount = 20;
+      if (region === 'north') {
+        combinationCount = 20
       } else {
-        combinationCount = 16;
+        combinationCount = 16
       }
     }
-  } else if (betTypeAlias === "b7l" || betTypeAlias === "baobay") {
+  } else if (betTypeAlias === 'b7l' || betTypeAlias === 'baobay') {
     // Bao lô 7
-    combinationCount = 7;
-  } else if (betTypeAlias === "b8l" || betTypeAlias === "baotam") {
+    combinationCount = 7
+  } else if (betTypeAlias === 'b8l' || betTypeAlias === 'baotam') {
     // Bao lô 8
-    combinationCount = 8;
+    combinationCount = 8
   } else if (
-    betTypeAlias === "nt" ||
-    betTypeAlias === "nto" ||
-    betTypeAlias === "nhatto"
+    betTypeAlias === 'nt' ||
+    betTypeAlias === 'nto' ||
+    betTypeAlias === 'nhatto'
   ) {
     // Nhất to
-    combinationCount = 1;
+    combinationCount = 1
   }
 
   return {
@@ -351,7 +351,7 @@ function getNumberInfo(line, betTypeInfo) {
     isBridge,
     isPermutation,
     digitCount,
-  };
+  }
 }
 
 /**
@@ -363,19 +363,18 @@ function getNumberInfo(line, betTypeInfo) {
  * @returns {object} Kết quả tính tiềm năng thắng cược
  */
 function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
-  const betAmount = line.amount || 0;
-  const payoutRate = betTypeInfo.payoutRate || 0;
-  const betTypeAlias = betTypeInfo.alias?.toLowerCase();
+  const betAmount = line.amount || 0
+  const payoutRate = betTypeInfo.payoutRate || 0
+  const betTypeAlias = betTypeInfo.alias?.toLowerCase()
 
   // Kiểm tra nếu là kiểu đá (bridge)
   if (numberInfo.isBridge) {
     // Tính số cặp tối đa
-    const n = numberInfo.count;
-    const maxPairs = (n * (n - 1)) / 2; // C(n,2) = số cặp tối đa
+    const n = numberInfo.count
+    const maxPairs = (n * (n - 1)) / 2 // C(n,2) = số cặp tối đa
 
     // Tính tiềm năng thắng (không nhân với combinationCount)
-    const potentialPrize =
-      stationInfo.count * maxPairs * betAmount * payoutRate;
+    const potentialPrize = stationInfo.count * maxPairs * betAmount * payoutRate
 
     return {
       potentialPrize,
@@ -386,21 +385,21 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       payoutRate,
       multiplier: stationInfo.multiplier,
       formula: `${stationInfo.count} × ${maxPairs} × ${betAmount} × ${payoutRate}`,
-    };
+    }
   }
   // Kiểm tra nếu là kiểu đảo (permutation)
   else if (numberInfo.isPermutation) {
     // Số lượng hoán vị của các số
-    const numbers = line.numbers || [];
-    let totalPermutations = 0;
+    const numbers = line.numbers || []
+    let totalPermutations = 0
 
     for (const number of numbers) {
-      totalPermutations += calculatePermutationCount(number);
+      totalPermutations += calculatePermutationCount(number)
     }
 
     // Tính tiềm năng thắng (nhân với combinationCount)
     const potentialPrize =
-      stationInfo.count * totalPermutations * betAmount * payoutRate;
+      stationInfo.count * totalPermutations * betAmount * payoutRate
 
     return {
       potentialPrize,
@@ -412,16 +411,16 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       payoutRate,
       multiplier: stationInfo.multiplier,
       formula: `${stationInfo.count} × ${totalPermutations} × ${betAmount} × ${payoutRate}`,
-    };
+    }
   }
   // Kiểu xiên
   else if (
-    betTypeAlias === "xien" ||
-    betTypeAlias === "xienmb" ||
-    betTypeAlias === "xienmbac"
+    betTypeAlias === 'xien' ||
+    betTypeAlias === 'xienmb' ||
+    betTypeAlias === 'xienmbac'
   ) {
     // Tính tiềm năng thắng - không nhân với số lượng số
-    const potentialPrize = betAmount * payoutRate;
+    const potentialPrize = betAmount * payoutRate
 
     return {
       potentialPrize,
@@ -432,13 +431,13 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       payoutRate,
       multiplier: stationInfo.multiplier,
       formula: `${betAmount} × ${payoutRate}`,
-    };
+    }
   }
   // Trường hợp thông thường
   else {
     // Tính tiềm năng thắng
     const potentialPrize =
-      stationInfo.count * numberInfo.count * betAmount * payoutRate;
+      stationInfo.count * numberInfo.count * betAmount * payoutRate
 
     return {
       potentialPrize,
@@ -449,7 +448,7 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       payoutRate,
       multiplier: stationInfo.multiplier,
       formula: `${stationInfo.count} × ${numberInfo.count} × ${betAmount} × ${payoutRate}`,
-    };
+    }
   }
 }
 
@@ -459,31 +458,31 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
  * @returns {number} Số lượng hoán vị
  */
 function calculatePermutationCount(number) {
-  if (!number) return 1;
+  if (!number) return 1
 
   // Đếm số lượng mỗi chữ số
-  const digitCounts = {};
+  const digitCounts = {}
   for (let i = 0; i < number.length; i++) {
-    const digit = number[i];
-    digitCounts[digit] = (digitCounts[digit] || 0) + 1;
+    const digit = number[i]
+    digitCounts[digit] = (digitCounts[digit] || 0) + 1
   }
 
   // Tính giai thừa của độ dài số
-  let factorial = 1;
+  let factorial = 1
   for (let i = 2; i <= number.length; i++) {
-    factorial *= i;
+    factorial *= i
   }
 
   // Chia cho giai thừa của số lần xuất hiện của mỗi chữ số
   for (const digit in digitCounts) {
-    let digitFactorial = 1;
+    let digitFactorial = 1
     for (let i = 2; i <= digitCounts[digit]; i++) {
-      digitFactorial *= i;
+      digitFactorial *= i
     }
-    factorial /= digitFactorial;
+    factorial /= digitFactorial
   }
 
-  return factorial;
+  return factorial
 }
 
 /**
@@ -508,18 +507,18 @@ export function calculateActualPrize(
       success: false,
       totalPrize: 0,
       details: [],
-      error: "Dữ liệu không hợp lệ",
-    };
+      error: 'Dữ liệu không hợp lệ',
+    }
   }
 
   try {
-    const lines = parsedBetCode.lines;
-    let totalPrize = 0;
-    const details = [];
+    const lines = parsedBetCode.lines
+    let totalPrize = 0
+    const details = []
 
     // Xử lý từng dòng trong mã cược
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i]
 
       if (!line.valid || !line.amount || line.amount <= 0) {
         details.push({
@@ -527,13 +526,13 @@ export function calculateActualPrize(
           originalLine: line.originalLine,
           prize: 0,
           valid: false,
-          error: "Dòng không hợp lệ hoặc không có số tiền",
-        });
-        continue;
+          error: 'Dòng không hợp lệ hoặc không có số tiền',
+        })
+        continue
       }
 
       // Tìm kết quả xổ số tương ứng với đài
-      const matchingResults = findMatchingResults(line, lotteryResults);
+      const matchingResults = findMatchingResults(line, lotteryResults)
 
       if (!matchingResults || matchingResults.length === 0) {
         // Không tìm thấy kết quả xổ số tương ứng
@@ -543,9 +542,9 @@ export function calculateActualPrize(
           prize: 0,
           valid: true,
           matched: false,
-          error: "Không tìm thấy kết quả xổ số tương ứng",
-        });
-        continue;
+          error: 'Không tìm thấy kết quả xổ số tương ứng',
+        })
+        continue
       }
 
       // Tính kết quả trúng thưởng cho dòng
@@ -553,14 +552,14 @@ export function calculateActualPrize(
         line,
         matchingResults,
         userSettings
-      );
+      )
 
-      totalPrize += linePrizeResult.prize || 0;
+      totalPrize += linePrizeResult.prize || 0
       details.push({
         lineIndex: i,
         originalLine: line.originalLine,
         ...linePrizeResult,
-      });
+      })
     }
 
     return {
@@ -568,15 +567,15 @@ export function calculateActualPrize(
       totalPrize,
       details,
       error: null,
-    };
+    }
   } catch (error) {
-    console.error("Lỗi khi tính trúng thưởng:", error);
+    console.error('Lỗi khi tính trúng thưởng:', error)
     return {
       success: false,
       totalPrize: 0,
       details: [],
-      error: error.message || "Lỗi không xác định khi tính trúng thưởng",
-    };
+      error: error.message || 'Lỗi không xác định khi tính trúng thưởng',
+    }
   }
 }
 
@@ -588,7 +587,7 @@ export function calculateActualPrize(
  */
 function findMatchingResults(line, lotteryResults) {
   if (!line.station || !lotteryResults || !Array.isArray(lotteryResults)) {
-    return [];
+    return []
   }
 
   // Trường hợp đài đơn lẻ
@@ -597,32 +596,32 @@ function findMatchingResults(line, lotteryResults) {
       (result) =>
         result.station === line.station.name &&
         result.region === line.station.region
-    );
+    )
   }
 
   // Trường hợp nhiều đài cụ thể
   if (line.station.stations) {
-    const stationNames = line.station.stations.map((s) => s.name);
+    const stationNames = line.station.stations.map((s) => s.name)
     return lotteryResults.filter((result) =>
       stationNames.includes(result.station)
-    );
+    )
   }
 
   // Trường hợp nhiều đài của một miền
   if (line.multiStation) {
     const results = lotteryResults.filter(
       (result) => result.region === line.station.region
-    );
+    )
 
     // Giới hạn số lượng đài nếu cần
     if (line.station.count && line.station.count < results.length) {
-      return results.slice(0, line.station.count);
+      return results.slice(0, line.station.count)
     }
 
-    return results;
+    return results
   }
 
-  return [];
+  return []
 }
 
 /**
@@ -634,63 +633,63 @@ function findMatchingResults(line, lotteryResults) {
  */
 function calculateLinePrize(line, matchingResults, userSettings = {}) {
   // Lấy thông tin cần thiết
-  const betTypeAlias = line.betType?.alias?.toLowerCase();
-  const numbers = line.numbers || [];
-  const betAmount = line.amount || 0;
+  const betTypeAlias = line.betType?.alias?.toLowerCase()
+  const numbers = line.numbers || []
+  const betAmount = line.amount || 0
 
   // Tìm thông tin bet type
   const defaultBetType = defaultBetTypes.find(
     (bt) =>
       bt.name === line.betType?.id ||
       bt.aliases.some((a) => a.toLowerCase() === betTypeAlias)
-  );
+  )
 
   if (!defaultBetType) {
     return {
       prize: 0,
       valid: true,
       matched: false,
-      error: "Không tìm thấy thông tin kiểu cược",
-    };
+      error: 'Không tìm thấy thông tin kiểu cược',
+    }
   }
 
   // Lấy payoutRate
-  let payoutRate = defaultBetType.payoutRate || 0;
+  let payoutRate = defaultBetType.payoutRate || 0
   if (userSettings.payoutRates && userSettings.payoutRates[defaultBetType.id]) {
-    payoutRate = userSettings.payoutRates[defaultBetType.id];
+    payoutRate = userSettings.payoutRates[defaultBetType.id]
   }
 
   // Xử lý payoutRate phức tạp (dạng object)
-  const digitCount = getDigitCount(line);
-  if (typeof payoutRate === "object") {
+  const digitCount = getDigitCount(line)
+  if (typeof payoutRate === 'object') {
     // Tương tự như trong getBetTypeInfo
-    if (betTypeAlias === "da" || betTypeAlias === "dv") {
+    if (betTypeAlias === 'da' || betTypeAlias === 'dv') {
       // Kiểu đá (bridge)
-      const region = line.station?.region;
+      const region = line.station?.region
       const stationCount = line.multiStation
         ? line.station?.count || 1
-        : line.station?.stations?.length || 1;
+        : line.station?.stations?.length || 1
 
-      if (region === "north") {
-        payoutRate = payoutRate.bridgeNorth || 650;
+      if (region === 'north') {
+        payoutRate = payoutRate.bridgeNorth || 650
       } else if (stationCount === 2) {
-        payoutRate = payoutRate.bridgeTwoStations || 550;
+        payoutRate = payoutRate.bridgeTwoStations || 550
       } else {
-        payoutRate = payoutRate.bridgeOneStation || 750;
+        payoutRate = payoutRate.bridgeOneStation || 750
       }
     } else if (
-      betTypeAlias === "xien" ||
-      betTypeAlias === "xienmb" ||
-      betTypeAlias === "xienmbac"
+      betTypeAlias === 'xien' ||
+      betTypeAlias === 'xienmb' ||
+      betTypeAlias === 'xienmbac'
     ) {
       // Kiểu xiên
-      const numberCount = line.numbers?.length || 0;
+      const numberCount = line.numbers?.length || 0
       if (numberCount === 2) {
-        payoutRate = payoutRate.crossTwo || 350;
+        payoutRate = payoutRate.crossTwo || 350
       } else if (numberCount === 3) {
-        payoutRate = payoutRate.crossThree || 1000;
+        payoutRate = payoutRate.crossThree || 1000
       } else if (numberCount >= 4) {
-        payoutRate = payoutRate.crossFour || 3000;
+        payoutRate = payoutRate.crossFour || 3000
       }
     } else {
       // Các kiểu khác
@@ -698,12 +697,12 @@ function calculateLinePrize(line, matchingResults, userSettings = {}) {
         payoutRate =
           payoutRate.twoDigits?.standard ||
           payoutRate.standard ||
-          payoutRate["2 digits"] ||
-          75;
+          payoutRate['2 digits'] ||
+          75
       } else if (digitCount === 3) {
-        payoutRate = payoutRate.threeDigits || payoutRate["3 digits"] || 650;
+        payoutRate = payoutRate.threeDigits || payoutRate['3 digits'] || 650
       } else if (digitCount === 4) {
-        payoutRate = payoutRate.fourDigits || payoutRate["4 digits"] || 5500;
+        payoutRate = payoutRate.fourDigits || payoutRate['4 digits'] || 5500
       }
     }
   }
@@ -713,7 +712,7 @@ function calculateLinePrize(line, matchingResults, userSettings = {}) {
     line,
     matchingResults,
     defaultBetType
-  );
+  )
 
   if (matchedNumbers.length === 0) {
     return {
@@ -722,28 +721,28 @@ function calculateLinePrize(line, matchingResults, userSettings = {}) {
       matched: false,
       matchedNumbers: [],
       payoutRate,
-    };
+    }
   }
 
   // Xử lý theo từng loại cược
   if (
-    betTypeAlias === "da" ||
-    betTypeAlias === "dv" ||
-    defaultBetType.specialCalc === "bridge"
+    betTypeAlias === 'da' ||
+    betTypeAlias === 'dv' ||
+    defaultBetType.specialCalc === 'bridge'
   ) {
     // Kiểu đá (bridge)
-    return calculateBridgePrize(line, matchedNumbers, payoutRate, betAmount);
+    return calculateBridgePrize(line, matchedNumbers, payoutRate, betAmount)
   } else if (
-    betTypeAlias === "xien" ||
-    betTypeAlias === "xienmb" ||
-    betTypeAlias === "xienmbac"
+    betTypeAlias === 'xien' ||
+    betTypeAlias === 'xienmb' ||
+    betTypeAlias === 'xienmbac'
   ) {
     // Kiểu xiên
-    return calculateCrossPrize(line, matchedNumbers, payoutRate, betAmount);
+    return calculateCrossPrize(line, matchedNumbers, payoutRate, betAmount)
   }
 
   // Kiểu thông thường
-  const prize = matchedNumbers.length * betAmount * payoutRate;
+  const prize = matchedNumbers.length * betAmount * payoutRate
 
   return {
     prize,
@@ -754,7 +753,7 @@ function calculateLinePrize(line, matchingResults, userSettings = {}) {
     betAmount,
     payoutRate,
     formula: `${matchedNumbers.length} × ${betAmount} × ${payoutRate}`,
-  };
+  }
 }
 
 /**
@@ -769,34 +768,34 @@ function calculateBridgePrize(line, matchedNumbers, payoutRate, betAmount) {
       matchedNumbers,
       matchedCount: matchedNumbers.length,
       payoutRate,
-    };
+    }
   }
 
   // Đếm số lần xuất hiện của mỗi số
-  const numberCounts = {};
+  const numberCounts = {}
   matchedNumbers.forEach((num) => {
-    numberCounts[num] = (numberCounts[num] || 0) + 1;
-  });
+    numberCounts[num] = (numberCounts[num] || 0) + 1
+  })
 
   // Tìm số lần xuất hiện nhiều nhất
-  let maxOccurrences = 1;
+  let maxOccurrences = 1
   for (const num in numberCounts) {
     if (numberCounts[num] > maxOccurrences) {
-      maxOccurrences = numberCounts[num];
+      maxOccurrences = numberCounts[num]
     }
   }
 
   // Tính hệ số tính thưởng W
-  const W = matchedNumbers.length - 1;
+  const W = matchedNumbers.length - 1
 
   // Tính tiền thắng 1 vòng V
-  const V = betAmount * payoutRate;
+  const V = betAmount * payoutRate
 
   // Tính tiền thưởng nháy B
-  const B = maxOccurrences > 1 ? (maxOccurrences - 1) * 0.5 * V : 0;
+  const B = maxOccurrences > 1 ? (maxOccurrences - 1) * 0.5 * V : 0
 
   // Tổng tiền thưởng
-  const prize = V * W + B;
+  const prize = V * W + B
 
   return {
     prize,
@@ -811,7 +810,7 @@ function calculateBridgePrize(line, matchedNumbers, payoutRate, betAmount) {
     baseWinAmount: V,
     bonusPrize: B,
     formula: `(${V} × ${W}) + ${B}`,
-  };
+  }
 }
 
 /**
@@ -827,11 +826,11 @@ function calculateCrossPrize(line, matchedNumbers, payoutRate, betAmount) {
       matchedNumbers,
       matchedCount: matchedNumbers.length,
       payoutRate,
-    };
+    }
   }
 
   // Nếu đủ số trúng thì nhận đủ giải thưởng
-  const prize = betAmount * payoutRate;
+  const prize = betAmount * payoutRate
 
   return {
     prize,
@@ -842,7 +841,7 @@ function calculateCrossPrize(line, matchedNumbers, payoutRate, betAmount) {
     betAmount,
     payoutRate,
     formula: `${betAmount} × ${payoutRate}`,
-  };
+  }
 }
 
 /**
@@ -853,47 +852,45 @@ function calculateCrossPrize(line, matchedNumbers, payoutRate, betAmount) {
  * @returns {array} Danh sách số trúng thưởng
  */
 function findMatchedNumbers(line, matchingResults, betType) {
-  const numbers = line.numbers || [];
-  const betTypeAlias = line.betType ? line.betType.alias : null;
-  const digitCount = getDigitCount(line);
+  const numbers = line.numbers || []
+  const betTypeAlias = line.betType ? line.betType.alias : null
+  const digitCount = getDigitCount(line)
   const isPermutation =
-    betTypeAlias === "dao" ||
-    betTypeAlias === "xcd" ||
-    betTypeAlias === "daob" ||
-    betTypeAlias === "bdao" ||
-    betTypeAlias === "daoxc" ||
-    betTypeAlias === "dxc" ||
-    betTypeAlias === "daodau" ||
-    betTypeAlias === "ddau" ||
-    betTypeAlias === "daoduoi" ||
-    betTypeAlias === "daodui" ||
-    betTypeAlias === "dduoi" ||
-    betTypeAlias === "ddui" ||
-    betTypeAlias === "dxcdau" ||
-    betTypeAlias === "dxcduoi" ||
-    betTypeAlias === "baobaydao" ||
-    betTypeAlias === "b7ld" ||
-    betTypeAlias === "b7ldao" ||
-    betTypeAlias === "baotamdao" ||
-    betTypeAlias === "b8ld" ||
-    betTypeAlias === "b8ldao";
+    betTypeAlias === 'dao' ||
+    betTypeAlias === 'xcd' ||
+    betTypeAlias === 'daob' ||
+    betTypeAlias === 'bdao' ||
+    betTypeAlias === 'daoxc' ||
+    betTypeAlias === 'dxc' ||
+    betTypeAlias === 'daodau' ||
+    betTypeAlias === 'ddau' ||
+    betTypeAlias === 'daoduoi' ||
+    betTypeAlias === 'daodui' ||
+    betTypeAlias === 'dduoi' ||
+    betTypeAlias === 'ddui' ||
+    betTypeAlias === 'dxcdau' ||
+    betTypeAlias === 'dxcduoi' ||
+    betTypeAlias === 'baobaydao' ||
+    betTypeAlias === 'b7ld' ||
+    betTypeAlias === 'b7ldao' ||
+    betTypeAlias === 'baotamdao' ||
+    betTypeAlias === 'b8ld' ||
+    betTypeAlias === 'b8ldao'
 
-  const matchedNumbers = [];
+  const matchedNumbers = []
 
   for (const result of matchingResults) {
     // Trích xuất mảng số từ các giải thưởng dựa trên kiểu cược
-    const resultDigits = extractDrawNumbers(result, line, betType);
+    const resultDigits = extractDrawNumbers(result, line, betType)
 
     // Kiểm tra từng số cược
     for (const number of numbers) {
       // Nếu là kiểu đảo, tạo tất cả hoán vị của số
       if (isPermutation) {
-        const permutations = generatePermutations(number);
-        const matched = permutations.some((perm) =>
-          resultDigits.includes(perm)
-        );
+        const permutations = generatePermutations(number)
+        const matched = permutations.some((perm) => resultDigits.includes(perm))
         if (matched && !matchedNumbers.includes(number)) {
-          matchedNumbers.push(number);
+          matchedNumbers.push(number)
         }
       }
       // Kiểu thông thường
@@ -901,12 +898,12 @@ function findMatchedNumbers(line, matchingResults, betType) {
         resultDigits.includes(number) &&
         !matchedNumbers.includes(number)
       ) {
-        matchedNumbers.push(number);
+        matchedNumbers.push(number)
       }
     }
   }
 
-  return matchedNumbers;
+  return matchedNumbers
 }
 
 /**
@@ -917,138 +914,138 @@ function findMatchedNumbers(line, matchingResults, betType) {
  * @returns {array} Danh sách số từ kết quả xổ số
  */
 function extractDrawNumbers(result, line, betType) {
-  if (!result || !result.results) return [];
+  if (!result || !result.results) return []
 
-  const betTypeAlias = line.betType?.alias?.toLowerCase();
-  const digitCount = getDigitCount(line);
-  const region = line.station?.region || "south";
-  const digits = [];
+  const betTypeAlias = line.betType?.alias?.toLowerCase()
+  const digitCount = getDigitCount(line)
+  const region = line.station?.region || 'south'
+  const digits = []
 
   // Xác định giải thưởng cần kiểm tra dựa vào kiểu cược và miền
   if (
-    betTypeAlias === "dd" ||
-    betTypeAlias === "dau duoi" ||
-    betTypeAlias === "head and tail"
+    betTypeAlias === 'dd' ||
+    betTypeAlias === 'dau duoi' ||
+    betTypeAlias === 'head and tail'
   ) {
     // Đầu đuôi - lấy giải 8 và đặc biệt cho miền Nam/Trung, giải 7 và đặc biệt cho miền Bắc
-    if (region === "north") {
+    if (region === 'north') {
       // Đầu - giải 7
       if (result.results.seventh) {
-        result.results.seventh.forEach((num) => digits.push(num.slice(-2)));
+        result.results.seventh.forEach((num) => digits.push(num.slice(-2)))
       }
       // Đuôi - giải đặc biệt
       if (result.results.special) {
-        result.results.special.forEach((num) => digits.push(num.slice(-2)));
+        result.results.special.forEach((num) => digits.push(num.slice(-2)))
       }
     } else {
       // Đầu - giải 8
       if (result.results.eighth) {
-        result.results.eighth.forEach((num) => digits.push(num.slice(-2)));
+        result.results.eighth.forEach((num) => digits.push(num.slice(-2)))
       }
       // Đuôi - giải đặc biệt
       if (result.results.special) {
-        result.results.special.forEach((num) => digits.push(num.slice(-2)));
+        result.results.special.forEach((num) => digits.push(num.slice(-2)))
       }
     }
-  } else if (betTypeAlias === "dau" || betTypeAlias === "head") {
+  } else if (betTypeAlias === 'dau' || betTypeAlias === 'head') {
     // Đầu - kiểm tra số chữ số
     if (digitCount === 2) {
-      if (region === "north") {
+      if (region === 'north') {
         // Miền Bắc - giải 7
         if (result.results.seventh) {
-          result.results.seventh.forEach((num) => digits.push(num.slice(-2)));
+          result.results.seventh.forEach((num) => digits.push(num.slice(-2)))
         }
       } else {
         // Miền Nam/Trung - giải 8
         if (result.results.eighth) {
-          result.results.eighth.forEach((num) => digits.push(num.slice(-2)));
+          result.results.eighth.forEach((num) => digits.push(num.slice(-2)))
         }
       }
     } else if (digitCount === 3) {
-      if (region === "north") {
+      if (region === 'north') {
         // Miền Bắc - giải 6
         if (result.results.sixth) {
-          result.results.sixth.forEach((num) => digits.push(num.slice(-3)));
+          result.results.sixth.forEach((num) => digits.push(num.slice(-3)))
         }
       } else {
         // Miền Nam/Trung - giải 7
         if (result.results.seventh) {
-          result.results.seventh.forEach((num) => digits.push(num.slice(-3)));
+          result.results.seventh.forEach((num) => digits.push(num.slice(-3)))
         }
       }
     }
   } else if (
-    betTypeAlias === "duoi" ||
-    betTypeAlias === "dui" ||
-    betTypeAlias === "tail"
+    betTypeAlias === 'duoi' ||
+    betTypeAlias === 'dui' ||
+    betTypeAlias === 'tail'
   ) {
     // Đuôi - chỉ lấy giải đặc biệt
     if (result.results.special) {
       if (digitCount === 2) {
-        result.results.special.forEach((num) => digits.push(num.slice(-2)));
+        result.results.special.forEach((num) => digits.push(num.slice(-2)))
       } else if (digitCount === 3) {
-        result.results.special.forEach((num) => digits.push(num.slice(-3)));
+        result.results.special.forEach((num) => digits.push(num.slice(-3)))
       }
     }
   } else if (
-    betTypeAlias === "xc" ||
-    betTypeAlias === "x" ||
-    betTypeAlias === "three digits"
+    betTypeAlias === 'xc' ||
+    betTypeAlias === 'x' ||
+    betTypeAlias === 'three digits'
   ) {
     // Xỉu chủ - lấy giải 7 và đặc biệt cho miền Nam/Trung, giải 6 và đặc biệt cho miền Bắc
-    if (region === "north") {
+    if (region === 'north') {
       // Miền Bắc - giải 6 và đặc biệt
       if (result.results.sixth) {
-        result.results.sixth.forEach((num) => digits.push(num.slice(-3)));
+        result.results.sixth.forEach((num) => digits.push(num.slice(-3)))
       }
       if (result.results.special) {
-        result.results.special.forEach((num) => digits.push(num.slice(-3)));
+        result.results.special.forEach((num) => digits.push(num.slice(-3)))
       }
     } else {
       // Miền Nam/Trung - giải 7 và đặc biệt
       if (result.results.seventh) {
-        result.results.seventh.forEach((num) => digits.push(num.slice(-3)));
+        result.results.seventh.forEach((num) => digits.push(num.slice(-3)))
       }
       if (result.results.special) {
-        result.results.special.forEach((num) => digits.push(num.slice(-3)));
+        result.results.special.forEach((num) => digits.push(num.slice(-3)))
       }
     }
   } else if (
-    betTypeAlias === "b" ||
-    betTypeAlias === "bao" ||
-    betTypeAlias === "baolo" ||
-    betTypeAlias === "cover all"
+    betTypeAlias === 'b' ||
+    betTypeAlias === 'bao' ||
+    betTypeAlias === 'baolo' ||
+    betTypeAlias === 'cover all'
   ) {
     // Bao lô - lấy tất cả các giải
     const allPrizes = [
-      "special",
-      "first",
-      "second",
-      "third",
-      "fourth",
-      "fifth",
-      "sixth",
-      "seventh",
-      "eighth",
-    ];
+      'special',
+      'first',
+      'second',
+      'third',
+      'fourth',
+      'fifth',
+      'sixth',
+      'seventh',
+      'eighth',
+    ]
 
     // Loại bỏ các giải không phù hợp với số chữ số
-    let applicablePrizes = [...allPrizes];
+    let applicablePrizes = [...allPrizes]
     if (digitCount === 3) {
-      if (region === "north") {
-        applicablePrizes = applicablePrizes.filter((p) => p !== "seventh");
+      if (region === 'north') {
+        applicablePrizes = applicablePrizes.filter((p) => p !== 'seventh')
       } else {
-        applicablePrizes = applicablePrizes.filter((p) => p !== "eighth");
+        applicablePrizes = applicablePrizes.filter((p) => p !== 'eighth')
       }
     } else if (digitCount === 4) {
-      if (region === "north") {
+      if (region === 'north') {
         applicablePrizes = applicablePrizes.filter(
-          (p) => p !== "seventh" && p !== "sixth"
-        );
+          (p) => p !== 'seventh' && p !== 'sixth'
+        )
       } else {
         applicablePrizes = applicablePrizes.filter(
-          (p) => p !== "eighth" && p !== "seventh"
-        );
+          (p) => p !== 'eighth' && p !== 'seventh'
+        )
       }
     }
 
@@ -1057,56 +1054,56 @@ function extractDrawNumbers(result, line, betType) {
       if (result.results[prize]) {
         result.results[prize].forEach((num) =>
           digits.push(num.slice(-digitCount))
-        );
+        )
       }
     }
-  } else if (betTypeAlias === "b7l" || betTypeAlias === "baobay") {
+  } else if (betTypeAlias === 'b7l' || betTypeAlias === 'baobay') {
     // Bao lô 7 - chỉ miền Nam/Trung, lấy giải 8, 7, 6, 5 và đặc biệt
-    if (region !== "north") {
-      const prizes = ["eighth", "seventh", "sixth", "fifth", "special"];
+    if (region !== 'north') {
+      const prizes = ['eighth', 'seventh', 'sixth', 'fifth', 'special']
       for (const prize of prizes) {
         if (Array.isArray(result.results[prize])) {
           result.results[prize].forEach((num) => {
-            digits.push(num.slice(-digitCount));
-          });
+            digits.push(num.slice(-digitCount))
+          })
         }
       }
     }
-  } else if (betTypeAlias === "b8l" || betTypeAlias === "baotam") {
+  } else if (betTypeAlias === 'b8l' || betTypeAlias === 'baotam') {
     // Bao lô 8 - chỉ miền Bắc, lấy giải 7, 6 và đặc biệt
-    if (region === "north") {
-      const prizes = ["seventh", "sixth", "special"];
+    if (region === 'north') {
+      const prizes = ['seventh', 'sixth', 'special']
       for (const prize of prizes) {
         if (Array.isArray(result.results[prize])) {
           result.results[prize].forEach((num) => {
-            digits.push(num.slice(-digitCount));
-          });
+            digits.push(num.slice(-digitCount))
+          })
         }
       }
     }
   } else if (
-    betTypeAlias === "nt" ||
-    betTypeAlias === "nto" ||
-    betTypeAlias === "nhatto"
+    betTypeAlias === 'nt' ||
+    betTypeAlias === 'nto' ||
+    betTypeAlias === 'nhatto'
   ) {
     // Nhất to - chỉ lấy giải nhất
     if (result.results.first) {
       result.results.first.forEach((num) => {
-        digits.push(num.slice(-digitCount));
-      });
+        digits.push(num.slice(-digitCount))
+      })
     }
   } else if (
-    betTypeAlias === "xien" ||
-    betTypeAlias === "xienmb" ||
-    betTypeAlias === "xienmbac"
+    betTypeAlias === 'xien' ||
+    betTypeAlias === 'xienmb' ||
+    betTypeAlias === 'xienmbac'
   ) {
     // Xiên miền bắc - lấy tất cả các giải miền bắc
-    if (region === "north") {
+    if (region === 'north') {
       for (const prize in result.results) {
         if (Array.isArray(result.results[prize])) {
           result.results[prize].forEach((num) => {
-            digits.push(num.slice(-digitCount));
-          });
+            digits.push(num.slice(-digitCount))
+          })
         }
       }
     }
@@ -1115,14 +1112,14 @@ function extractDrawNumbers(result, line, betType) {
     for (const prize in result.results) {
       if (Array.isArray(result.results[prize])) {
         result.results[prize].forEach((num) => {
-          digits.push(num.slice(-digitCount));
-        });
+          digits.push(num.slice(-digitCount))
+        })
       }
     }
   }
 
   // Loại bỏ các số trùng lặp
-  return [...new Set(digits)];
+  return [...new Set(digits)]
 }
 
 /**
@@ -1131,42 +1128,42 @@ function extractDrawNumbers(result, line, betType) {
  * @returns {array} Danh sách hoán vị
  */
 function generatePermutations(number) {
-  if (!number) return [];
-  if (number.length <= 1) return [number];
+  if (!number) return []
+  if (number.length <= 1) return [number]
 
-  const result = [];
-  const used = {};
+  const result = []
+  const used = {}
 
   function backtrack(current, remaining) {
     if (current.length === number.length) {
-      result.push(current);
-      return;
+      result.push(current)
+      return
     }
 
     for (let i = 0; i < remaining.length; i++) {
       // Bỏ qua nếu ký tự đã được sử dụng ở vị trí này
-      if (used[`${i}-${remaining[i]}`]) continue;
+      if (used[`${i}-${remaining[i]}`]) continue
 
-      used[`${i}-${remaining[i]}`] = true;
+      used[`${i}-${remaining[i]}`] = true
 
       // Tạo chuỗi mới không chứa ký tự đã chọn
       const newRemaining =
-        remaining.substring(0, i) + remaining.substring(i + 1);
+        remaining.substring(0, i) + remaining.substring(i + 1)
 
-      backtrack(current + remaining[i], newRemaining);
+      backtrack(current + remaining[i], newRemaining)
 
-      used[`${i}-${remaining[i]}`] = false;
+      used[`${i}-${remaining[i]}`] = false
 
       // Bỏ qua các ký tự trùng lặp
-      while (i + 1 < remaining.length && remaining[i] === remaining[i + 1]) i++;
+      while (i + 1 < remaining.length && remaining[i] === remaining[i + 1]) i++
     }
   }
 
-  const sortedDigits = number.split("").sort().join("");
-  backtrack("", sortedDigits);
+  const sortedDigits = number.split('').sort().join('')
+  backtrack('', sortedDigits)
 
   // Loại bỏ các hoán vị trùng lặp
-  return [...new Set(result)];
+  return [...new Set(result)]
 }
 
 /**
@@ -1176,17 +1173,17 @@ function generatePermutations(number) {
  * @returns {number} Tổng tiềm năng thắng cược
  */
 export function quickCalculatePotential(parsedResult, userSettings = {}) {
-  if (!parsedResult || !parsedResult.success || !parsedResult.lines) return 0;
+  if (!parsedResult || !parsedResult.success || !parsedResult.lines) return 0
 
-  let totalPotential = 0;
+  let totalPotential = 0
 
   // Duyệt qua từng dòng
   parsedResult.lines.forEach((line) => {
     if (line.valid && line.amount > 0) {
       // Lấy thông tin
-      const stationInfo = getStationInfo(line, userSettings);
-      const betTypeInfo = getBetTypeInfo(line, userSettings);
-      const numberInfo = getNumberInfo(line, betTypeInfo);
+      const stationInfo = getStationInfo(line, userSettings)
+      const betTypeInfo = getBetTypeInfo(line, userSettings)
+      const numberInfo = getNumberInfo(line, betTypeInfo)
 
       // Tính potential cho dòng
       const linePotential = calculateLinePotential(
@@ -1194,17 +1191,17 @@ export function quickCalculatePotential(parsedResult, userSettings = {}) {
         stationInfo,
         betTypeInfo,
         numberInfo
-      );
+      )
 
-      totalPotential += linePotential.potentialPrize;
+      totalPotential += linePotential.potentialPrize
     }
-  });
+  })
 
-  return totalPotential;
+  return totalPotential
 }
 
 export default {
   calculatePotentialPrize,
   calculateActualPrize,
   quickCalculatePotential,
-};
+}

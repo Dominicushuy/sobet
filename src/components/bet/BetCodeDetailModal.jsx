@@ -285,7 +285,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
                         </div>
                         <div>
                           <span className='font-medium'>
-                            Tiền cược thực tế:
+                            Tiền đóng thực tế:
                           </span>{' '}
                           {formatMoney(betCode.stakeAmount || 0)}đ
                         </div>

@@ -333,16 +333,16 @@ function getNumberInfo(line, betTypeInfo) {
     const region = line.station?.region || 'south'
 
     if (typeof defaultBetType.combinations === 'object') {
+      // Kiểm tra nếu có direct mapping cho region
+      if (typeof defaultBetType.combinations[region] === 'number') {
+        combinationCount = defaultBetType.combinations[region]
+      }
       // Kiểm tra nếu có nested structure cho số chữ số
-      if (
+      else if (
         typeof defaultBetType.combinations[`${digitCount} digits`] === 'object'
       ) {
         combinationCount =
           defaultBetType.combinations[`${digitCount} digits`][region] || 1
-      }
-      // Kiểm tra nếu có direct mapping cho region
-      else if (typeof defaultBetType.combinations[region] === 'number') {
-        combinationCount = defaultBetType.combinations[region]
       }
       // Kiểm tra nếu có direct mapping cho số chữ số
       else if (
@@ -355,7 +355,6 @@ function getNumberInfo(line, betTypeInfo) {
     }
   }
 
-  // Xử lý các trường hợp đặc biệt
   if (
     betTypeAlias === 'b' ||
     betTypeAlias === 'bao' ||
@@ -382,6 +381,19 @@ function getNumberInfo(line, betTypeInfo) {
       } else {
         combinationCount = 16
       }
+    }
+  } else if (
+    betTypeAlias === 'dd' ||
+    betTypeAlias === 'dau duoi' ||
+    betTypeAlias === 'đầu đuôi' ||
+    betTypeAlias === 'head and tail'
+  ) {
+    // Đầu đuôi - kiểm tra miền
+    const region = line.station?.region || 'south'
+    if (region === 'north') {
+      combinationCount = 5 // 4 lô ở giải bảy (đầu) và 1 lô ở giải đặc biệt (đuôi)
+    } else {
+      combinationCount = 2 // 1 lô ở giải tám (đầu) và 1 lô ở giải đặc biệt (đuôi)
     }
   } else if (betTypeAlias === 'b7l' || betTypeAlias === 'baobay') {
     // Bao lô 7
