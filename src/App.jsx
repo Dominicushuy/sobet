@@ -21,6 +21,7 @@ import LotteryResults from './pages/admin/LotteryResults'
 
 // Layouts
 import MainLayout from './components/layout/MainLayout'
+import BetManagementLayout from './components/BetManagementLayout'
 
 function App() {
   useEffect(() => {
@@ -37,7 +38,7 @@ function App() {
 
         <Route path='/' element={<MainLayout />}>
           {/* User Routes */}
-          <Route index element={<BetCodeInput />} />
+          <Route index element={<BetManagementLayout />} />
           <Route path='history' element={<BetCodeHistory />} />
 
           {/* Admin Routes */}
