@@ -428,12 +428,18 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
     const n = numberInfo.count
     const bridgeFactor = n < 2 ? 0 : (n * (n - 1)) / 2
 
+    // Kiểu đá luôn sử dụng hệ số nhân 2
+    const daMultiplier =
+      betTypeAlias === 'da' || betTypeAlias === 'dv'
+        ? 2
+        : stationInfo.multiplier
+
     // Tính stake cho kiểu đá (nhân với combinationCount)
     const stake =
       stationInfo.count *
       bridgeFactor *
       betAmount *
-      stationInfo.multiplier *
+      daMultiplier *
       numberInfo.combinationCount
 
     return {
@@ -443,8 +449,8 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       betFactor: bridgeFactor,
       combinationCount: numberInfo.combinationCount,
       betAmount,
-      multiplier: stationInfo.multiplier,
-      formula: `${stationInfo.count} × ${bridgeFactor} × ${betAmount} × ${stationInfo.multiplier} × ${numberInfo.combinationCount}`,
+      multiplier: daMultiplier,
+      formula: `${stationInfo.count} × ${bridgeFactor} × ${betAmount} × ${daMultiplier} × ${numberInfo.combinationCount}`,
       betTypeAlias: betTypeAlias,
     }
   }
