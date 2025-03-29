@@ -215,7 +215,7 @@ function fixSpecialCases(lines, changes) {
       continue;
     }
 
-    // Handle "keo" sequences
+    // Enhanced check for "keo" sequences
     const hasKeoSequence = /\d+\/\d+(?:keo|k)\d+/.test(line);
     if (hasKeoSequence) {
       // Don't modify keo sequences, as they are handled by the parser

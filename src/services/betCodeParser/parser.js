@@ -355,6 +355,15 @@ function isPartOfSpecialKeyword(currentStr, nextChar) {
 
   const testStr = (currentStr + nextChar).toLowerCase();
 
+  // Check for "keo" pattern specifically
+  if (currentStr.includes("/")) {
+    // If currentStr already contains a "/", check if nextChar could be part of "keo"
+    const lastPart = currentStr.split("/").pop().toLowerCase();
+    if (lastPart === "k" && nextChar.toLowerCase() === "e") return true;
+    if (lastPart === "ke" && nextChar.toLowerCase() === "o") return true;
+    if (nextChar.toLowerCase() === "k") return true;
+  }
+
   // Kiểm tra nếu chuỗi kết hợp khớp với bất kỳ từ khóa đặc biệt nào
   for (const keyword of specialKeywords) {
     if (keyword.startsWith(testStr)) {
@@ -953,10 +962,20 @@ function parseBetLine(line, station) {
       } else if (isAlphabetChar(char)) {
         // Cải tiến: Kiểm tra kỹ hơn khi gặp ký tự chữ cái
         // Ký tự chữ cái - có thể là phần của kiểu cược hoặc là phần của kéo hoặc từ khóa đặc biệt
+
+        // Improved check for "keo" pattern
+        const isKeoPattern =
+          currentNumber.includes("/") &&
+          (char.toLowerCase() === "k" ||
+            (currentNumber.toLowerCase().includes("/k") &&
+              char.toLowerCase() === "e") ||
+            (currentNumber.toLowerCase().includes("/ke") &&
+              char.toLowerCase() === "o"));
+
         if (
           parsingState === "number" &&
-          (currentNumber.includes("/") ||
-            char === "k" ||
+          (isKeoPattern ||
+            currentNumber.includes("/") ||
             isPartOfSpecialKeyword(currentNumber, char))
         ) {
           // Đang phân tích "kéo" hoặc các ký tự đặc biệt khác trong số

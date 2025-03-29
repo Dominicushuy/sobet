@@ -315,7 +315,7 @@ function formatBetLine(line) {
       continue;
     }
 
-    // Check for keo sequences
+    // Enhanced check for keo sequences
     const keoMatch = part.match(/^(\d+)\/(\d+)(?:keo|k)(\d+)$/);
     if (keoMatch) {
       processedParts.push(part);
