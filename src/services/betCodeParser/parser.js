@@ -12,6 +12,95 @@ export function parseBetCode(betCode) {
       return { success: false, errors: [{ message: "Mã cược không hợp lệ" }] };
     }
 
+    // First, let's check for special cases with kéo pattern directly
+    const initialLines = betCode
+      .trim()
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== "");
+    if (initialLines.length >= 2) {
+      const stationLine = initialLines[0];
+
+      // Direct check for kéo pattern in any subsequent line
+      for (let i = 1; i < initialLines.length; i++) {
+        const currentLine = initialLines[i];
+        // Precise regex to match kéo pattern including bet type and amount
+        const keoMatch = currentLine.match(
+          /(\d+)\/(\d+)(?:keo|k)(\d+)([a-z]+)(\d+(?:[,.]\d+)?)/i
+        );
+
+        if (keoMatch) {
+          // We found a kéo pattern, process it specially
+          const [fullMatch, start, next, end, betTypeText, amountText] =
+            keoMatch;
+
+          // Parse the station
+          const stationInfo = parseStation(stationLine);
+          if (!stationInfo.success) {
+            return {
+              success: false,
+              errors: [
+                { message: `Cannot determine station: ${stationInfo.error}` },
+              ],
+            };
+          }
+
+          // Generate sequence
+          const startNum = parseInt(start, 10);
+          const nextNum = parseInt(next, 10);
+          const endNum = parseInt(end, 10);
+          const step = nextNum - startNum;
+
+          if (step <= 0) {
+            // Invalid step, continue with regular parsing
+            continue;
+          }
+
+          // Generate sequence
+          const sequence = [];
+          const padLength = Math.max(start.length, end.length);
+          for (let i = startNum; i <= endNum; i += step) {
+            sequence.push(i.toString().padStart(padLength, "0"));
+          }
+
+          // Identify bet type
+          const betType = defaultBetTypes.find((bt) =>
+            bt.aliases.some(
+              (a) => a.toLowerCase() === betTypeText.toLowerCase()
+            )
+          );
+
+          if (!betType) {
+            // Invalid bet type, continue with regular parsing
+            continue;
+          }
+
+          // Parse amount
+          const amount = parseFloat(amountText.replace(",", ".")) || 10;
+
+          // We have a valid kéo pattern, generate a special result
+          const betLine = {
+            valid: true,
+            numbers: sequence,
+            betType: {
+              id: betType.name,
+              name: betType.name,
+              alias: betTypeText.toLowerCase(),
+            },
+            amount: amount,
+            originalLine: currentLine,
+          };
+
+          return {
+            success: true,
+            station: stationInfo.data,
+            lines: [betLine],
+            wasReformatted: true,
+            specialHandling: "keo_pattern",
+          };
+        }
+      }
+    }
+
     // Trước khi bất kỳ xử lý nào, kiểm tra xem đây có phải chỉ là tên đài không
     // Nếu là chỉ mỗi tên đài (như "hn"), xử lý đặc biệt
     if (!betCode.includes("\n") && !betCode.includes(" ")) {
@@ -752,6 +841,47 @@ function parseBetLine(line, station) {
       "$1duoi$2"
     );
 
+    // SPECIAL DIRECT HANDLING FOR KÉO PATTERN
+    // Handle kéo pattern as a special case first - new precise regex
+    const keoRegex = /(\d+)\/(\d+)(?:keo|k)(\d+)([a-z]+)(\d+(?:[,.]\d+)?)/i;
+    const keoMatch = normalizedLine.match(keoRegex);
+
+    if (keoMatch) {
+      // Extract all components
+      const [fullMatch, start, next, end, betTypeText, amountText] = keoMatch;
+
+      // Convert numbers
+      const startNum = parseInt(start, 10);
+      const nextNum = parseInt(next, 10);
+      const endNum = parseInt(end, 10);
+      const step = nextNum - startNum;
+
+      if (step > 0) {
+        // Generate the sequence
+        const sequence = [];
+        for (let i = startNum; i <= endNum; i += step) {
+          sequence.push(
+            i.toString().padStart(Math.max(start.length, end.length), "0")
+          );
+        }
+
+        // Identify the bet type
+        const betType = identifyBetType(betTypeText);
+        if (betType) {
+          // Parse amount
+          const amount = parseAmount(amountText);
+
+          // Build the result
+          result.numbers = sequence;
+          result.betType = betType;
+          result.amount = amount;
+          result.valid = true;
+
+          return result;
+        }
+      }
+    }
+
     // Cải tiến: Xử lý các trường hợp đặc biệt
 
     // 1. Xử lý nhiều kiểu cược trong một dòng (ví dụ: 23.45dd10.dau5)
@@ -1132,25 +1262,32 @@ function parseNumbers(numbersPart, station) {
 /**
  * Xử lý chuỗi số cược và chuyển đổi thành mảng số
  */
-function processNumber(numberString, station) {
-  // Xử lý kéo: 10/20keo90
-  const keoMatch = numberString.match(/^(\d+)\/(\d+)(?:keo|k)(\d+)$/);
+function processNumber(numberString) {
+  // Xử lý kéo: 10/20keo90 or 10/20k90
+  // Enhanced to better handle the format directly
+  const keoRegex = /^(\d+)\/(\d+)(?:keo|k)(\d+)$/i;
+  const keoMatch = numberString.match(keoRegex);
+
   if (keoMatch) {
     const start = parseInt(keoMatch[1], 10);
     const next = parseInt(keoMatch[2], 10);
     const end = parseInt(keoMatch[3], 10);
 
     const step = next - start;
-    if (step <= 0) return [];
+    // If step is invalid, just return original string to avoid errors
+    if (step <= 0) return [numberString];
 
     const numbers = [];
+    // Generate sequence with proper padding
+    const padLength = Math.max(keoMatch[1].length, keoMatch[3].length);
     for (let i = start; i <= end; i += step) {
-      numbers.push(i.toString().padStart(Math.max(2, keoMatch[1].length), "0"));
+      numbers.push(i.toString().padStart(padLength, "0"));
     }
+
     return numbers;
   }
 
-  // Xử lý các từ khóa đặc biệt
+  // Handle other special keyword cases
   // Check for exact keyword match
   const lowerString = numberString.toLowerCase();
 
@@ -1173,7 +1310,7 @@ function processNumber(numberString, station) {
       return generateLeChanNumbers();
   }
 
-  // Cải tiến: Xử lý số gộp thành nhóm (1234 -> 12, 34)
+  // Handle grouped numbers
   if (/^\d{4,}$/.test(numberString) && numberString.length % 2 === 0) {
     const numbers = [];
     for (let i = 0; i < numberString.length; i += 2) {
@@ -1182,7 +1319,7 @@ function processNumber(numberString, station) {
     return numbers;
   }
 
-  // Trường hợp bình thường
+  // Return as is for normal numbers
   return [numberString];
 }
 
@@ -1254,6 +1391,11 @@ function isBetTypeOrAmount(text) {
 /**
  * Phân tích số tiền cược
  */
+/**
+ * Phân tích số tiền cược
+ * @param {string} amountString - Chuỗi số tiền
+ * @returns {number} Số tiền đã phân tích
+ */
 function parseAmount(amountString) {
   if (!amountString) return 0;
 
@@ -1269,13 +1411,18 @@ function parseAmount(amountString) {
   const amount = parseFloat(cleaned);
   if (isNaN(amount)) return 0;
 
-  // Xử lý đơn vị "n" (nghìn)
+  // FIX: Xử lý đơn vị "n" (nghìn) và áp dụng đúng hệ số nhân
+  // Coi mọi số tiền đều được nhập theo đơn vị nghìn đồng, trừ khi đã rất lớn (>= 100,000)
   if (amountString.includes("n")) {
+    // Số có chữ "n" là đơn vị nghìn → giữ nguyên
     return amount;
+  } else if (amount >= 100000) {
+    // Số quá lớn → có thể đã nhập đúng giá trị
+    return amount;
+  } else {
+    // Mọi trường hợp khác → mặc định là đơn vị nghìn
+    return amount * 1000;
   }
-
-  // Nếu số nhỏ hơn 100, coi như đơn vị nghìn
-  return amount < 100 ? amount * 1000 : amount;
 }
 
 /**
