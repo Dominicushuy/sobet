@@ -24,9 +24,6 @@ export function formatBetCode(betCode) {
   // Đoạn code quan trọng: Kiểm tra nếu chỉ có một dòng và có thể là tên đài
   // Đây là chỗ nên xử lý trường hợp như "hn"
   if (lines.length === 1) {
-    console.log("lines[0]: ", lines[0]);
-
-    // Không cần thay đổi gì nếu chỉ là tên đài
     return betCode;
   }
 
@@ -279,6 +276,13 @@ function formatBetLine(line) {
   // Loại bỏ các dấu chấm dư thừa/liên tiếp
   normalizedLine = normalizedLine.replace(/\.{2,}/g, ".");
   normalizedLine = normalizedLine.replace(/^\.|\.$/g, "");
+
+  // QUAN TRỌNG: Đảm bảo không có dấu chấm trước các kiểu cược
+  for (const alias of betTypeAliases) {
+    // Tìm và loại bỏ dấu chấm trước kiểu cược
+    const betTypeRegex = new RegExp(`\\.(${alias}\\d*(?:[,.n]\\d+)?)`, "gi");
+    normalizedLine = normalizedLine.replace(betTypeRegex, "$1");
+  }
 
   // Bước 3: Phân tích các dãy số liền nhau
   // Xác định chữ số cần xử lý (2 hoặc 3)

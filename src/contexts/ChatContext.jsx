@@ -15,6 +15,7 @@ import { calculatePotentialPrize } from "../services/calculator/prizeCalculator"
 import { useBetCode } from "./BetCodeContext";
 import betCodeService from "@/services/betCodeService";
 import { uid } from "uid";
+import { defaultBetTypes } from "@/config/defaults";
 
 const ChatContext = createContext();
 
@@ -296,6 +297,36 @@ export function ChatProvider({ children }) {
     return specialCases;
   };
 
+  const ensureCorrectBetCodeFormat = (betCode) => {
+    if (!betCode || typeof betCode !== "string") {
+      return betCode;
+    }
+
+    const lines = betCode.split("\n");
+    if (lines.length <= 1) return betCode;
+
+    // Lấy danh sách alias từ defaultBetTypes
+    const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases);
+
+    // Chỉ xử lý các dòng từ dòng thứ 2 trở đi (sau dòng đài)
+    for (let i = 1; i < lines.length; i++) {
+      let line = lines[i];
+
+      // Loại bỏ dấu chấm trước kiểu cược
+      for (const alias of betTypeAliases) {
+        const betTypeRegex = new RegExp(
+          `\\.(${alias}\\d*(?:[,.n]\\d+)?)`,
+          "gi"
+        );
+        line = line.replace(betTypeRegex, "$1");
+      }
+
+      lines[i] = line;
+    }
+
+    return lines.join("\n");
+  };
+
   const processUserMessage = async (text) => {
     setIsTyping(true);
 
@@ -305,8 +336,6 @@ export function ChatProvider({ children }) {
 
       // Format the bet code first for better parsing
       const formattedBetCode = formatBetCode(text);
-
-      // console.log("Formatted bet code:", formattedBetCode);
 
       // Parse the bet code
       const parseResult = parseBetCode(formattedBetCode);
@@ -409,7 +438,13 @@ export function ChatProvider({ children }) {
             }
 
             if (formattedBetCode !== text) {
-              message += "\n\nMã cược đã được tối ưu định dạng.";
+              // Đảm bảo định dạng hiển thị cho người dùng là đúng
+              const correctedFormat =
+                ensureCorrectBetCodeFormat(formattedBetCode);
+              message +=
+                "\n\nMã cược đã được tối ưu định dạng:\n```\n" +
+                correctedFormat +
+                "\n```";
             }
 
             // Thêm thông tin về tổng tiền cược và tiềm năng thắng
@@ -420,7 +455,9 @@ export function ChatProvider({ children }) {
                 totalStake: totalStakeAmount,
                 potentialWin: totalPotentialWinAmount,
                 formattedCode:
-                  formattedBetCode !== text ? formattedBetCode : null,
+                  formattedBetCode !== text
+                    ? ensureCorrectBetCodeFormat(formattedBetCode)
+                    : null,
                 isAutoExpanded: true,
                 specialCasesType: specialCases.type,
                 addedCodes, // Thêm thông tin các mã cược đã thêm
@@ -491,28 +528,34 @@ export function ChatProvider({ children }) {
             }
           } else {
             // Single line - keep existing logic
-            addMessage(
-              `Mã cược hợp lệ! Đã thêm vào danh sách mã cược.${
-                formattedBetCode !== text
-                  ? "\n\nMã cược đã được tối ưu định dạng."
-                  : ""
-              }`,
-              "bot",
-              {
-                betCodeInfo: {
-                  station: parseResult.station.name,
-                  lineCount: parseResult.lines.length,
-                  totalStake,
-                  potentialWin: totalPotential,
-                  formattedCode:
-                    formattedBetCode !== text ? formattedBetCode : null,
-                },
-                detailedCalculations: {
-                  stakeDetails: stakeResult.details || [],
-                  prizeDetails: prizeResult.details || [],
-                },
-              }
-            );
+            let message = `Mã cược hợp lệ! Đã thêm vào danh sách mã cược.`;
+
+            if (formattedBetCode !== text) {
+              // Đảm bảo định dạng hiển thị cho người dùng là đúng
+              const correctedFormat =
+                ensureCorrectBetCodeFormat(formattedBetCode);
+              message +=
+                "\n\nMã cược đã được tối ưu định dạng:\n```\n" +
+                correctedFormat +
+                "\n```";
+            }
+
+            addMessage(message, "bot", {
+              betCodeInfo: {
+                station: parseResult.station.name,
+                lineCount: parseResult.lines.length,
+                totalStake,
+                potentialWin: totalPotential,
+                formattedCode:
+                  formattedBetCode !== text
+                    ? ensureCorrectBetCodeFormat(formattedBetCode)
+                    : null,
+              },
+              detailedCalculations: {
+                stakeDetails: stakeResult.details || [],
+                prizeDetails: prizeResult.details || [],
+              },
+            });
 
             // Add to draft codes
             addDraftCode({
@@ -603,8 +646,14 @@ export function ChatProvider({ children }) {
         // Add fix suggestion if available
         let fixedCodeMessage = "";
         if (fixResult.success) {
+          // Đảm bảo định dạng đúng trước khi hiển thị cho người dùng
+          const correctedFixedCode = ensureCorrectBetCodeFormat(
+            fixResult.fixed
+          );
           fixedCodeMessage =
-            "\n\nĐề xuất mã cược sửa lỗi:\n```\n" + fixResult.fixed + "\n```";
+            "\n\nĐề xuất mã cược sửa lỗi:\n```\n" +
+            correctedFixedCode +
+            "\n```";
 
           // Try parsing the fixed code
           const fixedParseResult = parseBetCode(fixResult.fixed);
@@ -662,8 +711,13 @@ export function ChatProvider({ children }) {
             error: true,
             detailedErrors,
             original: text,
-            formatted: formattedBetCode !== text ? formattedBetCode : null,
-            fixedCode: fixResult.success ? fixResult.fixed : null,
+            formatted:
+              formattedBetCode !== text
+                ? ensureCorrectBetCodeFormat(formattedBetCode)
+                : null,
+            fixedCode: fixResult.success
+              ? ensureCorrectBetCodeFormat(fixResult.fixed)
+              : null,
             changes: fixResult.success ? fixResult.changes : [],
             suggestions: fixSuggestions.hasSuggestions
               ? fixSuggestions.suggestions
@@ -701,7 +755,9 @@ export function ChatProvider({ children }) {
   // Add function to handle fix suggestion click
   const applyFixSuggestion = (fixedCode) => {
     if (fixedCode) {
-      addMessage(fixedCode, "user");
+      // Đảm bảo định dạng đúng trước khi áp dụng
+      const correctedFixedCode = ensureCorrectBetCodeFormat(fixedCode);
+      addMessage(correctedFixedCode, "user");
     }
   };
 
