@@ -242,9 +242,27 @@ function extractStationPart(line) {
 }
 
 /**
- * Chuẩn hóa dòng cược
- * @param {string} line - Dòng cược
- * @returns {string} Dòng cược đã chuẩn hóa
+ * Get list of special keywords for number combinations
+ * @returns {Array<string>} Array of special keywords
+ */
+function getSpecialKeywords() {
+  return ["tai", "xiu", "chan", "le", "chanchan", "lele", "chanle", "lechan"];
+}
+
+/**
+ * Check if a string is a special keyword
+ * @param {string} str - String to check
+ * @returns {boolean} True if string is a special keyword
+ */
+function isSpecialKeyword(str) {
+  if (!str) return false;
+  return getSpecialKeywords().includes(str.toLowerCase());
+}
+
+/**
+ * Format bet line with improved handling of special keywords and sequences
+ * @param {string} line - Bet line to format
+ * @returns {string} Formatted bet line
  */
 function formatBetLine(line) {
   // Bước 1: Xác định kiểu cược và tiền cược (thường ở cuối dòng)
@@ -284,32 +302,38 @@ function formatBetLine(line) {
     normalizedLine = normalizedLine.replace(betTypeRegex, "$1");
   }
 
-  // Bước 3: Phân tích các dãy số liền nhau
-  // Xác định chữ số cần xử lý (2 hoặc 3)
-  const digitLength = determineDigitLength(normalizedLine);
+  // Bước 3: Bảo vệ các từ khóa đặc biệt và định dạng kéo
+  const parts = normalizedLine.split(".");
+  const processedParts = [];
 
-  // Xử lý các trường hợp số không có dấu phân cách
-  const noSeparatorPattern = new RegExp(
-    `(\\d{${digitLength * 2},}(?!\\d*[a-z]))`,
-    "g"
-  );
-  const noSeparatorMatch = normalizedLine.match(noSeparatorPattern);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
 
-  if (noSeparatorMatch) {
-    for (const match of noSeparatorMatch) {
-      // Phân tích thành từng cụm theo độ dài số
-      const chunks = [];
+    // Check for special keywords
+    if (isSpecialKeyword(part)) {
+      processedParts.push(part);
+      continue;
+    }
 
-      for (let i = 0; i < match.length; i += digitLength) {
-        if (i + digitLength <= match.length) {
-          chunks.push(match.substr(i, digitLength));
-        }
-      }
+    // Check for keo sequences
+    const keoMatch = part.match(/^(\d+)\/(\d+)(?:keo|k)(\d+)$/);
+    if (keoMatch) {
+      processedParts.push(part);
+      continue;
+    }
 
-      const replaced = chunks.join(".");
-      normalizedLine = normalizedLine.replace(match, replaced);
+    // Handle numeric parts with potential grouping
+    if (/^\d+$/.test(part)) {
+      // For groups of 4 digits or more that are even in length, we might need to split
+      // But we'll leave this for the parser to handle contextually
+      processedParts.push(part);
+    } else {
+      processedParts.push(part);
     }
   }
+
+  // Rebuild the line
+  normalizedLine = processedParts.join(".");
 
   // Bước 4: Chuẩn hóa định dạng tiền cược
   // Xử lý trường hợp nhiều kiểu cược trên cùng dãy số
@@ -342,38 +366,6 @@ function formatBetLine(line) {
   }
 
   return normalizedLine;
-}
-
-/**
- * Xác định độ dài chữ số phổ biến trong chuỗi số
- * @param {string} numbersStr - Chuỗi chứa các số
- * @returns {number} Độ dài chữ số (2 hoặc 3)
- */
-function determineDigitLength(numbersStr) {
-  // Tách các số
-  const numbers = numbersStr.split(".").filter((n) => /^\d+$/.test(n));
-
-  // Đếm số lượng số có 2 chữ số và 3 chữ số
-  let twoDigitCount = 0;
-  let threeDigitCount = 0;
-  let fourDigitCount = 0;
-
-  for (const num of numbers) {
-    if (num.length === 2) twoDigitCount++;
-    else if (num.length === 3) threeDigitCount++;
-    else if (num.length === 4) fourDigitCount++;
-  }
-
-  // Nếu có nhiều số 3 chữ số hơn, trả về 3
-  // Nếu có nhiều số 4 chữ số, trả về 4
-  // Ngược lại trả về 2
-  if (fourDigitCount > threeDigitCount && fourDigitCount > twoDigitCount) {
-    return 4;
-  } else if (threeDigitCount > twoDigitCount) {
-    return 3;
-  } else {
-    return 2;
-  }
 }
 
 /**

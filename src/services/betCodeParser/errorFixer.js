@@ -97,6 +97,24 @@ export function fixBetCode(betCode, errorResult) {
 }
 
 /**
+ * Returns an array of special keywords for number combinations
+ * @returns {Array<string>} List of special keywords
+ */
+function getSpecialKeywords() {
+  return ["tai", "xiu", "chan", "le", "chanchan", "lele", "chanle", "lechan"];
+}
+
+/**
+ * Check if a string is a special keyword
+ * @param {string} str - String to check
+ * @returns {boolean} True if it's a special keyword
+ */
+function isSpecialKeyword(str) {
+  if (!str) return false;
+  return getSpecialKeywords().includes(str.toLowerCase());
+}
+
+/**
  * Đảm bảo không có dấu chấm nào trước kiểu cược
  * @param {Array<string>} lines - Các dòng mã cược
  * @returns {Array<string>} Các dòng đã được sửa
@@ -125,9 +143,9 @@ function ensureNoDotBeforeBetType(lines) {
 
 /**
  * Sửa các trường hợp đặc biệt
- * @param {Array} lines - Các dòng mã cược
+ * @param {Array<string>} lines - Các dòng mã cược
  * @param {Array} changes - Danh sách thay đổi
- * @returns {Array} Các dòng đã được sửa
+ * @returns {Array<string>} Các dòng đã được sửa
  */
 function fixSpecialCases(lines, changes) {
   // Sửa trường hợp đài có dấu chấm cuối cùng
@@ -183,6 +201,27 @@ function fixSpecialCases(lines, changes) {
       lines[i] = newLine;
     }
 
+    // Protect special keywords when fixing line
+    // Specifically preserve keywords like "tai", "xiu", etc.
+    const specialKeywords = getSpecialKeywords();
+    const specialKeywordRegexPattern = specialKeywords.join("|");
+    const hasSpecialKeywords = new RegExp(
+      `\\b(${specialKeywordRegexPattern})\\b`,
+      "i"
+    ).test(line);
+
+    if (hasSpecialKeywords) {
+      // Don't change the line if it contains special keywords, as our custom parsers will handle them
+      continue;
+    }
+
+    // Handle "keo" sequences
+    const hasKeoSequence = /\d+\/\d+(?:keo|k)\d+/.test(line);
+    if (hasKeoSequence) {
+      // Don't modify keo sequences, as they are handled by the parser
+      continue;
+    }
+
     // Handle grouped numbers with "da" bet type specifically
     if (/\d{4,}/.test(line) && line.match(/da\d+/i)) {
       const parts = line.split(/([a-z]+\d+(?:[,.]\d+)?)/i);
@@ -220,8 +259,6 @@ function fixSpecialCases(lines, changes) {
           });
 
           lines[i] = processedLines[0];
-          // If we need to add more lines, we'd need to expand the lines array
-          // This would require modifying the return structure
         }
       }
     }
@@ -307,7 +344,6 @@ function fixSpecialCases(lines, changes) {
   }
 
   // Cải tiến: Tách dòng có nhiều kiểu cược (vd: 23.45dd10.dau5)
-  // Lưu ý: Khi tách dòng, chúng ta cần phải cập nhật toàn bộ mảng dòng
   let newLines = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -319,6 +355,19 @@ function fixSpecialCases(lines, changes) {
       const parts = splitLineIntoParts(line);
 
       if (parts.numbersPart) {
+        // Special handling for special keywords in number parts
+        const numberParts = parts.numbersPart.split(".");
+        const hasSpecialKeyword = numberParts.some((part) =>
+          isSpecialKeyword(part)
+        );
+
+        // If the line contains special keywords, handle with care
+        if (hasSpecialKeyword) {
+          // Pass through special keyword lines without splitting
+          newLines.push(line);
+          continue;
+        }
+
         // Báo cáo thay đổi - chỉ lưu dòng đầu tiên thay thế
         changes.push({
           lineIndex: i,
@@ -351,6 +400,100 @@ function fixSpecialCases(lines, changes) {
 }
 
 /**
+ * Generate fix for special keyword case
+ * @param {object} error - Error information
+ * @param {string} line - Line containing error
+ * @returns {object} Suggested fix
+ */
+function generateSpecialKeywordFix(error, line) {
+  // For special keywords, identify what's wrong and suggest corrections
+  const specialKeywords = getSpecialKeywords();
+
+  // Check for misspelled special keywords
+  for (const keyword of specialKeywords) {
+    // Common misspellings - just checking a few simple transformations
+    const misspellings = [
+      keyword.replace("a", "e"),
+      keyword.replace("i", "y"),
+      keyword.replace("ch", "c"),
+      keyword + "s",
+    ];
+
+    for (const misspelling of misspellings) {
+      if (line.includes(misspelling) && !line.includes(keyword)) {
+        return {
+          newLine: line.replace(misspelling, keyword),
+          explanation: `Sửa lỗi chính tả "${misspelling}" thành "${keyword}"`,
+        };
+      }
+    }
+  }
+
+  // If an invalid keyword is being used, suggest the closest match
+  const words = line.split(/[. ]/);
+  for (const word of words) {
+    if (word.length >= 3 && /^[a-z]+$/i.test(word) && !isSpecialKeyword(word)) {
+      const bestMatch = findClosestKeyword(word, specialKeywords);
+      if (bestMatch && bestMatch.score > 0.7) {
+        return {
+          newLine: line.replace(word, bestMatch.keyword),
+          explanation: `Đề xuất thay đổi "${word}" thành "${bestMatch.keyword}"`,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Find closest special keyword match
+ * @param {string} input - Input string to match
+ * @param {Array<string>} keywords - List of keywords
+ * @returns {object|null} Best match info
+ */
+function findClosestKeyword(input, keywords) {
+  if (!input) return null;
+
+  let bestMatch = null;
+  let highestScore = 0;
+
+  for (const keyword of keywords) {
+    const score = similarityScore(input.toLowerCase(), keyword);
+    if (score > highestScore) {
+      highestScore = score;
+      bestMatch = {
+        keyword,
+        score,
+      };
+    }
+  }
+
+  return bestMatch;
+}
+
+/**
+ * Calculate similarity between two strings
+ * @param {string} str1 - First string
+ * @param {string} str2 - Second string
+ * @returns {number} Similarity score between 0-1
+ */
+function similarityScore(str1, str2) {
+  if (str1 === str2) return 1;
+  if (!str1 || !str2) return 0;
+
+  // Simple matching algorithm - can be replaced with more sophisticated one if needed
+  const maxLength = Math.max(str1.length, str2.length);
+  let matches = 0;
+
+  for (let i = 0; i < Math.min(str1.length, str2.length); i++) {
+    if (str1[i] === str2[i]) matches++;
+  }
+
+  return matches / maxLength;
+}
+
+/**
  * Trích xuất nhiều kiểu cược từ một dòng
  */
 function extractMultipleBetTypes(line) {
@@ -364,13 +507,13 @@ function extractMultipleBetTypes(line) {
     .replace(/[,\- ]+/g, ".");
 
   // Tạo pattern với word boundary (\b) để đảm bảo tìm đúng kiểu cược
-  // Sắp xếp alias theo độ dài (dài nhất trước)
+  // Sắp xếp các alias theo độ dài (dài nhất trước) để tránh trường hợp tìm thấy alias ngắn hơn trước
   const betTypePattern = betTypeAliases
     .sort((a, b) => b.length - a.length)
     .map((alias) => `\\b${alias}\\b`)
     .join("|");
 
-  // Tìm tất cả các kiểu cược
+  // Tìm tất cả các kiểu cược trong dòng với regex cải tiến
   const betTypeRegex = new RegExp(
     `(${betTypePattern})(\\d+(?:[,.n]\\d+)?)`,
     "gi"
@@ -406,13 +549,6 @@ function splitLineIntoParts(line) {
   }
 
   return { numbersPart: "", firstBetTypePos: -1 };
-}
-
-/**
- * Kiểm tra xem ký tự có phải là chữ cái hay không
- */
-function isAlphabetChar(char) {
-  return /[a-z]/i.test(char);
 }
 
 /**
@@ -505,6 +641,18 @@ function getAllStationAliases() {
  * @returns {object} Gợi ý
  */
 function generateSuggestion(error, betCode) {
+  // Check if this is a special keyword error
+  if (error.lineIndex !== undefined) {
+    const lines = betCode.split("\n");
+    const line = lines[error.lineIndex];
+
+    // Check if the line contains potential special keywords issues
+    const specialSuggestion = generateSpecialKeywordFix(error, line);
+    if (specialSuggestion) {
+      return specialSuggestion;
+    }
+  }
+
   switch (error.type) {
     case "INVALID_STATION":
       return {
@@ -621,6 +769,12 @@ function generateFix(error, lines) {
 
   // Biến kết quả
   let result = null;
+
+  // Check if this might be a special keyword error
+  const specialKeywordFix = generateSpecialKeywordFix(error, line);
+  if (specialKeywordFix) {
+    return specialKeywordFix;
+  }
 
   switch (error.type) {
     case "INVALID_STATION": {
@@ -823,6 +977,17 @@ function generateFix(error, lines) {
           const parts = splitLineIntoParts(line);
 
           if (parts.numbersPart) {
+            // Special check for special keywords
+            const numberParts = parts.numbersPart.split(".");
+            const hasSpecialKeyword = numberParts.some((part) =>
+              isSpecialKeyword(part)
+            );
+
+            // If the line contains special keywords, don't split by bet types
+            if (hasSpecialKeyword) {
+              return null;
+            }
+
             // QUAN TRỌNG: Không thêm dấu chấm trước kiểu cược
             result = {
               newLine: `${parts.numbersPart}${multipleBetTypes[0]}`,
@@ -1016,3 +1181,8 @@ function calculateSimilarity(str1, str2) {
   // Chuyển đổi khoảng cách thành độ giống nhau
   return 1 - distance / Math.max(len1, len2);
 }
+
+export default {
+  suggestFixes,
+  fixBetCode,
+};
