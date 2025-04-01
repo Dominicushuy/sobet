@@ -29,7 +29,28 @@ export function formatBetCode(betCode) {
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i].trim()
 
-    // Kiểm tra xem dòng hiện tại có phải là đài hay không
+    // NEW: Xử lý trường hợp đặc biệt - một dòng có cả đài và mã cược
+    // Ví dụ: "mb 01.02.03b1" -> "mb\n01.02.03b1"
+    const spaceParts = lineText.split(/\s+/)
+    if (spaceParts.length >= 2) {
+      const potentialStation = spaceParts[0].toLowerCase()
+
+      // Kiểm tra nếu phần đầu tiên là đài hợp lệ
+      if (isStationOnlyLine(potentialStation)) {
+        // Lấy phần còn lại (không dùng split để đảm bảo lấy chính xác)
+        const restOfText = lineText.substring(potentialStation.length).trim()
+
+        // Kiểm tra nếu phần còn lại có số và có thể là mã cược
+        if (/\d/.test(restOfText)) {
+          // Tách thành hai dòng riêng biệt
+          formattedLines.push(potentialStation)
+          formattedLines.push(restOfText)
+          continue
+        }
+      }
+    }
+
+    // Xử lý logic hiện tại nếu không phải trường hợp đặc biệt
     if (isStationOnlyLine(lineText)) {
       const formattedStation = formatStation(lineText)
       formattedLines.push(formattedStation)

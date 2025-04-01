@@ -35,6 +35,7 @@ import PrintBetCode from './PrintBetCode'
 import BetCodeDetailModal from './BetCodeDetailModal'
 import { formatMoney } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
+import { defaultBetTypes } from '@/config/defaults'
 
 const BetCodeCard = ({
   betCode,
@@ -135,6 +136,51 @@ const BetCodeCard = ({
     return allNumbers
   }
 
+  // Hàm lấy tên và mã kiểu cược từ betCode.lines
+  const getBetTypeNames = () => {
+    if (
+      !betCode.lines ||
+      !Array.isArray(betCode.lines) ||
+      betCode.lines.length === 0
+    ) {
+      return 'N/A'
+    }
+
+    // Lấy tất cả kiểu cược độc nhất
+    const uniqueBetTypes = new Set()
+
+    betCode.lines.forEach((line) => {
+      if (line.betType && line.betType.alias) {
+        uniqueBetTypes.add(line.betType.alias.toLowerCase())
+      }
+
+      // Xử lý thêm các kiểu cược bổ sung nếu có
+      if (line.additionalBetTypes && Array.isArray(line.additionalBetTypes)) {
+        line.additionalBetTypes.forEach((additionalBet) => {
+          if (additionalBet.betType && additionalBet.betType.alias) {
+            uniqueBetTypes.add(additionalBet.betType.alias.toLowerCase())
+          }
+        })
+      }
+    })
+
+    // Map alias với tên đầy đủ từ defaultBetTypes
+    const betTypeList = Array.from(uniqueBetTypes).map((alias) => {
+      const betType = defaultBetTypes.find((type) =>
+        type.aliases.some((a) => a.toLowerCase() === alias)
+      )
+
+      return betType ? `${alias} (${betType.name})` : alias
+    })
+
+    // Nếu có quá nhiều kiểu cược, chỉ hiển thị 2 kiểu đầu và tổng số
+    if (betTypeList.length > 2) {
+      return `${betTypeList[0]}, ${betTypeList[1]} +${betTypeList.length - 2}`
+    }
+
+    return betTypeList.join(', ')
+  }
+
   const numbers = getAllNumbers()
   const betText = betCode.originalText || 'N/A'
 
@@ -229,9 +275,9 @@ const BetCodeCard = ({
           {/* Key information in a compact form */}
           <div className='grid grid-cols-2 gap-x-2 gap-y-1 mt-1 text-sm'>
             <div className='flex items-center gap-1'>
-              <Hash className='h-3.5 w-3.5 text-muted-foreground' />
-              <span className='text-muted-foreground'>Số mã:</span>{' '}
-              <span className='font-medium'>{betCode.lines?.length || 0}</span>
+              <Tag className='h-3.5 w-3.5 text-muted-foreground' />
+              <span className='text-muted-foreground'>Kiểu cược:</span>{' '}
+              <span className='font-medium'>{getBetTypeNames()}</span>
             </div>
             <div className='flex items-center gap-1'>
               <DollarSign className='h-3.5 w-3.5 text-muted-foreground' />
