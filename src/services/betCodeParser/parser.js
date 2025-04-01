@@ -1206,6 +1206,8 @@ function parseBetLine(line, station) {
     for (let i = 0; i < normalizedLine.length; i++) {
       const char = normalizedLine[i]
 
+      // console.log('char', char)
+
       if (char === '.') {
         // Kết thúc một phần
         if (parsingState === 'number' && currentNumber) {
