@@ -81,10 +81,17 @@ const PrintBetCode = ({ betCode, isOpen, onClose }) => {
     return displayName
   }
 
-  // Calculate original stake amount (before applying coefficient)
+  // Get original stake amount directly from the bet code
   const getOriginalStakeAmount = () => {
-    if (!betCode.stakeAmount) return 0
-    return Math.round(betCode.stakeAmount / 0.8)
+    if (!betCode.lines || !Array.isArray(betCode.lines)) return 0
+
+    // console.log('Bet code lines:', betCode.lines)
+
+    // Sum up the original amount from all lines
+    return betCode.lines.reduce((total, line) => {
+      // Original amount in bet code is the base amount × 1000
+      return total + (line.amount || 0)
+    }, 0)
   }
 
   // Get all numbers from all lines

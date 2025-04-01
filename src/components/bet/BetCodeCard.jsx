@@ -116,10 +116,17 @@ const BetCodeCard = ({
     return displayName
   }
 
-  // Get original stake amount
+  // Get original stake amount from the bet code
   const getOriginalStakeAmount = () => {
-    if (!betCode.stakeAmount) return 0
-    return Math.round(betCode.stakeAmount / 0.8)
+    if (!betCode.lines || !Array.isArray(betCode.lines)) return 0
+
+    console.log('Bet code lines:', betCode.lines)
+
+    // Sum up the original amount from all lines
+    return betCode.lines.reduce((total, line) => {
+      // Original amount in bet code is the base amount × 1000
+      return total + (line.amount || 0)
+    }, 0)
   }
 
   // Get all bet numbers from all lines
@@ -155,49 +162,30 @@ const BetCodeCard = ({
 
   console.log('BetCodeCard - Bet Code:', betCode)
 
-  // Hàm lấy tên và mã kiểu cược từ betCode.lines
+  // Lấy thông tin kiểu cược từ dòng đầu tiên
   const getBetTypeNames = () => {
     if (
       !betCode.lines ||
       !Array.isArray(betCode.lines) ||
-      betCode.lines.length === 0
+      betCode.lines.length === 0 ||
+      !betCode.lines[0].betType
     ) {
       return 'N/A'
     }
 
-    // Lấy tất cả kiểu cược độc nhất
-    const uniqueBetTypes = new Set()
+    const line = betCode.lines[0]
+    const betTypeAlias = line.betType.alias?.toLowerCase() || ''
 
-    betCode.lines.forEach((line) => {
-      if (line.betType && line.betType.alias) {
-        uniqueBetTypes.add(line.betType.alias.toLowerCase())
-      }
+    // Tìm thông tin đầy đủ từ defaultBetTypes
+    const betType = defaultBetTypes.find((type) =>
+      type.aliases.some((a) => a.toLowerCase() === betTypeAlias)
+    )
 
-      // Xử lý thêm các kiểu cược bổ sung nếu có
-      if (line.additionalBetTypes && Array.isArray(line.additionalBetTypes)) {
-        line.additionalBetTypes.forEach((additionalBet) => {
-          if (additionalBet.betType && additionalBet.betType.alias) {
-            uniqueBetTypes.add(additionalBet.betType.alias.toLowerCase())
-          }
-        })
-      }
-    })
-
-    // Map alias với tên đầy đủ từ defaultBetTypes
-    const betTypeList = Array.from(uniqueBetTypes).map((alias) => {
-      const betType = defaultBetTypes.find((type) =>
-        type.aliases.some((a) => a.toLowerCase() === alias)
-      )
-
-      return betType ? `${alias} (${betType.name})` : alias
-    })
-
-    // Nếu có quá nhiều kiểu cược, chỉ hiển thị 2 kiểu đầu và tổng số
-    if (betTypeList.length > 2) {
-      return `${betTypeList[0]}, ${betTypeList[1]} +${betTypeList.length - 2}`
+    if (betType) {
+      return `${betTypeAlias} (${betType.name})`
     }
 
-    return betTypeList.join(', ')
+    return betTypeAlias || 'N/A'
   }
 
   const numbers = getAllNumbers()

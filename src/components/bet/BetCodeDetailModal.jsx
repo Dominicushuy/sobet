@@ -83,10 +83,15 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
     return statusMap[status] || status || 'Chờ xử lý'
   }
 
-  // Calculate original stake amount (before applying coefficient)
+  // Get original stake amount directly from bet code (not divided by coefficient)
   const getOriginalStakeAmount = () => {
-    if (!betCode.stakeAmount) return 0
-    return Math.round(betCode.stakeAmount / 0.8) // Divide by 0.8 to get original amount
+    if (!betCode.lines || !Array.isArray(betCode.lines)) return 0
+
+    // Sum up the original amount from all lines (amount in thousands)
+    return betCode.lines.reduce((total, line) => {
+      // Original amount in bet code is the base amount × 1000
+      return total + (line.amount || 0) * 1000
+    }, 0)
   }
 
   // Get all bet numbers from all lines
@@ -306,7 +311,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
                                   key={lineIdx}
                                   className='bg-green-50 p-3 rounded-md border border-green-100'>
                                   <div className='text-sm font-medium mb-2 text-green-800'>
-                                    Dòng {lineIdx + 1}:{' '}
                                     {line.betType?.alias || 'N/A'}
                                   </div>
                                   {line.numbers &&
@@ -396,12 +400,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
                   <Card key={idx}>
                     <CardContent className='p-4'>
                       <div className='flex justify-between items-center mb-3'>
-                        <h3 className='font-medium flex items-center gap-1.5'>
-                          <span className='inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted text-xs'>
-                            {idx + 1}
-                          </span>
-                          Dòng {idx + 1}
-                        </h3>
                         <Badge variant='outline' className='font-normal'>
                           {line.betType?.alias || 'N/A'}
                         </Badge>
@@ -410,7 +408,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
                       <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm'>
                         <div>
                           <div className='text-muted-foreground mb-1'>
-                            Nội dung dòng:
+                            Nội dung:
                           </div>
                           <div className='font-mono font-medium bg-muted px-2.5 py-1.5 rounded text-xs'>
                             {line.originalLine || 'N/A'}
@@ -568,7 +566,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
                           key={idx}
                           className='p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm'>
                           <div className='font-medium pb-2 text-blue-800'>
-                            Dòng {idx + 1}: {detail.betTypeAlias || 'N/A'}
+                            {detail.betTypeAlias || 'N/A'}
                           </div>
 
                           <div className='grid grid-cols-2 gap-2 mb-2'>
@@ -643,7 +641,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
                           key={idx}
                           className='p-3 bg-green-50 border border-green-100 rounded-lg text-sm'>
                           <div className='font-medium pb-2 text-green-800'>
-                            Dòng {idx + 1}: {detail.betTypeAlias || 'N/A'}
+                            {detail.betTypeAlias || 'N/A'}
                           </div>
 
                           <div className='grid grid-cols-2 gap-2 mb-2'>
