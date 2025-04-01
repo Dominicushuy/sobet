@@ -440,6 +440,53 @@ export function ChatProvider({ children }) {
 
       console.log('Parsed result:', parseResult)
 
+      // Xử lý khi parse result không thành công
+      if (!parseResult.success) {
+        // Trích xuất thông báo lỗi từ parseResult
+        let errorMessage = 'Mã cược không hợp lệ. '
+
+        // Thêm thông tin về lỗi cụ thể nếu có
+        if (parseResult.errors && parseResult.errors.length > 0) {
+          const detailedErrors = parseResult.errors
+            .map((err) => err.message || err)
+            .join(', ')
+          errorMessage += `Chi tiết lỗi: ${detailedErrors}`
+        }
+
+        // Nếu có station nhưng không có dòng cược
+        if (
+          parseResult.station &&
+          (!parseResult.lines || parseResult.lines.length === 0)
+        ) {
+          errorMessage = `Đã xác định đài ${parseResult.station.name}, nhưng không tìm thấy dòng cược hợp lệ. Vui lòng kiểm tra định dạng mã cược.`
+        }
+
+        // Nếu có lỗi ở các dòng cụ thể
+        if (parseResult.lines && parseResult.lines.length > 0) {
+          const lineErrors = []
+
+          parseResult.lines.forEach((line, index) => {
+            if (!line.valid && line.error) {
+              lineErrors.push(`Dòng ${index + 1}: ${line.error}`)
+            }
+          })
+
+          if (lineErrors.length > 0) {
+            errorMessage += `\n\nLỗi cụ thể:\n${lineErrors.join('\n')}`
+          }
+        }
+
+        // Hiển thị thông báo lỗi
+        addMessage(errorMessage, 'bot', {
+          error: true,
+          errors: parseResult.errors,
+          parseResult: parseResult,
+        })
+
+        setIsTyping(false)
+        return
+      }
+
       if (parseResult.success) {
         // Calculate stake and potential prize
         const stakeResult = calculateStake(parseResult)

@@ -69,8 +69,46 @@ const HighlightErrors = ({ text, errors }) => {
   )
 }
 
+// Hiển thị chi tiết lỗi từ parseResult
+const ErrorDetails = ({ parseResult }) => {
+  if (!parseResult || !parseResult.errors || parseResult.errors.length === 0) {
+    return null
+  }
+
+  return (
+    <div className='mt-2 border-t pt-2'>
+      <h4 className='text-sm font-semibold mb-1 flex items-center'>
+        <AlertTriangle className='h-3.5 w-3.5 mr-1.5 text-destructive' />
+        Chi tiết lỗi:
+      </h4>
+      <ul className='list-disc list-inside space-y-1 text-sm'>
+        {parseResult.errors.map((error, idx) => (
+          <li key={idx} className='text-destructive'>
+            {error.message || error}
+          </li>
+        ))}
+      </ul>
+
+      {parseResult.lines && parseResult.lines.some((line) => !line.valid) && (
+        <div className='mt-2'>
+          <h5 className='text-xs font-medium'>Lỗi cụ thể theo dòng:</h5>
+          <ul className='list-disc list-inside space-y-0.5 text-xs mt-1'>
+            {parseResult.lines.map((line, idx) =>
+              !line.valid && line.error ? (
+                <li key={idx} className='text-destructive'>
+                  Dòng {idx + 1}: {line.error}
+                </li>
+              ) : null
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const ChatMessage = ({ message }) => {
-  const { text, sender, timestamp, error, betCodeInfo } = message
+  const { text, sender, timestamp, error, betCodeInfo, parseResult } = message
   const isUser = sender === 'user'
 
   const handleCopy = () => {
@@ -99,6 +137,11 @@ const ChatMessage = ({ message }) => {
         <CardContent className='p-3'>
           <div className='text-sm whitespace-pre-wrap'>
             {isUser ? formatBetCode(text) : text}
+
+            {/* Display error details if exists */}
+            {error && !isUser && parseResult && (
+              <ErrorDetails parseResult={parseResult} />
+            )}
 
             {/* Valid bet code info */}
             {betCodeInfo && !isUser && (
