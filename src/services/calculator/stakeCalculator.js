@@ -1,6 +1,6 @@
 // src/services/calculator/stakeCalculator.js
 import { defaultBetTypes } from '@/config/defaults'
-import { calculatePermutationCount } from '@/utils/permutationUtils'
+import { generatePermutations } from '@/utils/permutationUtils'
 
 /**
  * Lấy thông tin về đài
@@ -102,7 +102,8 @@ function getNumberInfo(line, betTypeInfo, station) {
     betTypeAlias === 'b7ldao' ||
     betTypeAlias === 'baotamdao' ||
     betTypeAlias === 'b8ld' ||
-    betTypeAlias === 'b8ldao'
+    betTypeAlias === 'b8ldao' ||
+    betTypeInfo.isPermutation
 
   // Khởi tạo combinationCount
   let combinationCount = 1
@@ -300,6 +301,7 @@ function getBetTypeInfo(line, stationInfo, userSettings) {
       alias: betTypeAlias || '',
       payoutRate: 0,
       combined: false,
+      isPermutation: false,
     }
   }
 
@@ -385,6 +387,7 @@ function getBetTypeInfo(line, stationInfo, userSettings) {
     payoutRate,
     combined: defaultBetType.combined || false,
     specialCalc: defaultBetType.specialCalc || null,
+    isPermutation: defaultBetType.isPermutation || false,
   }
 }
 
@@ -462,9 +465,12 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
   else if (numberInfo.isPermutation) {
     // Tổng số hoán vị của tất cả số
     let totalPermutations = 0
+    const permutations = {}
 
     for (const number of line.numbers || []) {
-      totalPermutations += calculatePermutationCount(number)
+      const perms = generatePermutations(number)
+      permutations[number] = perms
+      totalPermutations += perms.length
     }
 
     // Tính stake cho kiểu đảo
@@ -485,6 +491,8 @@ function calculateLineStake(line, stationInfo, betTypeInfo, numberInfo) {
       multiplier: stationInfo.multiplier,
       formula: `${stationInfo.count} × ${totalPermutations} × ${numberInfo.combinationCount} × ${betAmount} × ${stationInfo.multiplier}`,
       betTypeAlias: betTypeAlias,
+      isPermutation: true, // Đánh dấu là kiểu hoán vị
+      permutations: permutations, // Lưu danh sách các hoán vị
     }
   } else {
     const stake =

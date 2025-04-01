@@ -129,12 +129,31 @@ const BetCodeCard = ({
     const allNumbers = []
     betCode.lines.forEach((line) => {
       if (line.numbers && Array.isArray(line.numbers)) {
+        // Thêm các số cơ bản
         allNumbers.push(...line.numbers)
+
+        // Thêm các số hoán vị nếu có
+        line.numbers.forEach((number) => {
+          // Kiểm tra xem số có permutations không
+          const perms =
+            (line.permutations && line.permutations[number]) ||
+            (betCode.permutations && betCode.permutations[number]) ||
+            []
+
+          // Thêm tất cả các số hoán vị trừ số gốc (đã được thêm ở trên)
+          perms.forEach((perm) => {
+            if (perm !== number && !allNumbers.includes(perm)) {
+              allNumbers.push(perm)
+            }
+          })
+        })
       }
     })
 
     return allNumbers
   }
+
+  console.log('BetCodeCard - Bet Code:', betCode)
 
   // Hàm lấy tên và mã kiểu cược từ betCode.lines
   const getBetTypeNames = () => {
@@ -308,19 +327,9 @@ const BetCodeCard = ({
               <div className='flex items-center gap-1 mb-1'>
                 <Tag className='h-3 w-3 text-blue-600' />
                 <span className='text-xs text-muted-foreground'>Số cược:</span>
-
-                {/* Show permutation indicator if applicable */}
-                {betCode.lines &&
-                  betCode.lines.some((line) => line.isPermutation) && (
-                    <Badge
-                      variant='outline'
-                      className='ml-1 text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-200'>
-                      Hoán vị
-                    </Badge>
-                  )}
               </div>
-              <div className='flex flex-wrap gap-1 max-h-16 overflow-y-auto pr-1'>
-                {numbers.slice(0, 12).map((number, idx) => (
+              <div className='flex flex-wrap gap-2 max-h-16 overflow-y-auto pr-1'>
+                {numbers.map((number, idx) => (
                   <Badge
                     key={idx}
                     variant='outline'
@@ -328,42 +337,7 @@ const BetCodeCard = ({
                     {number}
                   </Badge>
                 ))}
-                {numbers.length > 12 && (
-                  <Badge
-                    variant='outline'
-                    className='font-medium bg-muted text-muted-foreground text-xs'>
-                    +{numbers.length - 12} số
-                  </Badge>
-                )}
               </div>
-
-              {/* Permutation summary if applicable */}
-              {betCode.lines &&
-                betCode.lines.some((line) => line.isPermutation) && (
-                  <div className='mt-1.5 text-xs text-green-700 flex items-center'>
-                    <span className='text-muted-foreground mr-1'>Hoán vị:</span>
-                    {(() => {
-                      // Count total permutations
-                      let totalPerms = 0
-                      betCode.lines.forEach((line) => {
-                        if (line.isPermutation && line.permutations) {
-                          Object.values(line.permutations).forEach((perms) => {
-                            totalPerms += perms.length
-                          })
-                        }
-                      })
-                      return <span>{totalPerms} biến thể</span>
-                    })()}
-                    <span
-                      className='ml-1 text-primary text-xs cursor-pointer hover:underline'
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleOpenDetail()
-                      }}>
-                      Xem chi tiết
-                    </span>
-                  </div>
-                )}
             </div>
           )}
 

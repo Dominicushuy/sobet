@@ -84,7 +84,8 @@ function getNumberInfo(line, betTypeInfo, station) {
     betTypeAlias === 'b7ldao' ||
     betTypeAlias === 'baotamdao' ||
     betTypeAlias === 'b8ld' ||
-    betTypeAlias === 'b8ldao'
+    betTypeAlias === 'b8ldao' ||
+    betTypeInfo.isPermutation
 
   // Khởi tạo combinationCount
   let combinationCount = 1
@@ -209,6 +210,7 @@ function getBetTypeInfo(line, stationInfo, userSettings) {
       alias: betTypeAlias || '',
       payoutRate: 0,
       combined: false,
+      isPermutation: false,
     }
   }
 
@@ -292,6 +294,7 @@ function getBetTypeInfo(line, stationInfo, userSettings) {
     payoutRate,
     combined: defaultBetType.combined || false,
     specialCalc: defaultBetType.specialCalc || null,
+    isPermutation: defaultBetType.isPermutation || false,
   }
 }
 

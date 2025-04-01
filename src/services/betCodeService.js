@@ -4,6 +4,7 @@ import { formatBetCode } from './betCodeParser/formatter'
 import { calculateStake } from './calculator/stakeCalculator'
 import { calculatePotentialPrize } from './calculator/prizeCalculator'
 import { generatePermutations } from '@/utils/permutationUtils'
+import { defaultBetTypes } from '@/config/defaults'
 
 /**
  * Dịch vụ phân tích và xử lý mã cược
@@ -47,20 +48,34 @@ export const betCodeService = {
         parseResult.lineErrors = errorMessages
       }
 
+      // console.log(parseResult.lines)
+
       if (parseResult.success) {
         // Check for permutation types and ensure the permutations are generated
-        if (parseResult.lines) {
-          for (const line of parseResult.lines) {
-            if (line.isPermutation && !line.permutations) {
-              try {
-                // Generate permutations if not already present
-                const permutations = {}
-                for (const number of line.numbers || []) {
-                  permutations[number] = generatePermutations(number)
-                }
-                line.permutations = permutations
-              } catch (err) {
-                console.error('Error generating permutations in service:', err)
+        for (const line of parseResult.lines) {
+          // Check if this line has a permutation bet type
+          const betTypeAlias = line.betType?.alias?.toLowerCase()
+          const isPermutationType = defaultBetTypes.some(
+            (bt) =>
+              bt.isPermutation && bt.aliases.some((a) => a === betTypeAlias)
+          )
+
+          // If this is a permutation type, mark it and generate permutations
+          if (
+            betTypeAlias &&
+            (betTypeAlias.includes('dao') ||
+              betTypeAlias.includes('dxc') ||
+              isPermutationType ||
+              betTypeAlias === 'xcd')
+          ) {
+            line.isPermutation = true
+
+            // Generate permutations if not already present
+            if (!line.permutations && line.numbers) {
+              line.permutations = {}
+              for (const number of line.numbers) {
+                const perms = generatePermutations(number)
+                line.permutations[number] = perms
               }
             }
           }

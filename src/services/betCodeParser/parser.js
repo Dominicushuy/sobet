@@ -932,6 +932,7 @@ function parseBetLine(line, station) {
     betType: null,
     originalLine: line,
     additionalBetTypes: [],
+    isPermutation: false, // Thêm flag isPermutation mặc định là false
   }
 
   try {
