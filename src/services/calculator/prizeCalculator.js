@@ -79,10 +79,8 @@ function getNumberInfo(line, betTypeInfo, station) {
     betTypeAlias === 'ddui' ||
     betTypeAlias === 'dxcdau' ||
     betTypeAlias === 'dxcduoi' ||
-    betTypeAlias === 'baobaydao' ||
     betTypeAlias === 'b7ld' ||
     betTypeAlias === 'b7ldao' ||
-    betTypeAlias === 'baotamdao' ||
     betTypeAlias === 'b8ld' ||
     betTypeAlias === 'b8ldao' ||
     betTypeInfo.isPermutation

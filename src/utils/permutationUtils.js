@@ -23,10 +23,8 @@ export function isPermutationType(betTypeAlias) {
     'ddui',
     'dxcdau',
     'dxcduoi',
-    'baobaydao',
     'b7ld',
     'b7ldao',
-    'baotamdao',
     'b8ld',
     'b8ldao',
   ]

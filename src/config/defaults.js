@@ -558,7 +558,7 @@ export const defaultBetTypes = [
   },
   {
     name: 'Bao Lô 7 Đảo',
-    aliases: ['baobaydao', 'b7ld', 'b7ldao', 'cover seven permutation'],
+    aliases: ['b7ld', 'b7ldao', 'cover seven permutation'],
     applicableRegions: ['south', 'central'],
     betRule: ['2 digits'],
     matchingDraw: {
@@ -577,7 +577,7 @@ export const defaultBetTypes = [
   },
   {
     name: 'Bao Lô 8 Đảo',
-    aliases: ['baotamdao', 'b8ld', 'b8ldao', 'cover eight permutation'],
+    aliases: ['b8ld', 'b8ldao', 'cover eight permutation'],
     applicableRegions: ['north'],
     betRule: ['2 digits'],
     matchingDraw: {

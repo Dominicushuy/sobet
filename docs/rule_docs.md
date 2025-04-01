@@ -288,7 +288,7 @@ III. Mô tả các kiểu đặt cược:
 
 9. Bao lô 7 đảo:
 
-- Cách viết: "baobaydao", "b7ld" hoặc "b7ldao" đều được.
+- Cách viết: "b7ld" hoặc "b7ldao" đều được.
 - Chỉ áp dụng cho Miền Nam và Miền Trung.
 - Quy tắc đặt: Chọn một hoặc nhiều số có 2 chữ số.
 - Định nghĩa lô khớp:
