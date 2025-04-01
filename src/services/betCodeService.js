@@ -1,10 +1,6 @@
 // src/services/betCodeService.js
 import { parseBetCode } from './betCodeParser/parser'
-import { detectErrors } from './betCodeParser/errorDetector'
-import { suggestFixes, fixBetCode } from './betCodeParser/errorFixer'
 import { formatBetCode } from './betCodeParser/formatter'
-import { calculateStake } from './calculator/stakeCalculator'
-import { calculatePotentialPrize } from './calculator/prizeCalculator'
 
 /**
  * Dịch vụ phân tích và xử lý mã cược
@@ -29,54 +25,16 @@ export const betCodeService = {
       // Phân tích mã cược
       const parseResult = parseBetCode(formattedText)
 
-      // Phát hiện lỗi
-      const errorResult = detectErrors(formattedText, parseResult)
-
-      // Gợi ý sửa lỗi nếu có
-      const fixSuggestions = errorResult.hasErrors
-        ? suggestFixes(formattedText, errorResult)
-        : { hasSuggestions: false, suggestions: [] }
-
-      // Thử sửa lỗi tự động
-      const fixResult = errorResult.hasErrors
-        ? fixBetCode(formattedText, errorResult)
-        : { success: false, fixed: '', changes: [] }
-
       // Nếu mã cược hợp lệ, tính toán số tiền và tiềm năng thắng
       let calculationResults = { stakeResult: null, prizeResult: null }
 
-      if (parseResult.success && !errorResult.hasErrors) {
-        calculationResults.stakeResult = calculateStake(parseResult)
-        calculationResults.prizeResult = calculatePotentialPrize(parseResult)
-      }
-
-      // Kết quả phân tích cũng kiểm tra mã đã sửa nếu có
-      let fixedCodeAnalysis = null
-      if (fixResult.success) {
-        const fixedParseResult = parseBetCode(fixResult.fixed)
-        if (fixedParseResult.success) {
-          const fixedStakeResult = calculateStake(fixedParseResult)
-          const fixedPrizeResult = calculatePotentialPrize(fixedParseResult)
-
-          fixedCodeAnalysis = {
-            parseResult: fixedParseResult,
-            stakeResult: fixedStakeResult,
-            prizeResult: fixedPrizeResult,
-          }
-        }
-      }
-
       return {
-        success: parseResult.success && !errorResult.hasErrors,
+        success: parseResult.success,
         rawText,
         formattedText,
         isFormatted,
         parseResult,
-        errorResult,
-        fixSuggestions,
-        fixResult,
         calculationResults,
-        fixedCodeAnalysis,
       }
     } catch (error) {
       console.error('Error analyzing bet code:', error)
@@ -291,17 +249,15 @@ export const betCodeService = {
         return stationBetCodes.some((item) => {
           const formattedText = formatBetCode(item.betCode)
           const parseResult = parseBetCode(formattedText)
-          const errorResult = detectErrors(formattedText, parseResult)
-          return parseResult.success && !errorResult.hasErrors
+          return parseResult.success
         })
       }
 
       // Xử lý bình thường nếu không phải mã cược nhiều đài
       const formattedText = formatBetCode(text)
       const parseResult = parseBetCode(formattedText)
-      const errorResult = detectErrors(formattedText, parseResult)
 
-      return parseResult.success && !errorResult.hasErrors
+      return parseResult.success
     } catch (error) {
       return false
     }

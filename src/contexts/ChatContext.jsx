@@ -7,8 +7,6 @@ import React, {
   useEffect,
 } from 'react'
 import { parseBetCode } from '../services/betCodeParser/parser'
-import { detectErrors } from '../services/betCodeParser/errorDetector'
-import { suggestFixes, fixBetCode } from '../services/betCodeParser/errorFixer'
 import { formatBetCode } from '../services/betCodeParser/formatter'
 import { calculateStake } from '../services/calculator/stakeCalculator'
 import { calculatePotentialPrize } from '../services/calculator/prizeCalculator'
@@ -74,69 +72,6 @@ export function ChatProvider({ children }) {
 
   const clearMessages = () => {
     setMessages([])
-  }
-
-  // Generate examples for common error types
-  const generateHelpExamples = (errorType, errorMessage, region = 'south') => {
-    const examples = {
-      INVALID_STATION: {
-        example: region === 'south' ? 'vl' : region === 'central' ? 'dn' : 'mb',
-        message: 'Sử dụng tên đài hợp lệ. Ví dụ: vl (Vĩnh Long), mb (Miền Bắc)',
-      },
-      STATION_NOT_AVAILABLE: {
-        example:
-          region === 'south' ? '2dmn' : region === 'central' ? '2dmt' : 'mb',
-        message:
-          'Sử dụng đài có lịch xổ trong ngày. Ví dụ: 2dmn (2 đài miền Nam)',
-      },
-      NO_BET_TYPE: {
-        example: '23.45.67dd10',
-        message:
-          'Thêm kiểu cược. Ví dụ: dd (đầu đuôi), b (bao lô), xc (xỉu chủ)',
-      },
-      INVALID_BET_TYPE: {
-        example: '23.45.67dd10',
-        message: 'Sử dụng kiểu cược hợp lệ. Ví dụ: dd, b, xc, dau, duoi',
-      },
-      INCOMPATIBLE_BET_TYPE: {
-        example: region === 'north' ? '23.45b8l10' : '23.45dd10',
-        message:
-          'Sử dụng kiểu cược phù hợp với miền. Ví dụ: b8l chỉ dùng cho miền Bắc',
-      },
-      NO_NUMBERS: {
-        example: '23.45.67dd10',
-        message: 'Thêm số cược. Ví dụ: 23.45.67',
-      },
-      INVALID_NUMBER_FORMAT: {
-        example: '23.45.67dd10',
-        message: 'Đảm bảo số cược là số. Ví dụ: 23, 45, 67',
-      },
-      INVALID_DIGIT_COUNT: {
-        example: '123xc10',
-        message:
-          'Đảm bảo số chữ số phù hợp với kiểu cược. Ví dụ: 123 cho xỉu chủ',
-      },
-      INVALID_AMOUNT: {
-        example: '23.45.67dd10',
-        message: 'Thêm số tiền cược. Ví dụ: dd10 (10.000đ)',
-      },
-      MIXED_REGIONS: {
-        example: 'vl.dn',
-        message:
-          'Chỉ kết hợp các đài cùng miền. Ví dụ: vl.ct (Vĩnh Long, Cần Thơ)',
-      },
-      DEFAULT: {
-        example: 'mb\n23.45.67dd10',
-        message: 'Mẫu mã cược hợp lệ',
-      },
-    }
-
-    const errorKey =
-      Object.keys(examples).find(
-        (key) => errorMessage.includes(key) || errorType === key
-      ) || 'DEFAULT'
-
-    return examples[errorKey]
   }
 
   /**
@@ -423,6 +358,8 @@ export function ChatProvider({ children }) {
   const processUserMessage = async (text) => {
     setIsTyping(true)
 
+    console.log('Processing user message:', text)
+
     try {
       // Short delay to simulate processing
       await new Promise((resolve) => setTimeout(resolve, 500))
@@ -505,10 +442,7 @@ export function ChatProvider({ children }) {
       // Parse the bet code
       const parseResult = parseBetCode(formattedBetCode)
 
-      // Detect any errors
-      const errorResult = detectErrors(formattedBetCode, parseResult)
-
-      if (parseResult.success && !errorResult.hasErrors) {
+      if (parseResult.success) {
         // Calculate stake and potential prize
         const stakeResult = calculateStake(parseResult)
         const prizeResult = calculatePotentialPrize(parseResult)
@@ -737,155 +671,6 @@ export function ChatProvider({ children }) {
             })
           }
         }
-      } else {
-        // Check if we have any fix suggestions
-        const fixSuggestions = suggestFixes(formattedBetCode, errorResult)
-
-        // Try to auto-fix the errors
-        const fixResult = fixBetCode(formattedBetCode, errorResult)
-
-        let responseMessage = 'Mã cược không đúng định dạng.'
-        let detailedErrors = []
-
-        // Format detailed error messages
-        if (errorResult.errors && errorResult.errors.length > 0) {
-          // Group errors by line if possible
-          const errorsByLine = {}
-
-          errorResult.errors.forEach((error) => {
-            const lineKey =
-              error.lineIndex !== undefined
-                ? `Dòng ${error.lineIndex + 1}`
-                : 'Chung'
-            if (!errorsByLine[lineKey]) {
-              errorsByLine[lineKey] = []
-            }
-
-            // Add examples and more helpful suggestions
-            const helpExample = generateHelpExamples(
-              error.type,
-              error.message,
-              parseResult.station?.region || 'south'
-            )
-
-            errorsByLine[lineKey].push({
-              ...error,
-              suggestion:
-                helpExample.message ||
-                fixSuggestions.suggestions.find(
-                  (s) => s.message === error.message
-                )?.suggestion ||
-                null,
-              example: helpExample.example || null,
-            })
-          })
-
-          // Format errors into a structured list
-          Object.entries(errorsByLine).forEach(([lineKey, errors]) => {
-            const lineErrors = {
-              line: lineKey,
-              errors: errors.map((error) => ({
-                message: error.message,
-                type: error.type,
-                suggestion: error.suggestion,
-                example: error.example,
-              })),
-            }
-            detailedErrors.push(lineErrors)
-          })
-
-          // Generate main error message with a helpful tone
-          const primaryError = errorResult.errors[0]
-          responseMessage = `Mã cược chưa đúng định dạng. ${primaryError.message}`
-
-          // Add a more helpful suggestion based on the error type
-          const helpExample = generateHelpExamples(
-            primaryError.type,
-            primaryError.message,
-            parseResult.station?.region || 'south'
-          )
-          if (helpExample.message) {
-            responseMessage += `\n\n${helpExample.message}`
-          }
-        }
-
-        // Add fix suggestion if available
-        let fixedCodeMessage = ''
-        if (fixResult.success) {
-          // Đảm bảo định dạng đúng trước khi hiển thị cho người dùng
-          const correctedFixedCode = ensureCorrectBetCodeFormat(fixResult.fixed)
-          fixedCodeMessage =
-            '\n\nĐề xuất mã cược sửa lỗi:\n```\n' + correctedFixedCode + '\n```'
-
-          // Try parsing the fixed code
-          const fixedParseResult = parseBetCode(fixResult.fixed)
-          if (fixedParseResult.success) {
-            // Calculate fixed code details
-            const fixedStakeResult = calculateStake(fixedParseResult)
-            const fixedPrizeResult = calculatePotentialPrize(fixedParseResult)
-
-            const fixedTotalStake = fixedStakeResult.success
-              ? fixedStakeResult.totalStake
-              : 0
-            const fixedTotalPotential = fixedPrizeResult.success
-              ? fixedPrizeResult.totalPotential
-              : 0
-
-            // Phát hiện các trường hợp đặc biệt trong mã đã sửa
-            const fixedSpecialCases = extractSpecialCases(
-              fixResult.fixed,
-              fixedParseResult
-            )
-            const hasFixedSpecialCases =
-              fixedSpecialCases.groupedNumbers.length > 0 ||
-              fixedSpecialCases.multipleBetTypes.length > 0
-
-            let fixedSpecialCasesMessage = ''
-            if (hasFixedSpecialCases) {
-              fixedSpecialCasesMessage = '\n\n**Lưu ý về mã cược đã sửa:**\n'
-
-              if (fixedSpecialCases.groupedNumbers.length > 0) {
-                fixedSpecialCasesMessage +=
-                  '\n- Mã cược chứa số gộp thành nhóm sẽ được tách thành các dòng riêng biệt.'
-              }
-
-              if (fixedSpecialCases.multipleBetTypes.length > 0) {
-                fixedSpecialCasesMessage +=
-                  '\n- Mã cược chứa nhiều kiểu cược sẽ được tách thành các dòng riêng biệt.'
-              }
-            }
-
-            fixedCodeMessage +=
-              `\n\nTiền cược: ${fixedTotalStake.toLocaleString()}đ | ` +
-              `Tiềm năng thắng: ${fixedTotalPotential.toLocaleString()}đ` +
-              `${fixedSpecialCasesMessage}\n\n` +
-              'Bạn có thể sao chép mã trên và thử lại hoặc nhấn nút "Áp dụng mã đã sửa" bên dưới.'
-          } else {
-            fixedCodeMessage += '\n\nBạn có thể sao chép mã trên và thử lại.'
-          }
-        }
-
-        // Response with error details and fix suggestions
-        addMessage(
-          `${responseMessage}\n\nVui lòng kiểm tra lại mã cược và thử lại.${fixedCodeMessage}`,
-          'bot',
-          {
-            error: true,
-            detailedErrors,
-            original: text,
-            formatted:
-              formattedBetCode !== text
-                ? ensureCorrectBetCodeFormat(formattedBetCode)
-                : null,
-            fixedCode: fixResult.success
-              ? ensureCorrectBetCodeFormat(fixResult.fixed)
-              : null,
-            changes: fixResult.success ? fixResult.changes : [],
-            suggestions: fixSuggestions.hasSuggestions
-              ? fixSuggestions.suggestions
-              : [],
-          }
-        )
       }
     } catch (error) {
       console.error('Error processing message:', error)

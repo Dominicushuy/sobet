@@ -25,8 +25,6 @@ import {
   Building,
   Hash,
   ListChecks,
-  Sparkles,
-  Scissors,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatMoney } from '@/utils/formatters'
@@ -36,6 +34,8 @@ import { cn } from '@/lib/utils'
 
 const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
   const { confirmDraftCode, removeBetCode, removeDraftCode } = useBetCode()
+
+  // console.log('BetCodeDetailModal betCode:', betCode)
 
   const [activeTab, setActiveTab] = useState('general')
 
@@ -100,7 +100,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
       }
     })
 
-    return [...new Set(allNumbers)] // Remove duplicates
+    return allNumbers // Remove duplicates
   }
 
   const numbers = getAllNumbers()
