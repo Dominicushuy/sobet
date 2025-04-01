@@ -152,6 +152,9 @@ export function parseBetCode(betCode) {
     // Chuẩn hóa dấu xuống dòng và khoảng trắng
     betCode = betCode.trim();
 
+    // Preprocessor: Remove trailing 'n' from amount directly
+    // betCode = betCode.replace(/([a-z]+\d+(?:[,.]\d+)?)n(\s|$|\n)/gi, "$1$2");
+
     // Tiền xử lý: Tự động định dạng khi người dùng nhập đài và mã cược trên cùng một dòng
     if (!betCode.includes("\n")) {
       // Sử dụng split với regex mạnh hơn để xử lý tất cả loại khoảng trắng
@@ -210,7 +213,6 @@ export function parseBetCode(betCode) {
     }
 
     // QUAN TRỌNG: Xử lý nhiều đài trong một đoạn mã cược
-    // Kiểm tra xem mã cược có chứa nhiều đài riêng biệt không
     const multipleStations = detectMultipleStations(betCode);
     if (multipleStations && multipleStations.length > 0) {
       return parseMultipleStationBetCode(multipleStations);
@@ -1196,114 +1198,6 @@ function parseBetLine(line, station) {
     let currentAmount = "";
     let parsingState = "number"; // Trạng thái phân tích: 'number', 'betType', 'amount'
 
-    // for (let i = 0; i < normalizedLine.length; i++) {
-    //   const char = normalizedLine[i];
-
-    //   console.log("char", char);
-
-    //   if (char === ".") {
-    //     // Kết thúc một phần
-    //     if (parsingState === "number" && currentNumber) {
-    //       // Thêm số hiện tại vào danh sách
-    //       const processedNumbers = processNumber(currentNumber, station);
-    //       numbers.push(...processedNumbers);
-    //       currentNumber = "";
-    //     } else if (parsingState === "betType" && currentBetType) {
-    //       // Đã có kiểu cược, nhưng gặp dấu chấm, có thể có nhiều kiểu cược
-    //       result.betType = identifyBetType(currentBetType);
-    //       currentBetType = "";
-    //       parsingState = "number";
-    //     }
-    //   } else if (/[0-9]/.test(char)) {
-    //     // Ký tự số
-    //     if (parsingState === "number" || parsingState === "amount") {
-    //       if (parsingState === "betType" && currentBetType) {
-    //         // Chuyển từ betType sang amount
-    //         result.betType = identifyBetType(currentBetType);
-    //         currentBetType = "";
-    //         parsingState = "amount";
-    //       }
-
-    //       if (
-    //         parsingState === "number" &&
-    //         hasCompleteBetTypeAndAmount(normalizedLine, i)
-    //       ) {
-    //         // Nếu phía sau có đủ kiểu cược và số tiền, kết thúc số hiện tại
-    //         if (currentNumber) {
-    //           const processedNumbers = processNumber(currentNumber, station);
-    //           numbers.push(...processedNumbers);
-    //           currentNumber = "";
-    //         }
-    //         // Chuyển sang phân tích kiểu cược
-    //         parsingState = "betType";
-    //         currentBetType += char;
-    //       } else if (parsingState === "amount") {
-    //         currentAmount += char;
-    //       } else {
-    //         currentNumber += char;
-    //       }
-    //     } else {
-    //       // Trong kiểu cược, có thể là phần của kiểu cược hoặc số tiền
-    //       if (isBetTypeOrAmount(currentBetType + char)) {
-    //         currentBetType += char;
-    //       } else {
-    //         // Chuyển sang phân tích số tiền
-    //         result.betType = identifyBetType(currentBetType);
-    //         currentBetType = "";
-    //         parsingState = "amount";
-    //         currentAmount += char;
-    //       }
-    //     }
-    //   } else if (char === "/" || char === "k") {
-    //     // Ký tự đặc biệt trong số
-    //     if (parsingState === "number") {
-    //       currentNumber += char;
-    //     } else if (parsingState === "betType") {
-    //       currentBetType += char;
-    //     }
-    //   } else if (isAlphabetChar(char)) {
-    //     // Cải tiến: Kiểm tra kỹ hơn khi gặp ký tự chữ cái
-    //     // Ký tự chữ cái - có thể là phần của kiểu cược hoặc là phần của kéo hoặc từ khóa đặc biệt
-
-    //     // Improved check for "keo" pattern
-    //     const isKeoPattern =
-    //       currentNumber.includes("/") &&
-    //       (char.toLowerCase() === "k" ||
-    //         (currentNumber.toLowerCase().includes("/k") &&
-    //           char.toLowerCase() === "e") ||
-    //         (currentNumber.toLowerCase().includes("/ke") &&
-    //           char.toLowerCase() === "o"));
-
-    //     if (
-    //       parsingState === "number" &&
-    //       (isKeoPattern ||
-    //         currentNumber.includes("/") ||
-    //         isPartOfSpecialKeyword(currentNumber, char))
-    //     ) {
-    //       // Đang phân tích "kéo" hoặc các ký tự đặc biệt khác trong số
-    //       currentNumber += char;
-    //     } else {
-    //       // Chuyển sang kiểu cược
-    //       if (parsingState === "number" && currentNumber) {
-    //         const processedNumbers = processNumber(currentNumber, station);
-    //         numbers.push(...processedNumbers);
-    //         currentNumber = "";
-    //       }
-
-    //       parsingState = "betType";
-    //       currentBetType += char;
-    //     }
-    //   } else if (char === ",") {
-    //     // Dấu phẩy có thể dùng trong số tiền
-    //     if (parsingState === "amount") {
-    //       currentAmount += char;
-    //     }
-    //   } else if (char === "n" && parsingState === "amount") {
-    //     // Ký tự 'n' trong số tiền (nghìn)
-    //     // Không thêm gì, bỏ qua
-    //   }
-    // }
-
     // Trong hàm parseBetLine, thay đổi đoạn xử lý ký tự:
     for (let i = 0; i < normalizedLine.length; i++) {
       const char = normalizedLine[i];
@@ -1431,8 +1325,10 @@ function parseBetLine(line, station) {
 
     // Nếu vẫn chưa có kiểu cược, thử phân tích lại xem có vô tình bỏ qua không
     if (!result.betType && numbers.length > 0) {
-      // Tìm kiểu cược ở cuối dòng
-      const betTypeMatch = normalizedLine.match(/([a-z]+)(\d+(?:[,.]\d+)?)?$/i);
+      // Tìm kiểu cược ở cuối dòng (bao gồm cả trường hợp có khoảng trắng + chữ 'n' sau số tiền)
+      const betTypeMatch = normalizedLine.match(
+        /([a-z]+)(?:\s+)?(\d+(?:[,.]\d+)?(?:n)?)?$/i
+      );
       if (betTypeMatch) {
         const potentialBetType = betTypeMatch[1].toLowerCase();
         const betType = identifyBetType(potentialBetType);

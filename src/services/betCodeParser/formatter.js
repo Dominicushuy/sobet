@@ -311,6 +311,12 @@ function formatBetLine(line) {
     "$1$2"
   );
 
+  // Preprocessor: Remove trailing 'n' from amount directly
+  normalizedLine = normalizedLine.replace(
+    /([a-z]+\d+(?:[,.]\d+)?)n(\s|$|\n)/gi,
+    "$1$2"
+  );
+
   // console.log("Normalized line after initial replacements:", normalizedLine);
 
   // Special handling for đá pattern with concatenated pairs - MUST BE BEFORE REPLACING COMMA
@@ -409,8 +415,9 @@ function formatBetLine(line) {
     normalizedLine = normalizedLine.replace(
       pattern,
       (match, betType, amount) => {
-        // Chuẩn hóa số tiền (đổi dấu , thành .)
-        const normalizedAmount = amount ? amount.replace(/,/g, ".") : "10";
+        // Loại bỏ chữ 'n' ở cuối nếu có và chuẩn hóa số tiền (đổi dấu , thành .)
+        const cleanAmount = amount ? amount.replace(/n$/i, "") : "10";
+        const normalizedAmount = cleanAmount.replace(/,/g, ".");
         return `${betType}${normalizedAmount}`;
       }
     );
