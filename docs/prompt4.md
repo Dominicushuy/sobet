@@ -1,4 +1,5 @@
-Hiện tại tôi muốn đặt nhiều miền/đài trong một lúc nhưng không được (hệ thống đang lấy theo tên đài đầu tiên và dòng cược cuối cùng), ví dụ:
+Trường hợp nâng cao, tôi muốn đặt cược cho nhiều miền/đài trong một lần, nhưng hệ thống chỉ ghi nhận miền/đài đầu tiên và dòng cược cuối cùng. Tôi đã thử nghiệm với các cú pháp khác nhau nhưng không thành công. Hãy kiểm tra lại các file logic đặt cược và logic ghi nhận cược, sau đó nâng cấp thêm một số cú pháp mới cho phép người dùng đặt cược cho nhiều miền/đài trong một lần.
+Ví dụ:
 
 ```
 mb

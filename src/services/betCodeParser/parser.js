@@ -209,6 +209,13 @@ export function parseBetCode(betCode) {
       }
     }
 
+    // QUAN TRỌNG: Xử lý nhiều đài trong một đoạn mã cược
+    // Kiểm tra xem mã cược có chứa nhiều đài riêng biệt không
+    const multipleStations = detectMultipleStations(betCode)
+    if (multipleStations && multipleStations.length > 0) {
+      return parseMultipleStationBetCode(multipleStations)
+    }
+
     // Tiếp tục xử lý như bình thường
     const normalizedBetCode = betCode.trim().toLowerCase()
 
@@ -308,18 +315,146 @@ export function parseBetCode(betCode) {
 }
 
 /**
+ * Phát hiện nhiều đài trong mã cược
+ * @param {string} betCode - Mã cược đầu vào
+ * @returns {Array|null} Danh sách các cặp đài-dòng cược
+ */
+function detectMultipleStations(betCode) {
+  const lines = betCode
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+  if (lines.length < 2) return null
+
+  // Kiểm tra xem có ít nhất 2 dòng đài
+  const stationLines = lines.filter((line) => isStationLine(line))
+  if (stationLines.length < 2) return null
+
+  const result = []
+  let currentStation = null
+  let currentBetLines = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line) continue
+
+    if (isStationLine(line)) {
+      // Nếu đã có station và betLines, lưu lại vào result
+      if (currentStation && currentBetLines.length > 0) {
+        result.push({
+          station: currentStation,
+          betLines: [...currentBetLines],
+        })
+      }
+
+      // Bắt đầu station mới
+      currentStation = line
+      currentBetLines = []
+    } else {
+      // Thêm dòng cược vào station hiện tại
+      if (currentStation) {
+        currentBetLines.push(line)
+      }
+    }
+  }
+
+  // Thêm cặp cuối cùng nếu có
+  if (currentStation && currentBetLines.length > 0) {
+    result.push({
+      station: currentStation,
+      betLines: [...currentBetLines],
+    })
+  }
+
+  return result.length > 0 ? result : null
+}
+
+/**
+ * Phân tích mã cược có nhiều đài
+ * @param {Array} multipleStations - Danh sách các cặp đài-dòng cược
+ * @returns {object} Kết quả phân tích
+ */
+function parseMultipleStationBetCode(multipleStations) {
+  // Để dễ hiểu, chỉ xử lý station đầu tiên
+  // Thông tin về nhiều station sẽ được xử lý ở lớp cao hơn (ChatContext)
+
+  if (!multipleStations || multipleStations.length === 0) {
+    return {
+      success: false,
+      errors: [{ message: 'Không có dữ liệu đài hợp lệ' }],
+    }
+  }
+
+  // Phân tích station đầu tiên
+  const firstStation = multipleStations[0]
+  if (
+    !firstStation.station ||
+    !firstStation.betLines ||
+    firstStation.betLines.length === 0
+  ) {
+    return {
+      success: false,
+      errors: [{ message: 'Dữ liệu đài không hợp lệ' }],
+    }
+  }
+
+  // Tạo mã cược cho station đầu tiên để phân tích
+  const singleStationBetCode = `${
+    firstStation.station
+  }\n${firstStation.betLines.join('\n')}`
+  const result = parseBetCode(singleStationBetCode)
+
+  if (result.success) {
+    // Đánh dấu là có nhiều đài
+    result.hasMultipleStations = true
+    result.stationCount = multipleStations.length
+  }
+
+  return result
+}
+
+/**
  * Kiểm tra xem dòng có phải là dòng chỉ chứa tên đài không
  */
 function isStationLine(line) {
-  // Loại bỏ dấu chấm cuối
-  const cleanLine = line.replace(/\.+$/, '').trim()
+  // Cải tiến: Kiểm tra kỹ lưỡng hơn để xác định dòng đài
 
-  // Kiểm tra xem dòng có phải là tên đài không
-  return defaultStations.some(
-    (station) =>
+  // 1. Loại bỏ dấu chấm cuối
+  const cleanLine = line.replace(/\.+$/, '').trim().toLowerCase()
+
+  // 2. Kiểm tra các mẫu đài nhiều miền (vd: 2dmn, 3dmt)
+  if (/^\d+d(mn|mt|n|t|nam|trung)$/i.test(cleanLine)) {
+    return true
+  }
+
+  // 3. Kiểm tra tên đài đơn lẻ
+  for (const station of defaultStations) {
+    if (
       station.name.toLowerCase() === cleanLine ||
       station.aliases.some((alias) => alias === cleanLine)
-  )
+    ) {
+      return true
+    }
+  }
+
+  // 4. Kiểm tra mẫu "mb", "mt", "mn" và biến thể của chúng
+  if (/^(mb|mt|mn|mienbac|mientrung|miennam|hanoi|hn)$/i.test(cleanLine)) {
+    return true
+  }
+
+  // 5. Kiểm tra nếu là tổ hợp các đài (vd: vl.ct, dn.hue)
+  if (cleanLine.includes('.')) {
+    const parts = cleanLine.split('.')
+    return parts.every((part) =>
+      defaultStations.some(
+        (station) =>
+          station.name.toLowerCase() === part ||
+          station.aliases.some((alias) => alias === part)
+      )
+    )
+  }
+
+  return false
 }
 
 /**

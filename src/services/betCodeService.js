@@ -17,6 +17,11 @@ export const betCodeService = {
    */
   analyzeBetCode(rawText) {
     try {
+      // Kiểm tra nếu là trường hợp nhiều đài trong một mã cược
+      if (this.isMultiStationBetCode(rawText)) {
+        return this.analyzeMultiStationBetCode(rawText)
+      }
+
       // Chuẩn hóa định dạng
       const formattedText = formatBetCode(rawText)
       const isFormatted = formattedText !== rawText
@@ -84,12 +89,214 @@ export const betCodeService = {
   },
 
   /**
+   * Kiểm tra xem có phải mã cược nhiều đài không
+   * @param {string} text - Mã cược cần kiểm tra
+   * @returns {boolean} Là mã cược nhiều đài hay không
+   */
+  isMultiStationBetCode(text) {
+    if (!text || typeof text !== 'string') return false
+
+    const lines = text
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim() !== '')
+    if (lines.length < 2) return false
+
+    // Đếm số dòng đài
+    let stationLineCount = 0
+    for (const line of lines) {
+      if (this.isStationLine(line)) {
+        stationLineCount++
+        if (stationLineCount >= 2) return true
+      }
+    }
+
+    return false
+  },
+
+  /**
+   * Kiểm tra xem một dòng có phải là dòng đài không
+   * @param {string} line - Dòng cần kiểm tra
+   * @returns {boolean} Là dòng đài hay không
+   */
+  isStationLine(line) {
+    // Lấy danh sách các đài từ defaultStations
+    const stationNames = [
+      'mb',
+      'mt',
+      'mn',
+      'mienbac',
+      'mientrung',
+      'miennam',
+      'hn',
+      'hanoi',
+      'vl',
+      'ct',
+      'tp',
+      'hcm',
+      'dt',
+      'cm',
+      'bt',
+      'vt',
+      'bl',
+      'ag',
+      'dn',
+      'tg',
+      'la',
+      'kg',
+      'dl',
+      'qn',
+      'kh',
+      'hue',
+      'py',
+      'gl',
+    ]
+
+    // Các mẫu đài nhiều miền
+    const multiRegionPattern = /^\d+d(mn|mt|n|t|nam|trung)$/i
+
+    // Kiểm tra nếu dòng chỉ chứa tên đài
+    const simpleLine = line.trim().toLowerCase().replace(/\.+$/, '')
+
+    // Trường hợp 1: đài nhiều miền
+    if (multiRegionPattern.test(simpleLine)) {
+      return true
+    }
+
+    // Trường hợp 2: Đài đơn lẻ
+    for (const stationName of stationNames) {
+      if (simpleLine === stationName) {
+        return true
+      }
+    }
+
+    // Trường hợp 3: Nhiều đài (vl.ct, v.v.)
+    if (simpleLine.includes('.')) {
+      const parts = simpleLine.split('.')
+      if (parts.length > 1) {
+        // Nếu tất cả các phần đều là tên đài
+        return parts.every((part) => stationNames.includes(part))
+      }
+    }
+
+    return false
+  },
+
+  /**
+   * Phân tích mã cược nhiều đài
+   * @param {string} rawText - Mã cược thô
+   * @returns {object} Kết quả phân tích
+   */
+  analyzeMultiStationBetCode(rawText) {
+    const stationBetCodes = this.extractMultiStationBetCodes(rawText)
+    if (!stationBetCodes || stationBetCodes.length === 0) {
+      return {
+        success: false,
+        error: 'Không thể phân tách mã cược nhiều đài',
+        rawText,
+        multiStation: true,
+      }
+    }
+
+    // Phân tích từng cặp đài-dòng cược
+    const analysisResults = stationBetCodes.map((item) => ({
+      station: item.station,
+      betLines: item.betLines,
+      analysis: this.analyzeBetCode(item.betCode),
+    }))
+
+    // Kiểm tra xem có ít nhất một mã cược thành công
+    const hasSuccessfulCode = analysisResults.some(
+      (result) => result.analysis.success
+    )
+
+    // Trả về kết quả tích hợp
+    return {
+      success: hasSuccessfulCode,
+      rawText,
+      multiStation: true,
+      stationBetCodes,
+      analysisResults,
+    }
+  },
+
+  /**
+   * Trích xuất các cặp đài-dòng cược từ mã cược nhiều đài
+   * @param {string} rawText - Mã cược thô
+   * @returns {Array} Danh sách các cặp đài-dòng cược
+   */
+  extractMultiStationBetCodes(rawText) {
+    const lines = rawText
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim() !== '')
+    if (lines.length < 2) return null
+
+    const result = []
+    let currentStation = null
+    let currentBetLines = []
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) continue
+
+      if (this.isStationLine(line)) {
+        // Nếu đã có station và betLines, lưu lại vào result
+        if (currentStation && currentBetLines.length > 0) {
+          const betCode = `${currentStation}\n${currentBetLines.join('\n')}`
+          result.push({
+            station: currentStation,
+            betLines: [...currentBetLines],
+            betCode,
+          })
+        }
+
+        // Bắt đầu station mới
+        currentStation = line
+        currentBetLines = []
+      } else {
+        // Thêm dòng cược vào station hiện tại
+        if (currentStation) {
+          currentBetLines.push(line)
+        }
+      }
+    }
+
+    // Thêm cặp cuối cùng nếu có
+    if (currentStation && currentBetLines.length > 0) {
+      const betCode = `${currentStation}\n${currentBetLines.join('\n')}`
+      result.push({
+        station: currentStation,
+        betLines: [...currentBetLines],
+        betCode,
+      })
+    }
+
+    return result.length > 0 ? result : null
+  },
+
+  /**
    * Kiểm tra nhanh xem một mã cược có hợp lệ không
    * @param {string} text - Mã cược cần kiểm tra
    * @returns {boolean} Kết quả kiểm tra
    */
   isValidBetCode(text) {
     try {
+      // Kiểm tra trường hợp nhiều đài
+      if (this.isMultiStationBetCode(text)) {
+        const stationBetCodes = this.extractMultiStationBetCodes(text)
+        if (!stationBetCodes || stationBetCodes.length === 0) return false
+
+        // Kiểm tra xem có ít nhất một mã cược hợp lệ
+        return stationBetCodes.some((item) => {
+          const formattedText = formatBetCode(item.betCode)
+          const parseResult = parseBetCode(formattedText)
+          const errorResult = detectErrors(formattedText, parseResult)
+          return parseResult.success && !errorResult.hasErrors
+        })
+      }
+
+      // Xử lý bình thường nếu không phải mã cược nhiều đài
       const formattedText = formatBetCode(text)
       const parseResult = parseBetCode(formattedText)
       const errorResult = detectErrors(formattedText, parseResult)
@@ -106,6 +313,55 @@ export const betCodeService = {
    * @returns {object} Thông tin tóm tắt
    */
   extractBetCodeSummary(text) {
+    // Kiểm tra trường hợp nhiều đài
+    if (this.isMultiStationBetCode(text)) {
+      const stationBetCodes = this.extractMultiStationBetCodes(text)
+      if (!stationBetCodes || stationBetCodes.length === 0) {
+        return {
+          isValid: false,
+          station: null,
+          lineCount: 0,
+          stakeAmount: 0,
+          potentialWinning: 0,
+          multiStation: true,
+          stationCount: 0,
+        }
+      }
+
+      // Tính tổng hợp từ tất cả các đài
+      let totalStakeAmount = 0
+      let totalPotentialWinning = 0
+      let totalLineCount = 0
+      let validCodeCount = 0
+
+      stationBetCodes.forEach((item) => {
+        const analysis = this.analyzeBetCode(item.betCode)
+        if (analysis.success) {
+          validCodeCount++
+          const stakeResult = analysis.calculationResults.stakeResult
+          const prizeResult = analysis.calculationResults.prizeResult
+
+          totalStakeAmount += stakeResult.success ? stakeResult.totalStake : 0
+          totalPotentialWinning += prizeResult.success
+            ? prizeResult.totalPotential
+            : 0
+          totalLineCount += analysis.parseResult.lines.length
+        }
+      })
+
+      return {
+        isValid: validCodeCount > 0,
+        multiStation: true,
+        stationCount: stationBetCodes.length,
+        lineCount: totalLineCount,
+        stakeAmount: totalStakeAmount,
+        potentialWinning: totalPotentialWinning,
+        validCodeCount,
+        totalStations: stationBetCodes.length,
+      }
+    }
+
+    // Xử lý bình thường nếu không phải mã cược nhiều đài
     const analysis = this.analyzeBetCode(text)
 
     if (!analysis.success) {
