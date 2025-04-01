@@ -289,6 +289,76 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
                         </Badge>
                       ))}
                     </div>
+
+                    {/* Display permutations if available */}
+                    {betCode.lines &&
+                      betCode.lines.some((line) => line.isPermutation) && (
+                        <div className='mt-4 pt-3 border-t'>
+                          <h3 className='text-sm font-medium flex items-center gap-1.5 mb-2'>
+                            <Hash className='h-4 w-4 text-green-600' />
+                            Các hoán vị đối với kiểu đảo
+                          </h3>
+                          <div className='space-y-3'>
+                            {betCode.lines
+                              .filter((line) => line.isPermutation)
+                              .map((line, lineIdx) => (
+                                <div
+                                  key={lineIdx}
+                                  className='bg-green-50 p-3 rounded-md border border-green-100'>
+                                  <div className='text-sm font-medium mb-2 text-green-800'>
+                                    Dòng {lineIdx + 1}:{' '}
+                                    {line.betType?.alias || 'N/A'}
+                                  </div>
+                                  {line.numbers &&
+                                    line.numbers.map((number, numIdx) => {
+                                      // Get permutations for this number
+                                      const perms =
+                                        line.permutations &&
+                                        line.permutations[number]
+                                          ? line.permutations[number]
+                                          : betCode.permutations &&
+                                            betCode.permutations[number]
+                                          ? betCode.permutations[number]
+                                          : []
+
+                                      return (
+                                        <div key={numIdx} className='mb-2'>
+                                          <div className='flex items-center gap-1.5 text-sm'>
+                                            <span className='font-medium'>
+                                              Số gốc:
+                                            </span>
+                                            <Badge className='bg-blue-100 text-blue-700'>
+                                              {number}
+                                            </Badge>
+                                            <span className='text-muted-foreground'>
+                                              {perms.length > 0 &&
+                                                `(${perms.length} hoán vị)`}
+                                            </span>
+                                          </div>
+                                          {perms.length > 0 && (
+                                            <div className='flex flex-wrap gap-1 mt-1.5 ml-3'>
+                                              {perms.map((perm, permIdx) => (
+                                                <Badge
+                                                  key={permIdx}
+                                                  variant='outline'
+                                                  className={`text-xs ${
+                                                    perm === number
+                                                      ? 'bg-blue-100 text-blue-700'
+                                                      : 'bg-green-50 text-green-700'
+                                                  }`}>
+                                                  {perm}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
                   </div>
                 )}
 

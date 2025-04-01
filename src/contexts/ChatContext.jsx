@@ -405,6 +405,8 @@ export function ChatProvider({ children }) {
                 betCodeResult.calculationResults.stakeResult?.details || [],
               prizeDetails:
                 betCodeResult.calculationResults.prizeResult?.details || [],
+              // Add permutation information if available
+              permutations: betCodeResult.parseResult.permutations || {},
             })
 
             successCount++
@@ -483,7 +485,20 @@ export function ChatProvider({ children }) {
 
           parseResult.lines.forEach((line, index) => {
             if (!line.valid && line.error) {
-              lineErrors.push(`Dòng ${index + 1}: ${line.error}`)
+              // Định dạng rõ ràng hơn cho lỗi độ dài không nhất quán
+              if (
+                line.error.includes(
+                  'Tất cả các số trong một dòng cược phải có cùng độ dài'
+                )
+              ) {
+                lineErrors.push(
+                  `Dòng ${index + 1}: ${
+                    line.error
+                  } - Không thể kết hợp các số có độ dài khác nhau (VD: 11 và 222)`
+                )
+              } else {
+                lineErrors.push(`Dòng ${index + 1}: ${line.error}`)
+              }
             }
           })
 

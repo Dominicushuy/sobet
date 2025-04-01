@@ -3,6 +3,7 @@ import { parseBetCode } from './betCodeParser/parser'
 import { formatBetCode } from './betCodeParser/formatter'
 import { calculateStake } from './calculator/stakeCalculator'
 import { calculatePotentialPrize } from './calculator/prizeCalculator'
+import { generatePermutations } from '@/utils/permutationUtils'
 
 /**
  * Dịch vụ phân tích và xử lý mã cược
@@ -47,6 +48,24 @@ export const betCodeService = {
       }
 
       if (parseResult.success) {
+        // Check for permutation types and ensure the permutations are generated
+        if (parseResult.lines) {
+          for (const line of parseResult.lines) {
+            if (line.isPermutation && !line.permutations) {
+              try {
+                // Generate permutations if not already present
+                const permutations = {}
+                for (const number of line.numbers || []) {
+                  permutations[number] = generatePermutations(number)
+                }
+                line.permutations = permutations
+              } catch (err) {
+                console.error('Error generating permutations in service:', err)
+              }
+            }
+          }
+        }
+
         calculationResults.stakeResult = calculateStake(parseResult)
         calculationResults.prizeResult = calculatePotentialPrize(parseResult)
 

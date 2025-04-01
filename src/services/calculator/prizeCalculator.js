@@ -1,5 +1,6 @@
 // src/services/calculator/prizeCalculator.js
 import { defaultBetTypes } from '@/config/defaults'
+import { calculatePermutationCount } from '@/utils/permutationUtils'
 
 /**
  * Lấy thông tin về đài
@@ -183,40 +184,6 @@ function getNumberInfo(line, betTypeInfo, station) {
     digitCount,
   }
 }
-
-/**
- * Tính số lượng hoán vị của một số (không tính trùng lặp)
- * @param {string} number - Số cần tính hoán vị
- * @returns {number} Số lượng hoán vị
- */
-function calculatePermutationCount(number) {
-  if (!number) return 1
-
-  // Đếm số lượng mỗi chữ số
-  const digitCounts = {}
-  for (let i = 0; i < number.length; i++) {
-    const digit = number[i]
-    digitCounts[digit] = (digitCounts[digit] || 0) + 1
-  }
-
-  // Tính giai thừa của độ dài số
-  let factorial = 1
-  for (let i = 2; i <= number.length; i++) {
-    factorial *= i
-  }
-
-  // Chia cho giai thừa của số lần xuất hiện của mỗi chữ số
-  for (const digit in digitCounts) {
-    let digitFactorial = 1
-    for (let i = 2; i <= digitCounts[digit]; i++) {
-      digitFactorial *= i
-    }
-    factorial /= digitFactorial
-  }
-
-  return factorial
-}
-
 /**
  * Lấy thông tin về kiểu cược
  * @param {object} line - Dòng mã cược

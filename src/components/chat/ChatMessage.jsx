@@ -3,7 +3,7 @@ import React from 'react'
 import { format } from 'date-fns'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Copy, Check, AlertTriangle, ArrowRight } from 'lucide-react'
+import { Copy, Check, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -29,42 +29,6 @@ const formatBetCode = (text) => {
           {line}
         </div>
       ))}
-    </div>
-  )
-}
-
-// Highlight error parts in bet code text
-const HighlightErrors = ({ text, errors }) => {
-  if (!text || !errors || errors.length === 0) return text
-
-  // For simplicity, just highlight the whole line with the error
-  const lines = text.split('\n')
-
-  return (
-    <div className='space-y-1'>
-      {lines.map((line, index) => {
-        const hasError = errors.some(
-          (err) =>
-            err.lineIndex === index ||
-            (err.line && err.line.includes(`Dòng ${index + 1}`))
-        )
-
-        return (
-          <div
-            key={index}
-            className={cn(
-              'pl-2 border-l-2',
-              hasError
-                ? 'border-destructive bg-destructive/10'
-                : 'border-primary-foreground/30'
-            )}>
-            {hasError && (
-              <AlertTriangle className='h-3 w-3 inline-block mr-1 text-destructive' />
-            )}
-            {line}
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -96,13 +60,34 @@ const ErrorDetails = ({ parseResult }) => {
             {parseResult.lines.map((line, idx) =>
               !line.valid && line.error ? (
                 <li key={idx} className='text-destructive'>
-                  Dòng {idx + 1}: {line.error}
+                  <span className='font-semibold'>Dòng {idx + 1}:</span>{' '}
+                  {line.error.includes(
+                    'Tất cả các số trong một dòng cược phải có cùng độ dài'
+                  )
+                    ? `${line.error} - Các số ${line.numbers?.join(
+                        ', '
+                      )} có độ dài khác nhau`
+                    : line.error}
                 </li>
               ) : null
             )}
           </ul>
         </div>
       )}
+
+      {/* Thêm ví dụ để hướng dẫn người dùng */}
+      <div className='mt-3 text-xs text-muted-foreground bg-muted/30 p-2 rounded'>
+        <p className='mb-1 font-medium'>Hướng dẫn:</p>
+        <p>- Tất cả các số trong cùng một dòng phải có cùng độ dài</p>
+        <p>
+          - Ví dụ đúng: <span className='text-green-600'>11.22.33b1</span> hoặc{' '}
+          <span className='text-green-600'>111.222.333b1</span>
+        </p>
+        <p>
+          - Ví dụ sai: <span className='text-red-600'>11.222.33b1</span> (kết
+          hợp số 2 và 3 chữ số)
+        </p>
+      </div>
     </div>
   )
 }
