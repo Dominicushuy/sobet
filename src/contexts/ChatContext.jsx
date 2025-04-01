@@ -300,22 +300,30 @@ export function ChatProvider({ children }) {
 
     const betCodesByStation = []
     let currentStation = null
+    let isNewStation = true
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
       if (!line) continue
 
+      // Detect if this line is a station line
       if (isStationLine(line)) {
         currentStation = line
+        isNewStation = true
         continue
       }
 
+      // If we have a station and this is a bet line
       if (currentStation) {
+        // Create a new station-betcode pair
         betCodesByStation.push({
           station: currentStation,
           betLine: line,
           betCode: `${currentStation}\n${line}`,
         })
+
+        // Only mark as new station for the first bet line after a station
+        isNewStation = false
       }
     }
 
@@ -358,8 +366,11 @@ export function ChatProvider({ children }) {
       // Short delay to simulate processing
       await new Promise((resolve) => setTimeout(resolve, 500))
 
+      // Format the bet code first for better parsing
+      const formattedBetCode = formatBetCode(text)
+
       // NEW: Kiểm tra nếu có nhiều đài trong một mã cược
-      const multiStationBetCodes = processMultiStationBetCode(text)
+      const multiStationBetCodes = processMultiStationBetCode(formattedBetCode)
 
       console.log('multiStationBetCodes:', multiStationBetCodes)
 
@@ -431,9 +442,6 @@ export function ChatProvider({ children }) {
         setIsTyping(false)
         return
       }
-
-      // Format the bet code first for better parsing
-      const formattedBetCode = formatBetCode(text)
 
       // Parse the bet code
       const parseResult = parseBetCode(formattedBetCode)
