@@ -273,8 +273,17 @@ function formatBetLine(line) {
   // Loại bỏ dấu chấm ở đầu dòng
   normalizedLine = normalizedLine.replace(/^\./, '')
 
-  // Sửa lỗi "xcdui" thành "xcduoi"
-  normalizedLine = normalizedLine.replace(/xcdui/g, 'xcduoi')
+  // Sửa lỗi "xcdui" thành "duoi"
+  normalizedLine = normalizedLine.replace(/xcdui/g, 'duoi')
+
+  // Sửa lỗi "xcduoi" thành "duoi"
+  normalizedLine = normalizedLine.replace(/xcduoi/g, 'duoi')
+
+  // Sửa lỗi "xcd" thành "dau"
+  normalizedLine = normalizedLine.replace(/xcd(?!\w)/g, 'dau')
+
+  // Sửa lỗi "xcdau" thành "dau"
+  normalizedLine = normalizedLine.replace(/xcdau/g, 'dau')
 
   // Sửa lỗi "dui" thành "duoi"
   normalizedLine = normalizedLine.replace(/(\b|[^a-z])dui(\d+|$)/g, '$1duoi$2')
