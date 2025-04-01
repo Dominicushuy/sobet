@@ -1368,6 +1368,18 @@ function parseBetLine(line, station) {
     result.valid =
       result.numbers.length > 0 && result.betType && result.amount > 0
 
+    // NEW CODE: Add compatibility validation between bet type and region
+    if (result.valid && result.betType) {
+      const compatibilityCheck = validateBetTypeRegionCompatibility(
+        result.betType,
+        station
+      )
+      if (!compatibilityCheck.valid) {
+        result.valid = false
+        result.error = compatibilityCheck.error
+      }
+    }
+
     return result
   } catch (error) {
     console.error('Lỗi khi phân tích dòng cược:', error, line)
@@ -1666,6 +1678,98 @@ function isAlphabetChar(char) {
   return /[a-z]/i.test(char)
 }
 
+// Add new validation helper function
+function validateBetTypeDigitCount(betTypeId, digitCount) {
+  const betType = defaultBetTypes.find((bt) => bt.name === betTypeId)
+  if (!betType || !betType.betRule) {
+    return { valid: true } // No rules defined, allow any
+  }
+
+  const allowedDigitRules = betType.betRule
+  const isAllowed = allowedDigitRules.some(
+    (rule) => rule === `${digitCount} digits`
+  )
+
+  if (!isAllowed) {
+    return {
+      valid: false,
+      message: `Kiểu cược ${
+        betType.name
+      } chỉ chấp nhận ${allowedDigitRules.join(
+        ', '
+      )}, không hỗ trợ số ${digitCount} chữ số`,
+    }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * Kiểm tra tính tương thích giữa kiểu cược và miền/đài
+ * @param {object} betType - Thông tin kiểu cược
+ * @param {object} station - Thông tin đài
+ * @returns {object} Kết quả kiểm tra {valid: boolean, error: string}
+ */
+function validateBetTypeRegionCompatibility(betType, station) {
+  // Nếu không có thông tin kiểu cược hoặc đài, trả về lỗi
+  if (!betType || !station) {
+    return {
+      valid: false,
+      error: 'Thiếu thông tin kiểu cược hoặc đài',
+    }
+  }
+
+  // Tìm kiểu cược trong danh sách kiểu cược mặc định
+  const defaultBetType = defaultBetTypes.find(
+    (bt) =>
+      bt.name === betType.id ||
+      bt.aliases.some((a) => a.toLowerCase() === betType.alias?.toLowerCase())
+  )
+
+  // Nếu không tìm thấy kiểu cược, trả về lỗi
+  if (!defaultBetType) {
+    return {
+      valid: false,
+      error: `Kiểu cược ${betType.alias || betType.id} không tồn tại`,
+    }
+  }
+
+  // Lấy danh sách các miền mà kiểu cược này có thể áp dụng
+  const applicableRegions = defaultBetType.applicableRegions || []
+
+  // Lấy miền của đài
+  const stationRegion = station.region
+
+  // Kiểm tra xem miền của đài có nằm trong danh sách các miền mà kiểu cược này có thể áp dụng hay không
+  if (!applicableRegions.includes(stationRegion)) {
+    return {
+      valid: false,
+      error: `Kiểu cược ${
+        defaultBetType.name
+      } không áp dụng cho miền ${mapRegionName(stationRegion)}`,
+    }
+  }
+
+  // Nếu tất cả các kiểm tra đều thành công, trả về kết quả thành công
+  return {
+    valid: true,
+  }
+}
+
+/**
+ * Map tên miền sang tên hiển thị
+ * @param {string} region - Mã miền
+ * @returns {string} Tên miền hiển thị
+ */
+function mapRegionName(region) {
+  const regionMap = {
+    north: 'Miền Bắc',
+    central: 'Miền Trung',
+    south: 'Miền Nam',
+  }
+  return regionMap[region] || region
+}
+
 /**
  * Tạo danh sách số tài (50-99)
  */
@@ -1764,30 +1868,4 @@ function generateLeChanNumbers() {
 
 export default {
   parseBetCode,
-}
-
-// Add new validation helper function
-function validateBetTypeDigitCount(betTypeId, digitCount) {
-  const betType = defaultBetTypes.find((bt) => bt.name === betTypeId)
-  if (!betType || !betType.betRule) {
-    return { valid: true } // No rules defined, allow any
-  }
-
-  const allowedDigitRules = betType.betRule
-  const isAllowed = allowedDigitRules.some(
-    (rule) => rule === `${digitCount} digits`
-  )
-
-  if (!isAllowed) {
-    return {
-      valid: false,
-      message: `Kiểu cược ${
-        betType.name
-      } chỉ chấp nhận ${allowedDigitRules.join(
-        ', '
-      )}, không hỗ trợ số ${digitCount} chữ số`,
-    }
-  }
-
-  return { valid: true }
 }
