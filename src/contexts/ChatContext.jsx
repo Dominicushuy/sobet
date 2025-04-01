@@ -696,23 +696,12 @@ export function ChatProvider({ children }) {
 
     setMessages((prev) => [...prev, exampleMessage])
   }
-
-  // Add function to handle fix suggestion click
-  const applyFixSuggestion = (fixedCode) => {
-    if (fixedCode) {
-      // Đảm bảo định dạng đúng trước khi áp dụng
-      const correctedFixedCode = ensureCorrectBetCodeFormat(fixedCode)
-      addMessage(correctedFixedCode, 'user')
-    }
-  }
-
   const value = {
     messages,
     isTyping,
     addMessage,
     clearMessages,
     addSystemExample,
-    applyFixSuggestion,
     messagesEndRef,
   }
 

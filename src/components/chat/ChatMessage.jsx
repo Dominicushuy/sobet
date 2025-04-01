@@ -7,7 +7,6 @@ import { Copy, Check, AlertTriangle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { useChat } from '@/contexts/ChatContext'
 
 // Định dạng mã cược để hiển thị đẹp hơn
 const formatBetCode = (text) => {
@@ -71,38 +70,12 @@ const HighlightErrors = ({ text, errors }) => {
 }
 
 const ChatMessage = ({ message }) => {
-  const {
-    id,
-    text,
-    sender,
-    timestamp,
-    error,
-    detailedErrors,
-    betCodeInfo,
-    fixedCode,
-    suggestions,
-    formatted,
-    changes,
-    original,
-  } = message
+  const { text, sender, timestamp, error, betCodeInfo } = message
   const isUser = sender === 'user'
-  const { applyFixSuggestion } = useChat()
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text)
     toast.success('Đã sao chép nội dung!')
-  }
-
-  const handleApplyFix = () => {
-    applyFixSuggestion(fixedCode)
-    toast.success('Đã áp dụng sửa lỗi!')
-  }
-
-  const handleApplySuggestion = (suggestion) => {
-    if (suggestion) {
-      applyFixSuggestion(suggestion)
-      toast.success('Đã áp dụng gợi ý!')
-    }
   }
 
   return (
@@ -126,160 +99,6 @@ const ChatMessage = ({ message }) => {
         <CardContent className='p-3'>
           <div className='text-sm whitespace-pre-wrap'>
             {isUser ? formatBetCode(text) : text}
-
-            {/* Format optimization notice */}
-            {formatted && !isUser && (
-              <div className='mt-2 border-t pt-2'>
-                <Badge variant='outline' className='bg-blue-100 text-blue-800'>
-                  Tối ưu định dạng
-                </Badge>
-                <div className='mt-1 text-xs bg-blue-50 p-2 rounded'>
-                  <p>Mã cược đã được tối ưu định dạng:</p>
-                  <pre className='mt-1 bg-blue-100 p-2 rounded text-blue-800 overflow-x-auto'>
-                    {formatted}
-                  </pre>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    className='mt-2 bg-blue-200 text-blue-800 hover:bg-blue-300'
-                    onClick={() => handleApplySuggestion(formatted)}>
-                    <Check className='h-3 w-3 mr-1' />
-                    Sử dụng mã đã tối ưu
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Show original code with highlighted errors */}
-            {error && !isUser && original && (
-              <div className='mt-2 border-t pt-2'>
-                <Badge variant='destructive'>Mã cược gốc</Badge>
-                <div className='mt-1 text-xs bg-red-50 p-2 rounded'>
-                  <HighlightErrors text={original} errors={detailedErrors} />
-                </div>
-              </div>
-            )}
-
-            {/* Error details with better explanation */}
-            {detailedErrors && detailedErrors.length > 0 && !isUser && (
-              <div className='mt-2 border-t pt-2'>
-                <Badge variant='destructive'>Chi tiết lỗi</Badge>
-                <div className='mt-1 space-y-2'>
-                  {detailedErrors.map((lineError, idx) => (
-                    <div key={idx} className='bg-red-50 p-2 rounded'>
-                      <p className='font-medium text-red-800'>
-                        {lineError.line}:
-                      </p>
-                      <ul className='list-disc pl-5 mt-1 space-y-1 text-xs'>
-                        {lineError.errors.map((err, errIdx) => (
-                          <li key={errIdx} className='text-red-700'>
-                            {err.message}
-                            {err.suggestion && (
-                              <div className='mt-0.5 text-red-600'>
-                                <p className='italic'>
-                                  Gợi ý: {err.suggestion}
-                                </p>
-                                {err.example && (
-                                  <div className='mt-1 bg-red-100 p-1 rounded'>
-                                    Ví dụ: <code>{err.example}</code>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Changes made explanation */}
-            {changes && changes.length > 0 && !isUser && (
-              <div className='mt-2 border-t pt-2'>
-                <Badge
-                  variant='outline'
-                  className='bg-amber-100 text-amber-800'>
-                  Thay đổi đề xuất
-                </Badge>
-                <div className='mt-1 text-xs bg-amber-50 p-2 rounded'>
-                  <ul className='list-disc pl-5 space-y-1'>
-                    {changes.map((change, idx) => (
-                      <li key={idx} className='text-amber-800'>
-                        <span className='font-medium'>
-                          Mã {change.lineIndex + 1}:
-                        </span>{' '}
-                        <div className='flex items-center gap-2 mt-1'>
-                          <div className='bg-amber-100 p-1 rounded line-through'>
-                            {change.oldLine}
-                          </div>
-                          <ArrowRight className='h-3 w-3 flex-shrink-0' />
-                          <div className='bg-green-100 p-1 rounded'>
-                            {change.newLine}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* Fix suggestions */}
-            {fixedCode && !isUser && (
-              <div className='mt-2 border-t pt-2'>
-                <Badge
-                  variant='outline'
-                  className='bg-green-100 text-green-800'>
-                  Mã cược sửa lỗi
-                </Badge>
-                <div className='mt-1 text-xs bg-green-50 p-2 rounded'>
-                  <pre className='bg-green-100 p-2 rounded text-green-800 overflow-x-auto'>
-                    {fixedCode}
-                  </pre>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    className='mt-2 bg-green-200 text-green-800 hover:bg-green-300'
-                    onClick={handleApplyFix}>
-                    <Check className='h-3 w-3 mr-1' />
-                    Áp dụng mã đã sửa
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Generic suggestions */}
-            {suggestions && suggestions.length > 0 && !isUser && (
-              <div className='mt-2 border-t pt-2'>
-                <Badge variant='outline' className='bg-blue-100 text-blue-800'>
-                  Gợi ý
-                </Badge>
-                <div className='mt-1 text-xs bg-blue-50 p-2 rounded'>
-                  <ul className='list-disc pl-5 space-y-1'>
-                    {suggestions.map((suggestion, idx) => (
-                      <li key={idx} className='text-blue-700'>
-                        {suggestion.message}
-                        {suggestion.suggested && (
-                          <div className='flex items-center gap-2 mt-1'>
-                            <div className='bg-blue-100 p-1 rounded line-through'>
-                              {suggestion.original}
-                            </div>
-                            <ArrowRight className='h-3 w-3 flex-shrink-0' />
-                            <div className='bg-green-100 p-1 rounded'>
-                              {Array.isArray(suggestion.suggested)
-                                ? suggestion.suggested.join(' hoặc ')
-                                : suggestion.suggested}
-                            </div>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
 
             {/* Valid bet code info */}
             {betCodeInfo && !isUser && (
@@ -308,25 +127,6 @@ const ChatMessage = ({ message }) => {
                     {betCodeInfo.potentialWin.toLocaleString()}đ
                   </div>
                 </div>
-
-                {betCodeInfo.formattedCode && (
-                  <div className='mt-2 text-xs bg-green-50 p-2 rounded'>
-                    <p>Mã cược đã được tối ưu định dạng:</p>
-                    <pre className='mt-1 bg-green-100 p-2 rounded text-green-800 overflow-x-auto'>
-                      {betCodeInfo.formattedCode}
-                    </pre>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className='mt-2 bg-green-200 text-green-800 hover:bg-green-300'
-                      onClick={() =>
-                        handleApplySuggestion(betCodeInfo.formattedCode)
-                      }>
-                      <Check className='h-3 w-3 mr-1' />
-                      Sử dụng mã đã tối ưu
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
           </div>
