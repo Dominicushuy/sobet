@@ -142,7 +142,7 @@ export function ChatProvider({ children }) {
   /**
    * Phát hiện các trường hợp đặc biệt trong mã cược
    */
-  const extractSpecialCases = (betCode, parseResult) => {
+  function extractSpecialCases(betCode, parseResult) {
     const specialCases = {
       groupedNumbers: [],
       multipleBetTypes: [],
@@ -186,8 +186,31 @@ export function ChatProvider({ children }) {
               }
               if (singleNumbers.length >= 2) {
                 // Tạo cặp từ các số này
-                pairs.push(singleNumbers.join('.'))
+                for (let i = 0; i < singleNumbers.length; i += 2) {
+                  if (i + 1 < singleNumbers.length) {
+                    pairs.push(`${singleNumbers[i]}.${singleNumbers[i + 1]}`)
+                  }
+                }
               }
+            }
+          }
+
+          // Xử lý các cặp đá đã có sẵn trong dòng (dạng XX.YY)
+          const existingPairs = line.originalLine
+            .split(/[a-zA-Z]/)[0] // Lấy phần trước kiểu cược
+            .split('.')
+            .filter((part) => part.includes('.')) // Lọc ra các phần có dấu chấm
+
+          // Nếu có cặp đá sẵn (nhưng không phải là cặp đá gộp)
+          const lineWithoutGroups = line.originalLine
+            .split(/[a-zA-Z]/)[0] // Lấy phần trước kiểu cược
+            .split('.')
+            .filter((part) => !groupedNumbers.includes(part)) // Lọc bỏ các số gộp
+
+          for (const part of lineWithoutGroups) {
+            if (part.match(/^\d+\.\d+$/)) {
+              // Đây là cặp đá có sẵn
+              pairs.push(part)
             }
           }
 
@@ -195,8 +218,12 @@ export function ChatProvider({ children }) {
           const formattedAmount = Math.floor((line.amount || 10000) / 1000)
           const betTypeStr = `${line.betType.alias}${formattedAmount}`
 
+          // Tạo ra một dòng cược riêng biệt cho mỗi cặp đá
+          // Quan trọng: Thêm đài vào mỗi dòng cược
+          const stationText = parseResult.station.name || 'mb'
+
           pairs.forEach((pair) => {
-            separateLines.push(`${pair}${betTypeStr}`)
+            separateLines.push(`${stationText}\n${pair}${betTypeStr}`)
           })
 
           // Cập nhật mô tả cho loại này
@@ -204,7 +231,7 @@ export function ChatProvider({ children }) {
             specialCases.type = 'da_grouped'
             specialCases.description = `Mã đá gộp ${groupedNumbers.join(
               ', '
-            )} được tách thành các cặp đá riêng biệt`
+            )} được tách thành ${pairs.length} cặp đá riêng biệt`
           }
         } else {
           // Các kiểu cược khác - tách mỗi số 4 chữ số thành hai số 2 chữ số
@@ -231,6 +258,7 @@ export function ChatProvider({ children }) {
           const formattedAmount = Math.floor((line.amount || 10000) / 1000)
           const betTypeStr = `${line.betType.alias}${formattedAmount}`
 
+          // Không cần tách thành nhiều dòng cho các kiểu cược không phải đá
           separateLines.push(`${allNumbers.join('.')}${betTypeStr}`)
 
           // Cập nhật mô tả cho loại này
@@ -261,7 +289,12 @@ export function ChatProvider({ children }) {
         // Tạo dòng cho kiểu cược chính
         const formattedMainAmount = Math.floor((line.amount || 10000) / 1000)
         const mainBetType = `${line.betType.alias}${formattedMainAmount}`
-        separateLines.push(`${numbersPart}${mainBetType}`)
+
+        // Quan trọng: Thêm đài vào mỗi dòng cược
+        const stationText = parseResult.station.name || 'mb'
+
+        // Tạo một dòng cược hoàn chỉnh bao gồm đài
+        separateLines.push(`${stationText}\n${numbersPart}${mainBetType}`)
 
         // Tạo dòng cho mỗi kiểu cược bổ sung
         line.additionalBetTypes.forEach((additionalBet) => {
@@ -269,7 +302,7 @@ export function ChatProvider({ children }) {
             (additionalBet.amount || 10000) / 1000
           )
           const betTypeStr = `${additionalBet.betType.alias}${formattedAmount}`
-          separateLines.push(`${numbersPart}${betTypeStr}`)
+          separateLines.push(`${stationText}\n${numbersPart}${betTypeStr}`)
         })
 
         if (separateLines.length > 0) {

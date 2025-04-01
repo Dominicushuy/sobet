@@ -482,33 +482,6 @@ function isStationOnly(line) {
 }
 
 /**
- * Kiểm tra xem dòng có chứa số hoặc kiểu cược hay không
- */
-function containsNumbersOrBetTypes(line) {
-  // Regex kiểm tra xem có số nào trong dòng hay không
-  const hasNumbers = /\d/.test(line)
-
-  // Kiểm tra xem có kiểu cược nào xuất hiện không
-  const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases)
-
-  // Cải tiến: Chỉ kiểm tra nếu alias là từ hoàn chỉnh hoặc theo sau bởi số
-  // Tránh trường hợp line "mb" có chứa alias "b"
-  const hasBetType = betTypeAliases.some((alias) => {
-    // Sử dụng regex để kiểm tra nếu alias là một từ hoàn chỉnh hoặc theo sau bởi số
-    const pattern = new RegExp(`\\b${alias}\\b|\\b${alias}\\d+`, 'i')
-    return pattern.test(line) && !isPartOfStationName(alias, line)
-  })
-
-  // Kiểm tra đặc biệt cho mẫu đài nhiều miền như "2dmn"
-  const isMultiStationPattern = /^\d+d(mn|mt|n|t)/i
-  if (isMultiStationPattern.test(line)) {
-    return false // Đây là đài, không phải số cược
-  }
-
-  return hasNumbers || hasBetType
-}
-
-/**
  * Kiểm tra xem một alias có phải là một phần của tên đài
  */
 function isPartOfStationName(alias, line) {
