@@ -521,6 +521,7 @@ export const defaultBetTypes = [
       '2 digits': 75,
       '3 digits': 650,
     },
+    isPermutation: true,
     isActive: true,
   },
   {
@@ -571,6 +572,7 @@ export const defaultBetTypes = [
     matchingMethod:
       'Match any permutation of the last 2 digits of specific prizes',
     payoutRate: 75,
+    isPermutation: true,
     isActive: true,
   },
   {
@@ -587,11 +589,12 @@ export const defaultBetTypes = [
     matchingMethod:
       'Match any permutation of the last 2 digits of specific prizes',
     payoutRate: 75,
+    isPermutation: true,
     isActive: true,
   },
   {
     name: 'Đá',
-    aliases: ['da', 'dv', 'bridge'],
+    aliases: ['da', 'dv'],
     applicableRegions: ['south', 'central', 'north'],
     betRule: ['2 digits'],
     matchingDraw: {
@@ -639,6 +642,7 @@ export const defaultBetTypes = [
     },
     matchingMethod: 'Match any permutation of the last 3 digits of the draw',
     payoutRate: 650,
+    isPermutation: true,
     isActive: true,
   },
   {
@@ -659,6 +663,7 @@ export const defaultBetTypes = [
     matchingMethod:
       'Match any permutation of the last 3 digits of the head prize',
     payoutRate: 650,
+    isPermutation: true,
     isActive: true,
   },
   {
@@ -686,6 +691,7 @@ export const defaultBetTypes = [
     matchingMethod:
       'Match any permutation of the last 3 digits of the special prize',
     payoutRate: 650,
+    isPermutation: true,
     isActive: true,
   },
   {
