@@ -26,6 +26,7 @@ import {
   Copy,
   Scissors,
   Sparkles,
+  Tag,
 } from 'lucide-react'
 import { useBetCode } from '@/contexts/BetCodeContext'
 import { format } from 'date-fns'
@@ -120,7 +121,21 @@ const BetCodeCard = ({
     return Math.round(betCode.stakeAmount / 0.8)
   }
 
-  // const numbers = getAllNumbers()
+  // Get all bet numbers from all lines
+  const getAllNumbers = () => {
+    if (!betCode.lines || !Array.isArray(betCode.lines)) return []
+
+    const allNumbers = []
+    betCode.lines.forEach((line) => {
+      if (line.numbers && Array.isArray(line.numbers)) {
+        allNumbers.push(...line.numbers)
+      }
+    })
+
+    return allNumbers
+  }
+
+  const numbers = getAllNumbers()
   const betText = betCode.originalText || 'N/A'
 
   return (
@@ -240,6 +255,33 @@ const BetCodeCard = ({
               </span>
             </div>
           </div>
+
+          {/* Numbers list */}
+          {numbers.length > 0 && (
+            <div className='mt-2 mb-1'>
+              <div className='flex items-center gap-1 mb-1'>
+                <Tag className='h-3 w-3 text-blue-600' />
+                <span className='text-xs text-muted-foreground'>Số cược:</span>
+              </div>
+              <div className='flex flex-wrap gap-1 max-h-16 overflow-y-auto pr-1'>
+                {numbers.slice(0, 12).map((number, idx) => (
+                  <Badge
+                    key={idx}
+                    variant='outline'
+                    className='font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 text-xs'>
+                    {number}
+                  </Badge>
+                ))}
+                {numbers.length > 12 && (
+                  <Badge
+                    variant='outline'
+                    className='font-medium bg-muted text-muted-foreground text-xs'>
+                    +{numbers.length - 12} số
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Details - only visible when expanded */}
           {showDetails && (
