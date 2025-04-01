@@ -924,6 +924,9 @@ function findStationByAlias(alias) {
  * @param {object} station - Thông tin đài
  * @returns {object} Kết quả phân tích dòng cược
  */
+// Cập nhật hàm parseBetLine trong src/services/betCodeParser/parser.js
+// Thêm phần kiểm tra độ dài số sau khi xử lý tất cả các số
+
 function parseBetLine(line, station) {
   const result = {
     valid: false,
@@ -941,8 +944,6 @@ function parseBetLine(line, station) {
     // Xử lý trường hợp dấu chấm ở đầu dòng
     normalizedLine = normalizedLine.replace(/^\./, '')
 
-    // Kiểm tra nếu có "xcdui" và sửa thành "xcduoi"
-    normalizedLine = normalizedLine.replace(/xcdui/g, 'xcduoi')
     // Kiểm tra nếu có "dui" và sửa thành "duoi"
     normalizedLine = normalizedLine.replace(
       /(\b|[^a-z])dui(\d+|$)/g,
@@ -1051,7 +1052,17 @@ function parseBetLine(line, station) {
         }
       }
 
+      // THÊM ĐOẠN CODE KIỂM TRA ĐỘ DÀI NHẤT QUÁN CỦA CÁC SỐ
       if (processedNumbers.length > 0) {
+        // Kiểm tra độ dài của các số
+        const lengths = new Set(processedNumbers.map((num) => num.length))
+        if (lengths.size > 1) {
+          result.numbers = processedNumbers
+          result.valid = false
+          result.error = 'Tất cả các số trong một dòng cược phải có cùng độ dài'
+          return result
+        }
+
         result.numbers = processedNumbers
         result.betType = multipleBetTypes[0].betType
         result.amount = multipleBetTypes[0].amount
@@ -1114,7 +1125,18 @@ function parseBetLine(line, station) {
               }
             }
 
+            // THÊM ĐOẠN CODE KIỂM TRA ĐỘ DÀI NHẤT QUÁN CỦA CÁC SỐ
             if (processedNumbers.length > 0) {
+              // Kiểm tra độ dài của các số
+              const lengths = new Set(processedNumbers.map((num) => num.length))
+              if (lengths.size > 1) {
+                result.numbers = processedNumbers
+                result.valid = false
+                result.error =
+                  'Tất cả các số trong một dòng cược phải có cùng độ dài'
+                return result
+              }
+
               result.numbers = processedNumbers
               result.betType = betType
               result.amount = amount
@@ -1271,6 +1293,16 @@ function parseBetLine(line, station) {
 
     // Đảm bảo không có số trùng lặp
     result.numbers = Array.from(new Set(numbers))
+
+    // THÊM ĐOẠN CODE MỚI: KIỂM TRA TẤT CẢ CÁC SỐ CÓ CÙNG ĐỘ DÀI KHÔNG
+    if (result.numbers.length > 1) {
+      const lengths = new Set(result.numbers.map((num) => num.length))
+      if (lengths.size > 1) {
+        result.valid = false
+        result.error = 'Tất cả các số trong một dòng cược phải có cùng độ dài'
+        return result
+      }
+    }
 
     // Kiểm tra tính hợp lệ
     result.valid =

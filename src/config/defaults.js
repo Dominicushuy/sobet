@@ -707,25 +707,6 @@ export const defaultBetTypes = [
     },
     isActive: true,
   },
-  // {
-  //   name: "Xiên Miền Bắc",
-  //   aliases: ["xien", "xienmb", "xienmbac", "cross"],
-  //   applicableRegions: ["north"],
-  //   betRule: ["2 digits"],
-  //   matchingDraw: {
-  //     north: "all prizes",
-  //   },
-  //   combinations: {
-  //     north: 27,
-  //   },
-  //   matchingMethod: "All betted numbers must match the draw",
-  //   payoutRate: {
-  //     crossTwo: 350,
-  //     crossThree: 1000,
-  //     crossFour: 3000,
-  //   },
-  //   isActive: true,
-  // },
 ]
 
 export const defaultNumberCombinations = [
