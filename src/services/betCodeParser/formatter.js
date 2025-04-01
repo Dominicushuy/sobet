@@ -44,7 +44,17 @@ export function formatBetCode(betCode) {
         if (/\d/.test(restOfText)) {
           // Tách thành hai dòng riêng biệt
           formattedLines.push(potentialStation)
-          formattedLines.push(restOfText)
+
+          // Format the bet line, which might result in multiple lines
+          const formattedBetLines = formatBetLine(restOfText)
+          if (formattedBetLines.includes('\n')) {
+            // If formatBetLine returned multiple lines, add each one
+            formattedBetLines.split('\n').forEach((line) => {
+              formattedLines.push(line)
+            })
+          } else {
+            formattedLines.push(formattedBetLines)
+          }
           continue
         }
       }
@@ -57,7 +67,14 @@ export function formatBetCode(betCode) {
     } else {
       // Nếu không phải là dòng đài, xử lý như dòng cược
       const formattedLine = formatBetLine(lineText)
-      formattedLines.push(formattedLine)
+      if (formattedLine.includes('\n')) {
+        // If formatBetLine returned multiple lines, add each one
+        formattedLine.split('\n').forEach((line) => {
+          formattedLines.push(line)
+        })
+      } else {
+        formattedLines.push(formattedLine)
+      }
     }
   }
 
@@ -287,6 +304,47 @@ function formatBetLine(line) {
 
   // Sửa lỗi "dui" thành "duoi"
   normalizedLine = normalizedLine.replace(/(\b|[^a-z])dui(\d+|$)/g, '$1duoi$2')
+
+  // Special handling for đá pattern with concatenated pairs - MUST BE BEFORE REPLACING COMMA
+  if (normalizedLine.includes('da')) {
+    const daBetPattern = /^([\d.]+)da(\d+(?:[,.n]\d+)?)$/i
+    const match = normalizedLine.match(daBetPattern)
+
+    if (match) {
+      const [_, numbersSection, amount] = match
+      const numberGroups = numbersSection.split('.')
+
+      // Check if any number group is a concatenation (4 or more digits)
+      const hasGroupedNumbers = numberGroups.some(
+        (group) => group.length >= 4 && group.length % 2 === 0
+      )
+
+      if (hasGroupedNumbers) {
+        // Array to collect formatted lines
+        const formattedLines = []
+
+        // Process each number group
+        for (const group of numberGroups) {
+          if (group.length >= 4 && group.length % 2 === 0) {
+            // Split the group into pairs and create a new line
+            const pairs = []
+            for (let i = 0; i < group.length; i += 2) {
+              pairs.push(group.substring(i, i + 2))
+            }
+            formattedLines.push(`${pairs.join('.')}da${amount}`)
+          } else {
+            // For non-concatenated numbers or odd-length numbers, keep as is
+            formattedLines.push(`${group}da${amount}`)
+          }
+        }
+
+        // Join all formatted lines
+        if (formattedLines.length > 0) {
+          return formattedLines.join('\n')
+        }
+      }
+    }
+  }
 
   // Bước 2: Chuẩn hóa phần số cược
   // Thay thế các dấu phân cách không chuẩn bằng dấu chấm
