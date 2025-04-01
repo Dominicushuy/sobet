@@ -1602,9 +1602,6 @@ function isBetTypeOrAmount(text) {
 
 /**
  * Phân tích số tiền cược
- */
-/**
- * Phân tích số tiền cược
  * @param {string} amountString - Chuỗi số tiền
  * @returns {number} Số tiền đã phân tích
  */
@@ -1619,16 +1616,8 @@ function parseAmount(amountString) {
   const amount = parseFloat(cleaned)
   if (isNaN(amount)) return 0
 
-  // Apply scaling based on context
-  if (amountString.includes('n')) {
-    return amount // Already in thousands
-  } else if (amount >= 100000) {
-    return amount // Very large amount, likely in full
-  } else {
-    return amount * 1000 // All other cases, multiply by 1000
-  }
+  return amount * 1000
 }
-
 /**
  * Xác định kiểu cược từ chuỗi
  */

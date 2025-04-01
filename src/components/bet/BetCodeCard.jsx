@@ -160,7 +160,7 @@ const BetCodeCard = ({
     return allNumbers
   }
 
-  console.log('BetCodeCard - Bet Code:', betCode)
+  // console.log('BetCodeCard - Bet Code:', betCode)
 
   // Lấy thông tin kiểu cược từ dòng đầu tiên
   const getBetTypeNames = () => {
@@ -314,7 +314,9 @@ const BetCodeCard = ({
             <div className='mt-2 mb-1'>
               <div className='flex items-center gap-1 mb-1'>
                 <Tag className='h-3 w-3 text-blue-600' />
-                <span className='text-xs text-muted-foreground'>Số cược:</span>
+                <span className='text-xs text-muted-foreground'>
+                  Số cược ({numbers.length}):
+                </span>
               </div>
               <div className='flex flex-wrap gap-2 max-h-16 overflow-y-auto pr-1'>
                 {numbers.map((number, idx) => (
