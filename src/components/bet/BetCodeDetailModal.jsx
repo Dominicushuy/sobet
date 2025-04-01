@@ -90,7 +90,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
     // Sum up the original amount from all lines (amount in thousands)
     return betCode.lines.reduce((total, line) => {
       // Original amount in bet code is the base amount × 1000
-      return total + (line.amount || 0) * 1000
+      return total + (line.amount || 0)
     }, 0)
   }
 
