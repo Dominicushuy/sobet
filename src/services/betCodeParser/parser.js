@@ -924,9 +924,6 @@ function findStationByAlias(alias) {
  * @param {object} station - Thông tin đài
  * @returns {object} Kết quả phân tích dòng cược
  */
-// Cập nhật hàm parseBetLine trong src/services/betCodeParser/parser.js
-// Thêm phần kiểm tra độ dài số sau khi xử lý tất cả các số
-
 function parseBetLine(line, station) {
   const result = {
     valid: false,
@@ -938,6 +935,33 @@ function parseBetLine(line, station) {
   }
 
   try {
+    // First, check for direct "da" with 3-digit numbers pattern
+    const daWithDigitsPattern = /^([\d.]+)da(\d+)$/i
+    const daMatch = line.match(daWithDigitsPattern)
+
+    if (daMatch) {
+      const numberPart = daMatch[1]
+
+      // Check if we have any 3-digit numbers
+      const numbers = numberPart.split('.')
+      const hasThreeDigitNumbers = numbers.some((num) => num.length === 3)
+
+      if (hasThreeDigitNumbers) {
+        // Early validation for "da" bet type which only accepts 2-digit numbers
+        const betTypeInfo = identifyBetType('da')
+        if (betTypeInfo) {
+          const validation = validateBetTypeDigitCount(betTypeInfo.id, 3)
+          if (!validation.valid) {
+            result.numbers = numbers
+            result.betType = betTypeInfo
+            result.valid = false
+            result.error = validation.message
+            return result
+          }
+        }
+      }
+    }
+
     // Chuẩn hóa dấu phân cách: dấu phẩy, dấu gạch ngang, dấu cách đều đổi thành dấu chấm
     let normalizedLine = line.replace(/[,\- ]+/g, '.')
 
@@ -1063,6 +1087,16 @@ function parseBetLine(line, station) {
           return result
         }
 
+        // NEW CODE: Add validation against bet type rules
+        const digitCount = processedNumbers[0].length
+        const betType = multipleBetTypes[0].betType
+        const validation = validateBetTypeDigitCount(betType.id, digitCount)
+        if (!validation.valid) {
+          result.valid = false
+          result.error = validation.message
+          return result
+        }
+
         result.numbers = processedNumbers
         result.betType = multipleBetTypes[0].betType
         result.amount = multipleBetTypes[0].amount
@@ -1134,6 +1168,18 @@ function parseBetLine(line, station) {
                 result.valid = false
                 result.error =
                   'Tất cả các số trong một dòng cược phải có cùng độ dài'
+                return result
+              }
+
+              // NEW CODE: Add validation against bet type rules
+              const digitCount = processedNumbers[0].length
+              const validation = validateBetTypeDigitCount(
+                betType.id,
+                digitCount
+              )
+              if (!validation.valid) {
+                result.valid = false
+                result.error = validation.message
                 return result
               }
 
@@ -1294,13 +1340,26 @@ function parseBetLine(line, station) {
     // Đảm bảo không có số trùng lặp
     result.numbers = Array.from(new Set(numbers))
 
-    // THÊM ĐOẠN CODE MỚI: KIỂM TRA TẤT CẢ CÁC SỐ CÓ CÙNG ĐỘ DÀI KHÔNG
-    if (result.numbers.length > 1) {
+    // THÊM ĐOẠN CODE KIỂM TRA ĐỘ DÀI NHẤT QUÁN CỦA CÁC SỐ
+    if (result.numbers.length > 0) {
       const lengths = new Set(result.numbers.map((num) => num.length))
       if (lengths.size > 1) {
         result.valid = false
         result.error = 'Tất cả các số trong một dòng cược phải có cùng độ dài'
         return result
+      }
+
+      // NEW CODE: Add validation against bet type rules
+      if (result.valid && result.betType && result.numbers.length > 0) {
+        const digitCount = result.numbers[0].length
+        const validation = validateBetTypeDigitCount(
+          result.betType.id,
+          digitCount
+        )
+        if (!validation.valid) {
+          result.valid = false
+          result.error = validation.message
+        }
       }
     }
 
@@ -1704,4 +1763,30 @@ function generateLeChanNumbers() {
 
 export default {
   parseBetCode,
+}
+
+// Add new validation helper function
+function validateBetTypeDigitCount(betTypeId, digitCount) {
+  const betType = defaultBetTypes.find((bt) => bt.name === betTypeId)
+  if (!betType || !betType.betRule) {
+    return { valid: true } // No rules defined, allow any
+  }
+
+  const allowedDigitRules = betType.betRule
+  const isAllowed = allowedDigitRules.some(
+    (rule) => rule === `${digitCount} digits`
+  )
+
+  if (!isAllowed) {
+    return {
+      valid: false,
+      message: `Kiểu cược ${
+        betType.name
+      } chỉ chấp nhận ${allowedDigitRules.join(
+        ', '
+      )}, không hỗ trợ số ${digitCount} chữ số`,
+    }
+  }
+
+  return { valid: true }
 }

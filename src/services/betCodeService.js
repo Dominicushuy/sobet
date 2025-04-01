@@ -30,9 +30,35 @@ export const betCodeService = {
       // Nếu mã cược hợp lệ, tính toán số tiền và tiềm năng thắng
       let calculationResults = { stakeResult: null, prizeResult: null }
 
+      // NEW: Check for validity at the line level even if parsing succeeded overall
+      const hasInvalidLines =
+        parseResult.success &&
+        parseResult.lines &&
+        parseResult.lines.some((line) => !line.valid && line.error)
+
+      if (hasInvalidLines) {
+        // Add specific error details from individual lines
+        const errorMessages = parseResult.lines
+          .filter((line) => !line.valid && line.error)
+          .map((line) => `Dòng "${line.originalLine}": ${line.error}`)
+          .join('\n')
+
+        parseResult.lineErrors = errorMessages
+      }
+
       if (parseResult.success) {
         calculationResults.stakeResult = calculateStake(parseResult)
         calculationResults.prizeResult = calculatePotentialPrize(parseResult)
+
+        // NEW: Check if stake calculation has errors
+        if (calculationResults.stakeResult.hasErrors) {
+          parseResult.calculationErrors = calculationResults.stakeResult.details
+            .filter((detail) => !detail.valid && detail.error)
+            .map((detail) => `Dòng "${detail.originalLine}": ${detail.error}`)
+            .join('\n')
+
+          parseResult.success = false
+        }
       }
 
       return {

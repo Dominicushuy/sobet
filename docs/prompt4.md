@@ -36,3 +36,7 @@ mb
 11.22.33da1
 44.55.66da1
 77.88.99da1
+
+=====
+Tất cả các kiểu đảo đang hiển thị số bị sai
+Gộp nhiều kiểu đánh có cùng số

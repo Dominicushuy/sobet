@@ -453,8 +453,16 @@ export function ChatProvider({ children }) {
         // Trích xuất thông báo lỗi từ parseResult
         let errorMessage = 'Mã cược không hợp lệ. '
 
-        // Thêm thông tin về lỗi cụ thể nếu có
-        if (parseResult.errors && parseResult.errors.length > 0) {
+        // NEW: Handle calculation errors first (more specific)
+        if (parseResult.calculationErrors) {
+          errorMessage = `Mã cược có lỗi liên quan đến kiểu đặt cược:\n\n${parseResult.calculationErrors}`
+        }
+        // NEW: Handle line-specific errors
+        else if (parseResult.lineErrors) {
+          errorMessage = `Mã cược có lỗi ở các dòng cụ thể:\n\n${parseResult.lineErrors}`
+        }
+        // Handle existing errors
+        else if (parseResult.errors && parseResult.errors.length > 0) {
           const detailedErrors = parseResult.errors
             .map((err) => err.message || err)
             .join(', ')
