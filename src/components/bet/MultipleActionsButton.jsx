@@ -6,9 +6,7 @@ import {
   RotateCcw,
   Download,
   BookmarkCheck,
-  CheckCircle,
   AlertTriangle,
-  FileText,
   Loader2,
 } from 'lucide-react'
 import {
@@ -36,13 +34,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 
 const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
-  const {
-    confirmDraftCode,
-    removeBetCode,
-    removeDraftCode,
-    getBetCode,
-    getStatistics,
-  } = useBetCode()
+  const { confirmDraftCode, removeBetCode, removeDraftCode, getBetCode } =
+    useBetCode()
 
   const [printing, setPrinting] = useState(false)
   const [saving, setSaving] = useState(false)

@@ -31,7 +31,6 @@ import { useBetCode } from '@/contexts/BetCodeContext'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import PrintBetCode from './PrintBetCode'
-import EditBetCodeModal from './EditBetCodeModal'
 import BetCodeDetailModal from './BetCodeDetailModal'
 import { formatMoney } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
@@ -48,7 +47,6 @@ const BetCodeCard = ({
   const [showDetails, setShowDetails] = useState(false)
   const [showFullCode, setShowFullCode] = useState(false)
   const [isPrintOpen, setIsPrintOpen] = useState(false)
-  const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
 
@@ -91,8 +89,6 @@ const BetCodeCard = ({
 
   const handleOpenPrint = () => setIsPrintOpen(true)
   const handleClosePrint = () => setIsPrintOpen(false)
-  const handleOpenEdit = () => setIsEditOpen(true)
-  const handleCloseEdit = () => setIsEditOpen(false)
   const handleOpenDetail = () => setIsDetailOpen(true)
   const handleCloseDetail = () => setIsDetailOpen(false)
 
@@ -313,10 +309,6 @@ const BetCodeCard = ({
                 <CheckCircle2 className='h-3 w-3 mr-1' />
                 Lưu
               </Button>
-              <Button variant='outline' size='sm' onClick={handleOpenEdit}>
-                <Edit className='h-3 w-3 mr-1' />
-                Sửa
-              </Button>
               <Button variant='outline' size='sm' onClick={handleOpenDetail}>
                 <FileText className='h-3 w-3 mr-1' />
                 Chi tiết
@@ -332,10 +324,6 @@ const BetCodeCard = ({
             </>
           ) : (
             <>
-              <Button variant='outline' size='sm' onClick={handleOpenEdit}>
-                <Edit className='h-3 w-3 mr-1' />
-                Sửa
-              </Button>
               <Button variant='outline' size='sm' onClick={handleOpenDetail}>
                 <FileText className='h-3 w-3 mr-1' />
                 Chi tiết
@@ -365,19 +353,11 @@ const BetCodeCard = ({
           onClose={handleClosePrint}
         />
       )}
-      {isEditOpen && (
-        <EditBetCodeModal
-          betCode={betCode}
-          isOpen={isEditOpen}
-          onClose={handleCloseEdit}
-        />
-      )}
       {isDetailOpen && (
         <BetCodeDetailModal
           betCode={betCode}
           isOpen={isDetailOpen}
           onClose={handleCloseDetail}
-          onEdit={handleOpenEdit}
           onPrint={handleOpenPrint}
         />
       )}

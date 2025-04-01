@@ -130,12 +130,6 @@ export function ChatProvider({ children }) {
             }
           }
 
-          // Xử lý các cặp đá đã có sẵn trong dòng (dạng XX.YY)
-          const existingPairs = line.originalLine
-            .split(/[a-zA-Z]/)[0] // Lấy phần trước kiểu cược
-            .split('.')
-            .filter((part) => part.includes('.')) // Lọc ra các phần có dấu chấm
-
           // Nếu có cặp đá sẵn (nhưng không phải là cặp đá gộp)
           const lineWithoutGroups = line.originalLine
             .split(/[a-zA-Z]/)[0] // Lấy phần trước kiểu cược
@@ -367,6 +361,8 @@ export function ChatProvider({ children }) {
       // NEW: Kiểm tra nếu có nhiều đài trong một mã cược
       const multiStationBetCodes = processMultiStationBetCode(text)
 
+      console.log('multiStationBetCodes:', multiStationBetCodes)
+
       if (multiStationBetCodes) {
         // Xử lý từng cặp đài-dòng cược riêng biệt
         let successCount = 0
@@ -441,6 +437,8 @@ export function ChatProvider({ children }) {
 
       // Parse the bet code
       const parseResult = parseBetCode(formattedBetCode)
+
+      console.log('Parsed result:', parseResult)
 
       if (parseResult.success) {
         // Calculate stake and potential prize

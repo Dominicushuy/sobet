@@ -1,6 +1,8 @@
 // src/services/betCodeService.js
 import { parseBetCode } from './betCodeParser/parser'
 import { formatBetCode } from './betCodeParser/formatter'
+import { calculateStake } from './calculator/stakeCalculator'
+import { calculatePotentialPrize } from './calculator/prizeCalculator'
 
 /**
  * Dịch vụ phân tích và xử lý mã cược
@@ -27,6 +29,11 @@ export const betCodeService = {
 
       // Nếu mã cược hợp lệ, tính toán số tiền và tiềm năng thắng
       let calculationResults = { stakeResult: null, prizeResult: null }
+
+      if (parseResult.success) {
+        calculationResults.stakeResult = calculateStake(parseResult)
+        calculationResults.prizeResult = calculatePotentialPrize(parseResult)
+      }
 
       return {
         success: parseResult.success,

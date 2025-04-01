@@ -32,7 +32,7 @@ import { useBetCode } from '@/contexts/BetCodeContext'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
+const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
   const { confirmDraftCode, removeBetCode, removeDraftCode } = useBetCode()
 
   // console.log('BetCodeDetailModal betCode:', betCode)
@@ -636,10 +636,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
         <DialogFooter className='space-x-2'>
           {betCode.isDraft ? (
             <>
-              <Button variant='outline' size='sm' onClick={onEdit}>
-                <Edit className='h-3.5 w-3.5 mr-1.5' />
-                Sửa
-              </Button>
               <Button
                 variant='outline'
                 size='sm'
@@ -659,10 +655,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onEdit, onPrint }) => {
             </>
           ) : (
             <>
-              <Button variant='outline' size='sm' onClick={onEdit}>
-                <Edit className='h-3.5 w-3.5 mr-1.5' />
-                Sửa
-              </Button>
               <Button variant='outline' size='sm' onClick={onPrint}>
                 <Printer className='h-3.5 w-3.5 mr-1.5' />
                 In
