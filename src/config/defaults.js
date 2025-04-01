@@ -319,16 +319,16 @@ export const defaultBetTypes = [
     betRule: ['2 digits'],
     matchingDraw: {
       south: {
-        head: [{ prize: 'eighth', count: 1 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'eighth', count: 1 },
+        tail: { prize: 'special', count: 1 },
       },
       central: {
-        head: [{ prize: 'eighth', count: 1 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'eighth', count: 1 },
+        tail: { prize: 'special', count: 1 },
       },
       north: {
-        head: [{ prize: 'seventh', count: 4 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'seventh', count: 4 },
+        tail: { prize: 'special', count: 1 },
       },
     },
     combinations: {
@@ -347,16 +347,16 @@ export const defaultBetTypes = [
     betRule: ['3 digits'],
     matchingDraw: {
       south: {
-        head: [{ prize: 'seventh', count: 1 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'seventh', count: 1 },
+        tail: { prize: 'special', count: 1 },
       },
       central: {
-        head: [{ prize: 'seventh', count: 1 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'seventh', count: 1 },
+        tail: { prize: 'special', count: 1 },
       },
       north: {
-        head: [{ prize: 'sixth', count: 3 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'sixth', count: 3 },
+        tail: { prize: 'special', count: 1 },
       },
     },
     combinations: {
@@ -375,14 +375,14 @@ export const defaultBetTypes = [
     betRule: ['2 digits', '3 digits'],
     matchingDraw: {
       '2 digits': {
-        south: [{ prize: 'eighth', count: 1 }],
-        central: [{ prize: 'eighth', count: 1 }],
-        north: [{ prize: 'seventh', count: 4 }],
+        south: { prize: 'eighth', count: 1 },
+        central: { prize: 'eighth', count: 1 },
+        north: { prize: 'seventh', count: 4 },
       },
       '3 digits': {
-        south: [{ prize: 'seventh', count: 1 }],
-        central: [{ prize: 'seventh', count: 1 }],
-        north: [{ prize: 'sixth', count: 3 }],
+        south: { prize: 'seventh', count: 1 },
+        central: { prize: 'seventh', count: 1 },
+        north: { prize: 'sixth', count: 3 },
       },
     },
     combinations: {
@@ -411,14 +411,14 @@ export const defaultBetTypes = [
     betRule: ['2 digits', '3 digits'],
     matchingDraw: {
       '2 digits': {
-        south: [{ prize: 'special', count: 1 }],
-        central: [{ prize: 'special', count: 1 }],
-        north: [{ prize: 'special', count: 1 }],
+        south: { prize: 'special', count: 1 },
+        central: { prize: 'special', count: 1 },
+        north: { prize: 'special', count: 1 },
       },
       '3 digits': {
-        south: [{ prize: 'special', count: 1 }],
-        central: [{ prize: 'special', count: 1 }],
-        north: [{ prize: 'special', count: 1 }],
+        south: { prize: 'special', count: 1 },
+        central: { prize: 'special', count: 1 },
+        north: { prize: 'special', count: 1 },
       },
     },
     combinations: {
@@ -620,16 +620,16 @@ export const defaultBetTypes = [
     betRule: ['3 digits'],
     matchingDraw: {
       south: {
-        head: [{ prize: 'seventh', count: 1 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'seventh', count: 1 },
+        tail: { prize: 'special', count: 1 },
       },
       central: {
-        head: [{ prize: 'seventh', count: 1 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'seventh', count: 1 },
+        tail: { prize: 'special', count: 1 },
       },
       north: {
-        head: [{ prize: 'sixth', count: 3 }],
-        tail: [{ prize: 'special', count: 1 }],
+        head: { prize: 'sixth', count: 3 },
+        tail: { prize: 'special', count: 1 },
       },
     },
     combinations: {
@@ -647,9 +647,9 @@ export const defaultBetTypes = [
     applicableRegions: ['south', 'central', 'north'],
     betRule: ['3 digits'],
     matchingDraw: {
-      south: [{ prize: 'seventh', count: 1 }],
-      central: [{ prize: 'seventh', count: 1 }],
-      north: [{ prize: 'sixth', count: 3 }],
+      south: { prize: 'seventh', count: 1 },
+      central: { prize: 'seventh', count: 1 },
+      north: { prize: 'sixth', count: 3 },
     },
     combinations: {
       south: 1,
@@ -674,9 +674,9 @@ export const defaultBetTypes = [
     applicableRegions: ['south', 'central', 'north'],
     betRule: ['3 digits'],
     matchingDraw: {
-      south: [{ prize: 'special', count: 1 }],
-      central: [{ prize: 'special', count: 1 }],
-      north: [{ prize: 'special', count: 1 }],
+      south: { prize: 'special', count: 1 },
+      central: { prize: 'special', count: 1 },
+      north: { prize: 'special', count: 1 },
     },
     combinations: {
       south: 1,
@@ -694,7 +694,7 @@ export const defaultBetTypes = [
     applicableRegions: ['north'],
     betRule: ['2 digits', '3 digits', '4 digits'],
     matchingDraw: {
-      north: [{ prize: 'first', count: 1 }],
+      north: { prize: 'first', count: 1 },
     },
     combinations: {
       north: 1,
