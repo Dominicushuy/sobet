@@ -29,7 +29,7 @@ export const betCodeService = {
       // Phân tích mã cược
       const parseResult = parseBetCode(formattedText)
 
-      console.log('parseResult', parseResult)
+      // console.log('parseResult', parseResult)
 
       // Nếu mã cược hợp lệ, tính toán số tiền và tiềm năng thắng
       let calculationResults = { stakeResult: null, prizeResult: null }

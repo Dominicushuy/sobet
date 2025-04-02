@@ -286,7 +286,7 @@ export function ChatProvider({ children }) {
       // Parse the bet code
       const parseResult = parseBetCode(formattedBetCode)
 
-      console.log('Parsed result:', parseResult)
+      // console.log('Parsed result:', parseResult)
 
       // Xử lý khi parse result không thành công
       if (!parseResult.success) {
