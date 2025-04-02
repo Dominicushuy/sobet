@@ -300,7 +300,7 @@ export function ChatProvider({ children }) {
 
     const betCodesByStation = []
     let currentStation = null
-    let isNewStation = true
+    const uniqueStations = new Set() // Track unique stations
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
@@ -309,7 +309,7 @@ export function ChatProvider({ children }) {
       // Detect if this line is a station line
       if (isStationLine(line)) {
         currentStation = line
-        isNewStation = true
+        uniqueStations.add(line) // Add to unique stations set
         continue
       }
 
@@ -321,13 +321,13 @@ export function ChatProvider({ children }) {
           betLine: line,
           betCode: `${currentStation}\n${line}`,
         })
-
-        // Only mark as new station for the first bet line after a station
-        isNewStation = false
       }
     }
 
-    return betCodesByStation.length > 0 ? betCodesByStation : null
+    // Only return result if we have more than one unique station
+    return uniqueStations.size > 1 && betCodesByStation.length > 0
+      ? betCodesByStation
+      : null
   }
 
   const ensureCorrectBetCodeFormat = (betCode) => {
@@ -369,7 +369,7 @@ export function ChatProvider({ children }) {
       // Format the bet code first for better parsing
       const formattedBetCode = formatBetCode(text)
 
-      // NEW: Kiểm tra nếu có nhiều đài trong một mã cược
+      // Kiểm tra nếu có nhiều đài trong một mã cược
       const multiStationBetCodes = processMultiStationBetCode(formattedBetCode)
 
       console.log('multiStationBetCodes:', multiStationBetCodes)
