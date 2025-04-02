@@ -152,6 +152,8 @@ export function parseBetCode(betCode) {
     // Chuẩn hóa dấu xuống dòng và khoảng trắng
     betCode = betCode.trim()
 
+    // console.log('Bet code before normalization:', betCode)
+
     // Tiền xử lý: Tự động định dạng khi người dùng nhập đài và mã cược trên cùng một dòng
     if (!betCode.includes('\n')) {
       // Sử dụng split với regex mạnh hơn để xử lý tất cả loại khoảng trắng
@@ -211,6 +213,7 @@ export function parseBetCode(betCode) {
 
     // QUAN TRỌNG: Xử lý nhiều đài trong một đoạn mã cược
     const multipleStations = detectMultipleStations(betCode)
+
     if (multipleStations && multipleStations.length > 0) {
       return parseMultipleStationBetCode(multipleStations)
     }
@@ -964,99 +967,225 @@ function parseBetLine(line, station) {
 
     const normalizedLine = line
 
-    // Check for multiple bet types pattern (eg: 66.88da1.b5)
-    // This improved pattern captures bet codes with multiple bet types on the same numbers
-    const multipleBetTypesPattern = /^([\d.]+)((?:[a-z]+\d+(?:[,.]\d+)?\.?)+)$/i
+    // // Check for multiple bet types pattern (eg: 66.88da1.b5)
+    // // This improved pattern captures bet codes with multiple bet types on the same numbers
+    // const multipleBetTypesPattern = /^([\d.]+)((?:[a-z]+\d+(?:[,.]\d+)?\.?)+)$/i
+    // const multipleBetMatch = normalizedLine.match(multipleBetTypesPattern)
+
+    // console.log('multipleBetMatch', multipleBetMatch)
+
+    // if (multipleBetMatch) {
+    //   const [fullMatch, numbersPart, betTypesPart] = multipleBetMatch
+
+    //   // Process the numbers
+    //   const numbers = numbersPart.split('.').filter((n) => n.trim() !== '')
+
+    //   // Process all bet types
+    //   const betTypesSegments = []
+    //   let currentSegment = ''
+    //   let inBetType = false
+
+    //   for (let i = 0; i < betTypesPart.length; i++) {
+    //     const char = betTypesPart[i]
+
+    //     // If we find a letter after a number or at the beginning, it's a new bet type
+    //     if (
+    //       /[a-z]/i.test(char) &&
+    //       (!inBetType ||
+    //         /\d/.test(currentSegment.charAt(currentSegment.length - 1)))
+    //     ) {
+    //       if (inBetType && currentSegment) {
+    //         betTypesSegments.push(currentSegment)
+    //         currentSegment = ''
+    //       }
+    //       inBetType = true
+    //       currentSegment += char
+    //     } else {
+    //       currentSegment += char
+    //     }
+
+    //     // If we reach a dot, end the current segment
+    //     if (char === '.') {
+    //       if (currentSegment) {
+    //         // Remove the dot and add the segment
+    //         betTypesSegments.push(currentSegment.slice(0, -1))
+    //         currentSegment = ''
+    //         inBetType = false
+    //       }
+    //     }
+    //   }
+
+    //   // Add the last segment if it exists
+    //   if (currentSegment) {
+    //     betTypesSegments.push(currentSegment)
+    //   }
+
+    //   // Process each bet type segment
+    //   const betTypes = []
+    //   for (const segment of betTypesSegments) {
+    //     // Extract bet type and amount
+    //     const betTypeMatch = segment.match(/([a-z]+)(\d+(?:[,.]\d+)?)/i)
+    //     if (betTypeMatch) {
+    //       const [_, betTypeText, amountText] = betTypeMatch
+    //       const betType = identifyBetType(betTypeText)
+    //       if (betType) {
+    //         const amount = parseAmount(amountText)
+    //         betTypes.push({ betType, amount })
+    //       }
+    //     }
+    //   }
+
+    //   // If we have valid numbers and bet types
+    //   if (numbers.length > 0 && betTypes.length > 0) {
+    //     // Check that all numbers have the same length
+    //     const lengths = new Set(numbers.map((num) => num.length))
+    //     if (lengths.size > 1) {
+    //       result.valid = false
+    //       result.error = 'Tất cả các số trong một dòng cược phải có cùng độ dài'
+    //       result.numbers = numbers
+    //       return result
+    //     }
+
+    //     // Set the primary bet type and additional bet types
+    //     result.numbers = numbers
+    //     result.betType = betTypes[0].betType
+    //     result.amount = betTypes[0].amount
+    //     result.valid = true
+
+    //     // Add additional bet types
+    //     for (let i = 1; i < betTypes.length; i++) {
+    //       result.additionalBetTypes.push({
+    //         betType: betTypes[i].betType,
+    //         amount: betTypes[i].amount,
+    //         numbers: numbers, // Share the same numbers
+    //       })
+    //     }
+
+    //     return result
+    //   }
+    // }
+
+    // Check for multiple bet types pattern (eg: 66.88da1.b5) or single bet type with decimal amount
+    const multipleBetTypesPattern =
+      /^([\d.,]+)([a-z]+\d+(?:[,.]\d+)?)(\.([a-z]+\d+(?:[,.]\d+)?)+)?$/i
     const multipleBetMatch = normalizedLine.match(multipleBetTypesPattern)
 
     if (multipleBetMatch) {
-      const [fullMatch, numbersPart, betTypesPart] = multipleBetMatch
+      const [
+        fullMatch,
+        numbersPart,
+        firstBetTypePart,
+        dotAndRest,
+        remainingBetTypes,
+      ] = multipleBetMatch
 
-      // Process the numbers
-      const numbers = numbersPart.split('.').filter((n) => n.trim() !== '')
+      // Process the numbers - be explicit about splitting on both commas and dots
+      const numbers = numbersPart.split(/[,.]/).filter((n) => n.trim() !== '')
 
-      // Process all bet types
-      const betTypesSegments = []
-      let currentSegment = ''
-      let inBetType = false
+      // Check if this is a multiple bet types case (with dot separator)
+      if (dotAndRest) {
+        // Extract first bet type and amount
+        const firstBetTypeMatch = firstBetTypePart.match(
+          /([a-z]+)(\d+(?:[,.]\d+)?)/i
+        )
+        if (!firstBetTypeMatch) return result
 
-      for (let i = 0; i < betTypesPart.length; i++) {
-        const char = betTypesPart[i]
+        const [_, firstBetTypeText, firstAmountText] = firstBetTypeMatch
+        const firstBetType = identifyBetType(firstBetTypeText)
+        const firstAmount = parseAmount(firstAmountText)
 
-        // If we find a letter after a number or at the beginning, it's a new bet type
-        if (
-          /[a-z]/i.test(char) &&
-          (!inBetType ||
-            /\d/.test(currentSegment.charAt(currentSegment.length - 1)))
+        if (!firstBetType) return result
+
+        // Process remaining bet types
+        const betTypes = [{ betType: firstBetType, amount: firstAmount }]
+        const remainingBetTypePattern = /([a-z]+)(\d+(?:[,.]\d+)?)/gi
+        let betTypeMatch
+
+        while (
+          (betTypeMatch = remainingBetTypePattern.exec(remainingBetTypes)) !==
+          null
         ) {
-          if (inBetType && currentSegment) {
-            betTypesSegments.push(currentSegment)
-            currentSegment = ''
-          }
-          inBetType = true
-          currentSegment += char
-        } else {
-          currentSegment += char
-        }
-
-        // If we reach a dot, end the current segment
-        if (char === '.') {
-          if (currentSegment) {
-            // Remove the dot and add the segment
-            betTypesSegments.push(currentSegment.slice(0, -1))
-            currentSegment = ''
-            inBetType = false
-          }
-        }
-      }
-
-      // Add the last segment if it exists
-      if (currentSegment) {
-        betTypesSegments.push(currentSegment)
-      }
-
-      // Process each bet type segment
-      const betTypes = []
-      for (const segment of betTypesSegments) {
-        // Extract bet type and amount
-        const betTypeMatch = segment.match(/([a-z]+)(\d+(?:[,.]\d+)?)/i)
-        if (betTypeMatch) {
-          const [_, betTypeText, amountText] = betTypeMatch
+          const [__, betTypeText, amountText] = betTypeMatch
           const betType = identifyBetType(betTypeText)
           if (betType) {
             const amount = parseAmount(amountText)
             betTypes.push({ betType, amount })
           }
         }
-      }
 
-      // If we have valid numbers and bet types
-      if (numbers.length > 0 && betTypes.length > 0) {
-        // Check that all numbers have the same length
-        const lengths = new Set(numbers.map((num) => num.length))
-        if (lengths.size > 1) {
-          result.valid = false
-          result.error = 'Tất cả các số trong một dòng cược phải có cùng độ dài'
+        // If we have valid numbers and bet types
+        if (numbers.length > 0 && betTypes.length > 0) {
+          // Check that all numbers have the same length
+          const lengths = new Set(numbers.map((num) => num.length))
+          if (lengths.size > 1) {
+            result.valid = false
+            result.error =
+              'Tất cả các số trong một dòng cược phải có cùng độ dài'
+            result.numbers = numbers
+            return result
+          }
+
+          // Set the primary bet type and additional bet types
           result.numbers = numbers
+          result.betType = betTypes[0].betType
+          result.amount = betTypes[0].amount
+          result.valid = true
+
+          // Add additional bet types
+          for (let i = 1; i < betTypes.length; i++) {
+            result.additionalBetTypes.push({
+              betType: betTypes[i].betType,
+              amount: betTypes[i].amount,
+              numbers: numbers, // Share the same numbers
+            })
+          }
+
           return result
         }
+      } else {
+        // This is a single bet type (possibly with decimal amount)
+        const betTypeMatch = firstBetTypePart.match(
+          /([a-z]+)(\d+(?:[,.]\d+)?)/i
+        )
+        if (betTypeMatch) {
+          const [_, betTypeText, amountText] = betTypeMatch
+          const betType = identifyBetType(betTypeText)
+          if (betType) {
+            const amount = parseAmount(amountText)
 
-        // Set the primary bet type and additional bet types
-        result.numbers = numbers
-        result.betType = betTypes[0].betType
-        result.amount = betTypes[0].amount
-        result.valid = true
+            // Check number lengths
+            const lengths = new Set(numbers.map((num) => num.length))
+            if (lengths.size > 1) {
+              result.valid = false
+              result.error =
+                'Tất cả các số trong một dòng cược phải có cùng độ dài'
+              result.numbers = numbers
+              return result
+            }
 
-        // Add additional bet types
-        for (let i = 1; i < betTypes.length; i++) {
-          result.additionalBetTypes.push({
-            betType: betTypes[i].betType,
-            amount: betTypes[i].amount,
-            numbers: numbers, // Share the same numbers
-          })
+            // NEW CODE: Add validation against bet type rules
+            if (numbers.length > 0) {
+              const digitCount = numbers[0].length
+              const validation = validateBetTypeDigitCount(
+                betType.id,
+                digitCount
+              )
+              if (!validation.valid) {
+                result.valid = false
+                result.error = validation.message
+                result.numbers = numbers
+                return result
+              }
+            }
+
+            // Set result
+            result.numbers = numbers
+            result.betType = betType
+            result.amount = amount
+            result.valid = true
+            return result
+          }
         }
-
-        return result
       }
     }
 
@@ -1533,9 +1662,6 @@ function extractMultipleBetTypes(line) {
   const betTypeMatch = normalizedLine.match(combinedBetTypesRegex)
 
   if (betTypeMatch) {
-    // Extract number part and bet types part
-    const numbersPart = normalizedLine.split(/[a-z]/)[0].trim()
-
     // Get all bet type segments
     const betTypesStr = betTypeMatch[1]
     const betTypeSegments = []

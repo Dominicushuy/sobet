@@ -77,7 +77,7 @@ export function ChatProvider({ children }) {
   const processUserMessage = async (text) => {
     setIsTyping(true)
 
-    console.log('Processing user message:', text)
+    // console.log('Processing user message:', text)
 
     try {
       // Short delay to simulate processing
@@ -89,7 +89,7 @@ export function ChatProvider({ children }) {
       // Kiểm tra nếu có nhiều đài trong một mã cược
       const multiStationBetCodes = processMultiStationBetCode(formattedBetCode)
 
-      console.log('multiStationBetCodes:', multiStationBetCodes)
+      // console.log('multiStationBetCodes:', multiStationBetCodes)
 
       if (multiStationBetCodes) {
         // Xử lý từng cặp đài-dòng cược riêng biệt
@@ -267,6 +267,8 @@ export function ChatProvider({ children }) {
           }
         }
       }
+
+      // console.log("'Formatted bet code:", formattedBetCode)
 
       // Parse the bet code
       const parseResult = parseBetCode(formattedBetCode)
