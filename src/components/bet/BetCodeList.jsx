@@ -27,6 +27,7 @@ const BetCodeList = () => {
     confirmDraftCodes,
     isInitialized,
     getStatistics,
+    filterCodes,
     getFilteredStatistics, // Add the new function
   } = useBetCode()
 
@@ -290,13 +291,43 @@ const BetCodeList = () => {
                 <p className='text-sm'>
                   Không có mã cược nào phù hợp với từ khóa tìm kiếm
                 </p>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className='mt-4'
-                  onClick={() => setFilterOpen(true)}>
-                  Điều chỉnh tìm kiếm
-                </Button>
+                <div className='flex justify-center gap-2 mt-4'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // Clear filter
+                      const searchInput = document.querySelector(
+                        'input[placeholder*="Tìm"]'
+                      )
+                      if (searchInput) {
+                        searchInput.value = ''
+                        searchInput.dispatchEvent(
+                          new Event('change', { bubbles: true })
+                        )
+                      }
+                      filterCodes(null)
+                    }}>
+                    Xóa bộ lọc
+                  </Button>
+                  <Button
+                    variant='default'
+                    size='sm'
+                    onClick={() => setFilterOpen(true)}>
+                    Điều chỉnh tìm kiếm
+                  </Button>
+                </div>
+                <div className='mt-4 bg-muted/40 p-3 rounded-md text-xs max-w-sm mx-auto'>
+                  <p className='text-muted-foreground font-medium mb-1'>
+                    Gợi ý tìm kiếm:
+                  </p>
+                  <ul className='list-disc list-inside space-y-1 text-muted-foreground/80'>
+                    <li>Tìm theo số cược (ví dụ: 23, 45, 78)</li>
+                    <li>Tìm theo đài (mb, vl, ct...)</li>
+                    <li>Tìm theo kiểu cược (dd, b, da...)</li>
+                    <li>Tìm theo nội dung mã cược gốc</li>
+                  </ul>
+                </div>
               </div>
             )}
           </div>

@@ -529,19 +529,143 @@ export function BetCodeProvider({ children }) {
     if (!filterCriteria) return betCodes
 
     return betCodes.filter((code) => {
-      // If we only have searchText, just do a text search
+      // If we only have searchText, perform a comprehensive text search
       if (
         Object.keys(filterCriteria).length === 1 &&
         filterCriteria.searchText
       ) {
         const searchText = filterCriteria.searchText.toLowerCase()
-        const codeText = (code.originalText || '').toLowerCase()
-        const stationName = (code.station?.name || '').toLowerCase()
 
-        return codeText.includes(searchText) || stationName.includes(searchText)
+        // Function to check if search text exists in any numbers array
+        const hasMatchInNumbers = (lines) => {
+          if (!lines || !Array.isArray(lines)) return false
+
+          for (const line of lines) {
+            // Check in numbers array
+            if (line.numbers && Array.isArray(line.numbers)) {
+              if (line.numbers.some((num) => num.includes(searchText))) {
+                return true
+              }
+            }
+
+            // Check in original line text
+            if ((line.originalLine || '').toLowerCase().includes(searchText)) {
+              return true
+            }
+
+            // Check in bet type
+            if (
+              (line.betType?.alias || '').toLowerCase().includes(searchText)
+            ) {
+              return true
+            }
+          }
+          return false
+        }
+
+        // Search in original text
+        if ((code.originalText || '').toLowerCase().includes(searchText)) {
+          return true
+        }
+
+        // Search in formatted text
+        if ((code.formattedText || '').toLowerCase().includes(searchText)) {
+          return true
+        }
+
+        // Search in station name or other station properties
+        if ((code.station?.name || '').toLowerCase().includes(searchText)) {
+          return true
+        }
+
+        // If station has multiple stations (e.g., vl.ct)
+        if (code.station?.stations && Array.isArray(code.station.stations)) {
+          if (
+            code.station.stations.some((s) =>
+              (s.name || '').toLowerCase().includes(searchText)
+            )
+          ) {
+            return true
+          }
+        }
+
+        // Search in all numbers and bet types from lines
+        if (hasMatchInNumbers(code.lines)) {
+          return true
+        }
+
+        return false
       }
 
-      // Previous filter logic for other criteria (can be removed if not needed)
+      // Handle combined criteria search
+      if (filterCriteria.searchText) {
+        const searchText = filterCriteria.searchText.toLowerCase()
+        let foundMatch = false
+
+        // Search in original text
+        if ((code.originalText || '').toLowerCase().includes(searchText)) {
+          foundMatch = true
+        }
+
+        // Search in formatted text
+        else if (
+          (code.formattedText || '').toLowerCase().includes(searchText)
+        ) {
+          foundMatch = true
+        }
+
+        // Search in station name
+        else if (
+          (code.station?.name || '').toLowerCase().includes(searchText)
+        ) {
+          foundMatch = true
+        }
+
+        // Search in multiple stations
+        else if (
+          code.station?.stations &&
+          Array.isArray(code.station.stations)
+        ) {
+          if (
+            code.station.stations.some((s) =>
+              (s.name || '').toLowerCase().includes(searchText)
+            )
+          ) {
+            foundMatch = true
+          }
+        }
+
+        // Search in numbers array and bet types
+        else if (code.lines && Array.isArray(code.lines)) {
+          for (const line of code.lines) {
+            // Search in original line
+            if ((line.originalLine || '').toLowerCase().includes(searchText)) {
+              foundMatch = true
+              break
+            }
+
+            // Search in numbers
+            if (line.numbers && Array.isArray(line.numbers)) {
+              if (line.numbers.some((num) => num.includes(searchText))) {
+                foundMatch = true
+                break
+              }
+            }
+
+            // Search in bet type alias
+            if (
+              (line.betType?.alias || '').toLowerCase().includes(searchText)
+            ) {
+              foundMatch = true
+              break
+            }
+          }
+        }
+
+        if (!foundMatch) return false
+      }
+
+      // Other filter criteria remain unchanged
       if (
         filterCriteria.station &&
         code.station?.name !== filterCriteria.station
@@ -575,19 +699,6 @@ export function BetCodeProvider({ children }) {
         code.stakeAmount > filterCriteria.maxAmount
       ) {
         return false
-      }
-
-      if (filterCriteria.searchText) {
-        const searchText = filterCriteria.searchText.toLowerCase()
-        const codeText = (code.originalText || '').toLowerCase()
-        const stationName = (code.station?.name || '').toLowerCase()
-
-        if (
-          !codeText.includes(searchText) &&
-          !stationName.includes(searchText)
-        ) {
-          return false
-        }
       }
 
       return true
