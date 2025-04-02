@@ -44,7 +44,7 @@ const BetCodeList = () => {
   // Lấy thống kê cho mã cược đã lọc
   const filteredStats = getFilteredStatistics(filteredCodes)
 
-  console.log({ stats, filteredStats })
+  // console.log({ stats, filteredStats })
 
   // Toggle select mode
   const toggleSelectMode = () => {

@@ -740,28 +740,6 @@ function parseStation(stationString) {
     }
   }
 
-  // Kiểm tra đài với tên đầy đủ
-  for (const station of defaultStations) {
-    const fullName = station.name.toLowerCase()
-    const fullAliases = station.aliases.map((a) => a.toLowerCase())
-
-    if (
-      stationText === fullName ||
-      fullAliases.includes(stationText) ||
-      stationText.includes(fullName) ||
-      fullAliases.some((a) => stationText.includes(a))
-    ) {
-      return {
-        success: true,
-        data: {
-          name: station.name,
-          region: station.region,
-          multiStation: false,
-        },
-      }
-    }
-  }
-
   // Kiểm tra nhiều đài cụ thể
   if (
     stationText.includes('.') ||
@@ -769,6 +747,7 @@ function parseStation(stationString) {
     stationText.includes(' ')
   ) {
     const stationParts = stationText.split(/[., ]+/).filter(Boolean)
+
     if (stationParts.length > 1) {
       const stationObjects = []
       let regionType = null
@@ -824,6 +803,28 @@ function parseStation(stationString) {
         region: station.region,
         multiStation: false,
       },
+    }
+  }
+
+  // Kiểm tra đài với tên đầy đủ
+  for (const station of defaultStations) {
+    const fullName = station.name.toLowerCase()
+    const fullAliases = station.aliases.map((a) => a.toLowerCase())
+
+    if (
+      stationText === fullName ||
+      fullAliases.includes(stationText) ||
+      stationText.includes(fullName) ||
+      fullAliases.some((a) => stationText.includes(a))
+    ) {
+      return {
+        success: true,
+        data: {
+          name: station.name,
+          region: station.region,
+          multiStation: false,
+        },
+      }
     }
   }
 
@@ -912,12 +913,39 @@ function findStationByAlias(alias) {
   // Chuyển alias về lowercase để so sánh không phân biệt chữ hoa/thường
   const normalizedAlias = alias.toLowerCase()
 
-  return defaultStations.find(
+  // Tìm kiếm đài dựa trên alias chính xác
+  const exactMatch = defaultStations.find(
     (s) =>
       s.name.toLowerCase() === normalizedAlias ||
-      s.aliases.some((a) => a === normalizedAlias) ||
-      s.aliases.some((a) => normalizedAlias.includes(a))
+      s.aliases.some((a) => a.toLowerCase() === normalizedAlias)
   )
+
+  if (exactMatch) return exactMatch
+
+  // Nếu không tìm thấy đài chính xác, tìm kiếm đài có alias phù hợp nhất
+  let bestMatch = null
+  let bestScore = 0
+
+  for (const station of defaultStations) {
+    for (const a of station.aliases) {
+      const aliasLower = a.toLowerCase()
+      // Tính điểm phù hợp
+      let score = 0
+      if (normalizedAlias.includes(aliasLower)) {
+        score = aliasLower.length
+      } else if (aliasLower.includes(normalizedAlias)) {
+        score = normalizedAlias.length
+      }
+
+      // Cập nhật bestMatch nếu tìm thấy alias phù hợp hơn
+      if (score > bestScore) {
+        bestScore = score
+        bestMatch = station
+      }
+    }
+  }
+
+  return bestMatch
 }
 
 /**
