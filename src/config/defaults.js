@@ -526,7 +526,7 @@ export const defaultBetTypes = [
   },
   {
     name: 'Bao Lô 7',
-    aliases: ['baobay', 'b7l', 'bao lo 7', 'cover seven'],
+    aliases: ['baobay', 'b7l', 'b7lo', 'bao lo 7', 'cover seven'],
     applicableRegions: ['south', 'central'],
     betRule: ['2 digits'],
     matchingDraw: {
@@ -543,7 +543,7 @@ export const defaultBetTypes = [
   },
   {
     name: 'Bao Lô 8',
-    aliases: ['baotam', 'b8l', 'bao lo 8', 'cover eight'],
+    aliases: ['baotam', 'b8l', 'b8lo', 'bao lo 8', 'cover eight'],
     applicableRegions: ['north'],
     betRule: ['2 digits'],
     matchingDraw: {

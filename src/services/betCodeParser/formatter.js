@@ -321,9 +321,8 @@ function formatBetLine(line) {
   normalizedLine = normalizedLine.replace(/(\b|[^a-z])dui(\d+|$)/g, '$1duoi$2')
 
   // Bước 2: Phát hiện và tách nhiều kiểu cược (dau20.duoi10)
-  // Khi phát hiện pattern như: [số].[số] [kiểu cược][số tiền].[kiểu cược][số tiền]
   const multipleBetTypesPattern =
-    /^([\d.\s]+)\s*([a-z]+\d+(?:[,.]\d+)?\.?[a-z]+\d+(?:[,.]\d+)?)/i
+    /^([\d.\s]+)\s*([a-z][a-z0-9]+\d+(?:[,.]\d+)?\.?[a-z][a-z0-9]*\d+(?:[,.]\d+)?)/i
   const multipleBetMatch = normalizedLine.match(multipleBetTypesPattern)
 
   if (multipleBetMatch) {
@@ -332,16 +331,48 @@ function formatBetLine(line) {
     // Chuẩn hóa phần số (chuyển dấu cách thành dấu chấm)
     const formattedNumbers = numbersPart.trim().replace(/\s+/g, '.')
 
-    // Tìm các kiểu cược và số tiền
-    const betTypes = []
-    const betTypePattern = /([a-z]+)(\d+(?:[,.]\d+)?)/gi
-    let betTypeMatch
+    // Lấy danh sách tất cả aliases sắp xếp theo độ dài - dài nhất trước
+    const sortedAliases = defaultBetTypes
+      .flatMap((bt) => bt.aliases)
+      .sort((a, b) => b.length - a.length)
 
-    while ((betTypeMatch = betTypePattern.exec(betTypesPart)) !== null) {
-      betTypes.push({
-        type: betTypeMatch[1],
-        amount: betTypeMatch[2],
-      })
+    // Tìm kiếm các kiểu cược từ phần betTypesPart
+    const betTypes = []
+    let remainingText = betTypesPart
+
+    // Lặp cho đến khi hết text
+    while (remainingText.length > 0) {
+      let foundMatch = false
+
+      // Tìm kiếm alias dài nhất trước
+      for (const alias of sortedAliases) {
+        if (remainingText.toLowerCase().startsWith(alias.toLowerCase())) {
+          // Tìm số tiền đi kèm
+          const afterAlias = remainingText.substring(alias.length)
+          const amountMatch = afterAlias.match(/^(\d+(?:[,.]\d+)?)/)
+
+          if (amountMatch) {
+            betTypes.push({
+              type: alias,
+              amount: amountMatch[1],
+            })
+
+            // Cập nhật remainingText, bỏ qua phần đã xử lý và dấu chấm nếu có
+            remainingText = afterAlias.substring(amountMatch[0].length)
+            if (remainingText.startsWith('.')) {
+              remainingText = remainingText.substring(1)
+            }
+
+            foundMatch = true
+            break
+          }
+        }
+      }
+
+      // Nếu không tìm thấy match nào, di chuyển tiếp một ký tự
+      if (!foundMatch) {
+        remainingText = remainingText.substring(1)
+      }
     }
 
     // Tạo dòng cược riêng cho mỗi kiểu

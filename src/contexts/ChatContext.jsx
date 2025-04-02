@@ -86,10 +86,12 @@ export function ChatProvider({ children }) {
       // Format the bet code first for better parsing
       const formattedBetCode = formatBetCode(text)
 
+      console.log('Formatted bet code:', formattedBetCode)
+
       // Kiểm tra nếu có nhiều đài trong một mã cược
       const multiStationBetCodes = processMultiStationBetCode(formattedBetCode)
 
-      // console.log('multiStationBetCodes:', multiStationBetCodes)
+      console.log('multiStationBetCodes:', multiStationBetCodes)
 
       if (multiStationBetCodes) {
         // Thay đổi logic: phân tích tất cả mã cược trước, chỉ lưu khi không có lỗi
