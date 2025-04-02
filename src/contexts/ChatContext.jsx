@@ -966,40 +966,56 @@ function extractSpecialCases(betCode, parseResult) {
   return specialCases;
 }
 
-// Kiểm tra xem một dòng có phải là dòng chỉ chứa đài không
-const isStationLine = (line) => {
-  const cleanLine = line.trim().toLowerCase();
+/**
+ * Kiểm tra xem dòng có phải là dòng chỉ chứa tên đài không
+ */
+function isStationLine(line) {
+  // Cải tiến: Kiểm tra kỹ lưỡng hơn để xác định dòng đài
+  if (!line) return false;
 
-  // Kiểm tra các mẫu đài miền (mb, mt, mn, 2dmn, 3dmt, etc.)
-  if (/^(mb|mt|mn|hn|hanoi)$/i.test(cleanLine)) return true;
-  if (/^\d+d(mn|mt|n|t|nam|trung)$/i.test(cleanLine)) return true;
+  // 1. Loại bỏ dấu chấm cuối
+  const cleanLine = line.replace(/\.+$/, "").trim().toLowerCase();
 
-  // Kiểm tra từng đài trong danh sách đài
+  // 2. Các mẫu đài nhiều miền đặc biệt
+  if (/^\d+d(mn|mt|n|t|nam|trung)$/i.test(cleanLine)) {
+    return true;
+  }
+
+  // 3. Các tên miền đặc biệt
+  if (/^(mb|mt|mn|mienbac|mientrung|miennam|hanoi|hn)$/i.test(cleanLine)) {
+    return true;
+  }
+
+  // 4. Kiểm tra tên đài đơn lẻ theo aliases
   for (const station of defaultStations) {
-    if (
-      station.name.toLowerCase() === cleanLine ||
-      station.aliases.some((alias) => alias === cleanLine)
-    ) {
+    if (station.name.toLowerCase() === cleanLine) {
+      return true;
+    }
+
+    // Kiểm tra chính xác các aliases
+    if (station.aliases.some((alias) => alias.toLowerCase() === cleanLine)) {
       return true;
     }
   }
 
-  // Kiểm tra các đài ghép (vl.ct, etc.)
+  // 5. Kiểm tra đài ghép (vl.ct)
   if (cleanLine.includes(".")) {
     const parts = cleanLine.split(".");
     const allPartsAreStations = parts.every((part) => {
       return defaultStations.some(
         (station) =>
           station.name.toLowerCase() === part ||
-          station.aliases.some((alias) => alias === part)
+          station.aliases.some((alias) => alias.toLowerCase() === part)
       );
     });
 
-    if (allPartsAreStations) return true;
+    if (allPartsAreStations) {
+      return true;
+    }
   }
 
   return false;
-};
+}
 
 const processMultiStationBetCode = (text) => {
   const lines = text.trim().split("\n");

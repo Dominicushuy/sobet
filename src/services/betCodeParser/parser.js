@@ -615,57 +615,43 @@ function parseStation(stationString) {
   // Loại bỏ dấu chấm cuối cùng nếu có
   const stationText = stationString.trim().toLowerCase().replace(/\.+$/, "");
 
-  // Trường hợp đặc biệt: chuỗi chứa cả số, có thể là đài + số cược
-  if (/\d/.test(stationText)) {
-    // Kiểm tra đặc biệt cho đài nhiều miền trước
-    const multipleStationMatch = stationText.match(
-      /^(\d+)(dmn|dmt|dn|dt|dnam|dtrung|mn|mt|mnam|mtrung|mien nam|mien trung|miền nam|miền trung)/i
-    );
-
-    if (multipleStationMatch) {
-      const count = parseInt(multipleStationMatch[1], 10);
-      // Xác định miền dựa trên chuỗi phù hợp
-      const regionPart = multipleStationMatch[2].toLowerCase();
-      const isSouthern =
-        regionPart === "dmn" ||
-        regionPart === "dn" ||
-        regionPart === "dnam" ||
-        regionPart === "mn" ||
-        regionPart === "mnam" ||
-        regionPart === "mien nam" ||
-        regionPart === "miền nam";
-
-      const region = isSouthern ? "south" : "central";
-
+  // Kiểm tra tên đài chính xác
+  for (const station of defaultStations) {
+    if (station.name.toLowerCase() === stationText) {
       return {
         success: true,
         data: {
-          name: region === "south" ? "Miền Nam" : "Miền Trung",
-          region,
-          count,
-          multiStation: true,
+          name: station.name,
+          region: station.region,
+          multiStation: false,
         },
       };
     }
 
-    // Trích xuất phần đài cho các trường hợp khác
-    const stationPart = extractStationPart(stationText);
-    return parseStation(stationPart);
+    // Kiểm tra alias chính xác
+    if (station.aliases.some((alias) => alias.toLowerCase() === stationText)) {
+      return {
+        success: true,
+        data: {
+          name: station.name,
+          region: station.region,
+          multiStation: false,
+        },
+      };
+    }
   }
 
   // Kiểm tra đài miền Bắc
-  const northStation = defaultStations.find(
-    (s) =>
-      s.region === "north" &&
-      (s.name.toLowerCase() === stationText ||
-        s.aliases.some((a) => stationText === a))
-  );
-
-  if (northStation) {
+  if (
+    stationText === "mb" ||
+    stationText === "mienbac" ||
+    stationText === "hn" ||
+    stationText === "hanoi"
+  ) {
     return {
       success: true,
       data: {
-        name: northStation.name,
+        name: "Miền Bắc",
         region: "north",
         multiStation: false,
       },
@@ -701,129 +687,32 @@ function parseStation(stationString) {
     };
   }
 
-  // Kiểm tra đài miền Nam/Trung
-  const southCentralAliases = {
-    mn: "south",
-    dmn: "south",
-    dn: "south",
-    dnam: "south",
-    miennam: "south",
-    "mien nam": "south",
-    "miền nam": "south",
-    "đài nam": "south",
-    "đài miền nam": "south",
-    mnam: "south",
-    mt: "central",
-    dmt: "central",
-    dt: "central",
-    dtrung: "central",
-    mientrung: "central",
-    "mien trung": "central",
-    "miền trung": "central",
-    "đài trung": "central",
-    "đài miền trung": "central",
-    mtrung: "central",
-  };
+  // Kiểm tra nhiều đài cụ thể (vl.ct, etc.)
+  if (stationText.includes(".")) {
+    const stationParts = stationText.split(".");
+    const validStations = [];
 
-  if (southCentralAliases[stationText]) {
-    return {
-      success: true,
-      data: {
-        name:
-          southCentralAliases[stationText] === "south"
-            ? "Miền Nam"
-            : "Miền Trung",
-        region: southCentralAliases[stationText],
-        multiStation: true,
-        count: 1, // Mặc định là 1 nếu không chỉ định
-      },
-    };
-  }
-
-  // console.log('stationText', stationText)
-
-  // Kiểm tra nhiều đài cụ thể
-  if (
-    stationText.includes(".") ||
-    stationText.includes(",") ||
-    stationText.includes(" ")
-  ) {
-    const stationParts = stationText.split(/[., ]+/).filter(Boolean);
-
-    if (stationParts.length > 1) {
-      const stationObjects = [];
-      let regionType = null;
-
-      for (const part of stationParts) {
-        const station = findStationByAlias(part);
-        if (station) {
-          // Kiểm tra xem các đài có cùng miền không
-          if (regionType === null) {
-            regionType = station.region;
-          }
-
-          stationObjects.push({
+    for (const part of stationParts) {
+      for (const station of defaultStations) {
+        if (
+          station.name.toLowerCase() === part ||
+          station.aliases.some((alias) => alias.toLowerCase() === part)
+        ) {
+          validStations.push({
             name: station.name,
             region: station.region,
           });
+          break;
         }
       }
-
-      if (stationObjects.length > 0) {
-        return {
-          success: true,
-          data: {
-            stations: stationObjects,
-            region: regionType || "south", // Mặc định là miền Nam nếu không xác định được
-            multiStation: false,
-          },
-        };
-      }
     }
-  }
 
-  // Kiểm tra trường hợp đặc biệt: hai đài ghép liền (không có dấu phân cách)
-  const mergedStations = findMergedStations(stationText);
-  if (mergedStations.length === 2) {
-    return {
-      success: true,
-      data: {
-        stations: mergedStations,
-        region: mergedStations[0].region,
-        multiStation: false,
-      },
-    };
-  }
-
-  // Kiểm tra đài đơn lẻ
-  const station = findStationByAlias(stationText);
-  if (station) {
-    return {
-      success: true,
-      data: {
-        name: station.name,
-        region: station.region,
-        multiStation: false,
-      },
-    };
-  }
-
-  // Kiểm tra đài với tên đầy đủ
-  for (const station of defaultStations) {
-    const fullName = station.name.toLowerCase();
-    const fullAliases = station.aliases.map((a) => a.toLowerCase());
-
-    if (
-      stationText === fullName ||
-      fullAliases.includes(stationText) ||
-      stationText.includes(fullName) ||
-      fullAliases.some((a) => stationText.includes(a))
-    ) {
+    if (validStations.length === stationParts.length) {
       return {
         success: true,
         data: {
-          name: station.name,
-          region: station.region,
+          stations: validStations,
+          region: validStations[0].region, // Dùng miền của đài đầu tiên
           multiStation: false,
         },
       };
@@ -835,129 +724,6 @@ function parseStation(stationString) {
     success: false,
     error: `Không tìm thấy đài phù hợp với "${stationText}"`,
   };
-}
-
-/**
- * Tìm các đài ghép liền nhau không có dấu phân cách
- * @param {string} text - Chuỗi đài
- * @returns {Array} Danh sách đài tìm thấy
- */
-function findMergedStations(text) {
-  const foundStations = [];
-
-  // Trường hợp đặc biệt: dnaictho, tp.dongthap
-  for (const station1 of defaultStations) {
-    // Thử tất cả các alias của đài 1
-    for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
-      if (text.startsWith(alias1)) {
-        const remainingText = text.substring(alias1.length);
-
-        // Tìm đài thứ 2 trong phần còn lại
-        for (const station2 of defaultStations) {
-          // Không xét ghép giữa đài với chính nó
-          if (station1.name === station2.name) continue;
-
-          for (const alias2 of [
-            station2.name.toLowerCase(),
-            ...station2.aliases,
-          ]) {
-            if (remainingText === alias2 || remainingText.startsWith(alias2)) {
-              foundStations.push({
-                name: station1.name,
-                region: station1.region,
-              });
-
-              foundStations.push({
-                name: station2.name,
-                region: station2.region,
-              });
-
-              return foundStations;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Thử tất cả các cách chia chuỗi thành 2 phần
-  for (let i = 2; i < text.length - 1; i++) {
-    const part1 = text.substring(0, i);
-    const part2 = text.substring(i);
-
-    const station1 = findStationByAlias(part1);
-    const station2 = findStationByAlias(part2);
-
-    if (station1 && station2) {
-      foundStations.push({
-        name: station1.name,
-        region: station1.region,
-      });
-
-      foundStations.push({
-        name: station2.name,
-        region: station2.region,
-      });
-
-      break;
-    }
-  }
-
-  return foundStations;
-}
-
-/**
- * Tìm đài dựa trên alias
- */
-function findStationByAlias(alias) {
-  if (!alias) return null;
-
-  // Chuyển alias về lowercase để so sánh không phân biệt chữ hoa/thường
-  const normalizedAlias = alias.toLowerCase();
-
-  // Tìm kiếm đài dựa trên alias chính xác
-  const exactMatch = defaultStations.find(
-    (s) =>
-      s.name.toLowerCase() === normalizedAlias ||
-      s.aliases.some((a) => a.toLowerCase() === normalizedAlias)
-  );
-
-  if (exactMatch) return exactMatch;
-
-  // Nếu không tìm thấy đài chính xác, tìm kiếm đài có alias phù hợp nhất
-  let bestMatch = null;
-  let bestScore = 0;
-
-  for (const station of defaultStations) {
-    for (const a of station.aliases) {
-      const aliasLower = a.toLowerCase();
-      // Tính điểm phù hợp - cải tiến để tránh trường hợp các tỉnh bị trùng lặp
-      let score = 0;
-
-      // Ưu tiên khớp chính xác cao nhất
-      if (normalizedAlias === aliasLower) {
-        score = 1000; // Điểm rất cao cho khớp chính xác
-      }
-      // Chỉ xét các trường hợp partial match khi độ dài đủ lớn
-      else if (normalizedAlias.includes(aliasLower) && aliasLower.length >= 3) {
-        score = aliasLower.length * 2;
-      } else if (
-        aliasLower.includes(normalizedAlias) &&
-        normalizedAlias.length >= 3
-      ) {
-        score = normalizedAlias.length * 2;
-      }
-
-      // Cập nhật bestMatch nếu tìm thấy alias phù hợp hơn
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = station;
-      }
-    }
-  }
-
-  // Chỉ trả về kết quả nếu có điểm đủ cao (tránh trường hợp ký tự đơn)
-  return bestScore >= 6 ? bestMatch : null;
 }
 
 /**
