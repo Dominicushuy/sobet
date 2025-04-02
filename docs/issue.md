@@ -1,4 +1,4 @@
-Người dùng còn 1 kiểu đặt cược nâng cao nữa là
+Triển khai phân tích mã cược người dùng đặt và tự động tách mã cược thành các phần riêng biệt theo các quy tắc sau:
 
 "Gộp nhiều kiểu đánh có cùng số"
 
@@ -51,11 +51,11 @@ Chi tiết về số cước và số tiền:
    - Kiểu 2: `da5` - Đá 5.000đ
    - Kiểu 3: `b3` - Bao lô 3 lô (3.000đ)
 
-2. `79.456dau15.dit7.xc5`
+2. `79.456dau15.duoi7.xc5`
 
    - Số: 79.456
    - Kiểu 1: `dau15` - Đầu 15.000đ
-   - Kiểu 2: `dit7` - Đuôi 7.000đ
+   - Kiểu 2: `duoi7` - Đuôi 7.000đ
    - Kiểu 3: `xc5` - Xỉu chủ 5.000đ
 
 3. `55.789dd20.da10.b5`
@@ -95,15 +95,6 @@ Chi tiết về số cước và số tiền:
 - Mỗi kiểu cược được viết ngay sau số, phân cách bằng dấu chấm
 - Số tiền của mỗi kiểu cược có thể khác nhau
 - Hệ thống chấp nhận nhiều kiểu cược cho cùng một số
-
-Các kiểu cược thường gặp:
-
-- `xc`: Xỉu chủ
-- `da`: Đá
-- `b`: Bao lô
-- `dau`: Đầu
-- `dit`: Đuôi
-- `dd`: Đầu đuôi
 
 **Yêu cầu hệ thống phải tự động nhận diện các kiểu cược này và tách chúng ra thành các phần riêng biệt.**
 
@@ -194,12 +185,3 @@ Hệ thống sẽ tách thành:
 86.234b4
 86.234dau10
 ```
-
-Tôi vừa đặt mã sau thì bot thông báo "Không có mã cược hợp lệ nào được tìm thấy. Vui lòng kiểm tra lại định dạng của các dòng cược."
-
-```
-mb
-86.234xc15.da7.b4.dau10
-```
-
-Có vẻ như functions `processMultiStationBetCode` trong `ChatContext` chạy chưa đúng

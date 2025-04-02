@@ -76,6 +76,9 @@ export function ChatProvider({ children }) {
 
   /**
    * Phát hiện các trường hợp đặc biệt trong mã cược
+   * @param {string} betCode - Mã cược đầu vào
+   * @param {object} parseResult - Kết quả phân tích mã cược
+   * @returns {object} Thông tin về các trường hợp đặc biệt
    */
   function extractSpecialCases(betCode, parseResult) {
     const specialCases = {
@@ -445,6 +448,97 @@ export function ChatProvider({ children }) {
         return
       }
 
+      // Xử lý khi ở định dạng đã chuẩn hóa
+      if (formattedBetCode !== text) {
+        // Kiểm tra xem định dạng mới có tách thành nhiều dòng không
+        const formattedLines = formattedBetCode.split('\n')
+        const originalLines = text.split('\n')
+
+        // Nếu số dòng sau khi định dạng nhiều hơn số dòng ban đầu, có thể đã tách mã cược
+        if (formattedLines.length > originalLines.length) {
+          // Xử lý tách mã cược
+          let successCount = 0
+          const addedCodes = []
+          let totalStake = 0
+          let totalPotential = 0
+
+          // Đảm bảo dòng đầu tiên là tên đài
+          const stationLine = formattedLines[0]
+
+          // Xử lý từng dòng mã cược đã tách
+          for (let i = 1; i < formattedLines.length; i++) {
+            const betLine = formattedLines[i]
+            if (!betLine.trim()) continue
+
+            // Tạo mã cược hoàn chỉnh với tên đài
+            const completeBetCode = `${stationLine}\n${betLine}`
+
+            // Phân tích mã cược
+            const lineResult = betCodeService.analyzeBetCode(completeBetCode)
+
+            if (lineResult.success) {
+              const codeId = uid()
+              const stakeAmount =
+                lineResult.calculationResults.stakeResult?.totalStake || 0
+              const potentialWinning =
+                lineResult.calculationResults.prizeResult?.totalPotential || 0
+
+              // Thêm vào danh sách nháp
+              addDraftCode({
+                id: codeId,
+                station: lineResult.parseResult.station,
+                lines: lineResult.parseResult.lines,
+                originalText: completeBetCode,
+                formattedText:
+                  lineResult.formattedText !== completeBetCode
+                    ? lineResult.formattedText
+                    : completeBetCode,
+                stakeAmount,
+                potentialWinning,
+                stakeDetails:
+                  lineResult.calculationResults.stakeResult?.details || [],
+                prizeDetails:
+                  lineResult.calculationResults.prizeResult?.details || [],
+                autoExpanded: true,
+                specialCase: 'multiple_bet_types',
+              })
+
+              successCount++
+              totalStake += stakeAmount
+              totalPotential += potentialWinning
+              addedCodes.push({
+                id: codeId,
+                line: betLine,
+                stakeAmount,
+                potentialWinning,
+              })
+            }
+          }
+
+          // Hiển thị thông báo thành công cho người dùng
+          if (successCount > 0) {
+            let message = `Mã cược hợp lệ! Đã tự động tách thành ${successCount} mã cược và thêm vào danh sách.`
+            message += `\n\nMã cược gốc đã được tối ưu định dạng và tách thành ${successCount} mã cược riêng biệt.`
+
+            addMessage(message, 'bot', {
+              betCodeInfo: {
+                station: formattedLines[0],
+                lineCount: successCount,
+                totalStake,
+                potentialWin: totalPotential,
+                formattedCode: formattedBetCode,
+                isAutoExpanded: true,
+                specialCasesType: 'multiple_bet_types',
+                addedCodes,
+              },
+            })
+
+            setIsTyping(false)
+            return
+          }
+        }
+      }
+
       // Parse the bet code
       const parseResult = parseBetCode(formattedBetCode)
 
@@ -542,6 +636,102 @@ export function ChatProvider({ children }) {
           const originalLines = text.split('\n')
           const originalStationText = originalLines[0].trim()
 
+          // Cải tiến: Xử lý trường hợp formatted code có nhiều dòng sau khi tối ưu
+          if (formattedBetCode.split('\n').length > originalLines.length) {
+            const formattedLines = formattedBetCode.split('\n')
+            let successCount = 0
+            let totalStakeAmount = 0
+            let totalPotentialWinAmount = 0
+            const addedCodes = []
+
+            // Đảm bảo dòng đầu tiên là tên đài
+            const stationLine = formattedLines[0]
+
+            for (let i = 1; i < formattedLines.length; i++) {
+              const betLine = formattedLines[i].trim()
+              if (!betLine) continue
+
+              // Tạo mã cược hoàn chỉnh với tên đài
+              const completeBetCode = `${stationLine}\n${betLine}`
+
+              // Phân tích mã cược
+              const lineResult = betCodeService.analyzeBetCode(completeBetCode)
+
+              if (lineResult.success) {
+                const codeId = uid()
+                const stakeAmount =
+                  lineResult.calculationResults.stakeResult?.totalStake || 0
+                const potentialWinning =
+                  lineResult.calculationResults.prizeResult?.totalPotential || 0
+
+                // Thêm vào danh sách nháp
+                addDraftCode({
+                  id: codeId,
+                  station: lineResult.parseResult.station,
+                  lines: lineResult.parseResult.lines,
+                  originalText: completeBetCode,
+                  formattedText:
+                    lineResult.formattedText !== completeBetCode
+                      ? lineResult.formattedText
+                      : completeBetCode,
+                  stakeAmount,
+                  potentialWinning,
+                  stakeDetails:
+                    lineResult.calculationResults.stakeResult?.details || [],
+                  prizeDetails:
+                    lineResult.calculationResults.prizeResult?.details || [],
+                  autoExpanded: true,
+                  specialCase: specialCases.type,
+                })
+
+                successCount++
+                totalStakeAmount += stakeAmount
+                totalPotentialWinAmount += potentialWinning
+                addedCodes.push({
+                  id: codeId,
+                  line: betLine,
+                  stakeAmount,
+                  potentialWinning,
+                })
+              }
+            }
+
+            // Thêm thông báo thành công cho người dùng
+            if (successCount > 0) {
+              let message = `Mã cược hợp lệ! Đã tự động tách thành ${successCount} mã cược và thêm vào danh sách.`
+
+              // Thêm mô tả chi tiết về loại trường hợp đặc biệt
+              if (specialCases.description) {
+                message += `\n\n${specialCases.description}.`
+              }
+
+              message +=
+                '\n\nMã cược đã được tối ưu định dạng và tách thành các mã cược riêng biệt.'
+
+              // Thêm thông tin về tổng tiền cược và tiềm năng thắng
+              addMessage(message, 'bot', {
+                betCodeInfo: {
+                  station: stationLine,
+                  lineCount: successCount,
+                  totalStake: totalStakeAmount,
+                  potentialWin: totalPotentialWinAmount,
+                  formattedCode: formattedBetCode,
+                  isAutoExpanded: true,
+                  specialCasesType: specialCases.type,
+                  addedCodes,
+                },
+                detailedCalculations: {
+                  totalStakeAmount,
+                  totalPotentialWinAmount,
+                  successfulLines: successCount,
+                },
+              })
+
+              setIsTyping(false)
+              return
+            }
+          }
+
           // Thu thập tất cả các dòng đã tách
           const separateLines = [
             ...specialCases.groupedNumbers.flatMap(
@@ -560,47 +750,98 @@ export function ChatProvider({ children }) {
 
           for (let i = 0; i < separateLines.length; i++) {
             const line = separateLines[i]
-            const separateCode = `${originalStationText}\n${line}`
-            const separateResult = betCodeService.analyzeBetCode(separateCode)
+            // Kiểm tra nếu line đã chứa đài hay chưa
+            if (line.includes('\n')) {
+              // Line đã có đài
+              const separateResult = betCodeService.analyzeBetCode(line)
 
-            if (separateResult.success) {
-              const codeId = uid()
-              const stakeAmount =
-                separateResult.calculationResults.stakeResult?.totalStake || 0
-              const potentialWinning =
-                separateResult.calculationResults.prizeResult?.totalPotential ||
-                0
+              if (separateResult.success) {
+                const codeId = uid()
+                const stakeAmount =
+                  separateResult.calculationResults.stakeResult?.totalStake || 0
+                const potentialWinning =
+                  separateResult.calculationResults.prizeResult
+                    ?.totalPotential || 0
 
-              addDraftCode({
-                id: codeId,
-                station: separateResult.parseResult.station,
-                lines: separateResult.parseResult.lines,
-                originalText: separateCode,
-                formattedText:
-                  separateResult.formattedText !== separateCode
-                    ? separateResult.formattedText
-                    : separateCode,
-                stakeAmount,
-                potentialWinning,
-                stakeDetails:
-                  separateResult.calculationResults.stakeResult?.details || [],
-                prizeDetails:
-                  separateResult.calculationResults.prizeResult?.details || [],
-                autoExpanded: true,
-                specialCase: specialCases.type,
-              })
+                addDraftCode({
+                  id: codeId,
+                  station: separateResult.parseResult.station,
+                  lines: separateResult.parseResult.lines,
+                  originalText: line,
+                  formattedText:
+                    separateResult.formattedText !== line
+                      ? separateResult.formattedText
+                      : line,
+                  stakeAmount,
+                  potentialWinning,
+                  stakeDetails:
+                    separateResult.calculationResults.stakeResult?.details ||
+                    [],
+                  prizeDetails:
+                    separateResult.calculationResults.prizeResult?.details ||
+                    [],
+                  autoExpanded: true,
+                  specialCase: specialCases.type,
+                })
 
-              successCount++
-              totalStakeAmount += stakeAmount
-              totalPotentialWinAmount += potentialWinning
+                successCount++
+                totalStakeAmount += stakeAmount
+                totalPotentialWinAmount += potentialWinning
 
-              // Lưu thông tin mã cược đã thêm
-              addedCodes.push({
-                id: codeId,
-                line,
-                stakeAmount,
-                potentialWinning,
-              })
+                // Lưu thông tin mã cược đã thêm
+                addedCodes.push({
+                  id: codeId,
+                  line,
+                  stakeAmount,
+                  potentialWinning,
+                })
+              }
+            } else {
+              // Line chưa có đài, thêm đài vào
+              const separateCode = `${originalStationText}\n${line}`
+              const separateResult = betCodeService.analyzeBetCode(separateCode)
+
+              if (separateResult.success) {
+                const codeId = uid()
+                const stakeAmount =
+                  separateResult.calculationResults.stakeResult?.totalStake || 0
+                const potentialWinning =
+                  separateResult.calculationResults.prizeResult
+                    ?.totalPotential || 0
+
+                addDraftCode({
+                  id: codeId,
+                  station: separateResult.parseResult.station,
+                  lines: separateResult.parseResult.lines,
+                  originalText: separateCode,
+                  formattedText:
+                    separateResult.formattedText !== separateCode
+                      ? separateResult.formattedText
+                      : separateCode,
+                  stakeAmount,
+                  potentialWinning,
+                  stakeDetails:
+                    separateResult.calculationResults.stakeResult?.details ||
+                    [],
+                  prizeDetails:
+                    separateResult.calculationResults.prizeResult?.details ||
+                    [],
+                  autoExpanded: true,
+                  specialCase: specialCases.type,
+                })
+
+                successCount++
+                totalStakeAmount += stakeAmount
+                totalPotentialWinAmount += potentialWinning
+
+                // Lưu thông tin mã cược đã thêm
+                addedCodes.push({
+                  id: codeId,
+                  line,
+                  stakeAmount,
+                  potentialWinning,
+                })
+              }
             }
           }
 

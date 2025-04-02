@@ -120,7 +120,7 @@ const BetCodeCard = ({
   const getOriginalStakeAmount = () => {
     if (!betCode.lines || !Array.isArray(betCode.lines)) return 0
 
-    console.log('Bet code lines:', betCode.lines)
+    // console.log('Bet code lines:', betCode.lines)
 
     // Sum up the original amount from all lines
     return betCode.lines.reduce((total, line) => {
