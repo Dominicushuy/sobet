@@ -497,13 +497,51 @@ export function BetCodeProvider({ children }) {
     }
   }, [betCodes, draftCodes])
 
+  // Add a new function to calculate statistics for filtered codes
+  const getFilteredStatistics = useCallback((filteredCodes = []) => {
+    if (!filteredCodes || filteredCodes.length === 0) {
+      return {
+        totalStake: 0,
+        totalPotential: 0,
+        count: 0,
+      }
+    }
+
+    const totalStake = filteredCodes.reduce(
+      (sum, code) => sum + (code.stakeAmount || 0),
+      0
+    )
+    const totalPotential = filteredCodes.reduce(
+      (sum, code) => sum + (code.potentialWinning || 0),
+      0
+    )
+
+    return {
+      totalStake,
+      totalPotential,
+      count: filteredCodes.length,
+    }
+  }, [])
+
   // Filter codes with the current filter criteria
   const getFilteredCodes = useCallback(() => {
     const { filterCriteria } = state
     if (!filterCriteria) return betCodes
 
     return betCodes.filter((code) => {
-      // Filter by station
+      // If we only have searchText, just do a text search
+      if (
+        Object.keys(filterCriteria).length === 1 &&
+        filterCriteria.searchText
+      ) {
+        const searchText = filterCriteria.searchText.toLowerCase()
+        const codeText = (code.originalText || '').toLowerCase()
+        const stationName = (code.station?.name || '').toLowerCase()
+
+        return codeText.includes(searchText) || stationName.includes(searchText)
+      }
+
+      // Previous filter logic for other criteria (can be removed if not needed)
       if (
         filterCriteria.station &&
         code.station?.name !== filterCriteria.station
@@ -511,7 +549,6 @@ export function BetCodeProvider({ children }) {
         return false
       }
 
-      // Filter by date range
       if (filterCriteria.dateFrom || filterCriteria.dateTo) {
         const codeDate = new Date(code.createdAt).getTime()
 
@@ -526,7 +563,6 @@ export function BetCodeProvider({ children }) {
         }
       }
 
-      // Filter by amount range
       if (
         filterCriteria.minAmount &&
         code.stakeAmount < filterCriteria.minAmount
@@ -541,7 +577,6 @@ export function BetCodeProvider({ children }) {
         return false
       }
 
-      // Filter by text
       if (filterCriteria.searchText) {
         const searchText = filterCriteria.searchText.toLowerCase()
         const codeText = (code.originalText || '').toLowerCase()
@@ -585,6 +620,7 @@ export function BetCodeProvider({ children }) {
     filterCodes,
     getStatistics,
     getFilteredCodes,
+    getFilteredStatistics,
     analyzeBetCode,
   }
 

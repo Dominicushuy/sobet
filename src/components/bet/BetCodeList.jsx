@@ -5,6 +5,7 @@ import { useBetCode } from '@/contexts/BetCodeContext'
 import {
   Save,
   AlertTriangle,
+  BarChart2,
   Check,
   Filter,
   CircleSlash,
@@ -26,17 +27,24 @@ const BetCodeList = () => {
     confirmDraftCodes,
     isInitialized,
     getStatistics,
+    getFilteredStatistics, // Add the new function
   } = useBetCode()
 
   // State cho chọn nhiều
   const [selectedIds, setSelectedIds] = useState([])
   const [selectMode, setSelectMode] = useState(false)
-  const [filterOpen, setFilterOpen] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(true)
 
   // Lấy các mã cược đã lọc
   const filteredCodes = getFilteredCodes()
-  // Lấy thống kê
+
+  // Lấy thống kê cho tất cả mã cược
   const stats = getStatistics()
+
+  // Lấy thống kê cho mã cược đã lọc
+  const filteredStats = getFilteredStatistics(filteredCodes)
+
+  console.log({ stats, filteredStats })
 
   // Toggle select mode
   const toggleSelectMode = () => {
@@ -88,7 +96,7 @@ const BetCodeList = () => {
         <div className='flex items-center gap-2'>
           <h2 className='text-lg font-bold'>Mã cược</h2>
           <div className='flex space-x-1'>
-            <span className='text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full'>
+            <span className='text-xs text-white bg-primary px-2 py-0.5 rounded-full'>
               {betCodes.length} đã lưu
             </span>
             {draftCodes.length > 0 && (
@@ -152,7 +160,7 @@ const BetCodeList = () => {
         <div className='flex items-center justify-between mb-2'>
           <div className='text-sm font-medium flex items-center gap-1.5'>
             <Filter className='h-4 w-4 text-muted-foreground' />
-            Bộ lọc
+            Tìm kiếm
             <Button
               variant='ghost'
               size='sm'
@@ -170,15 +178,25 @@ const BetCodeList = () => {
             <div className='flex items-center gap-1.5'>
               <span className='text-muted-foreground'>Tổng tiền đóng:</span>
               <span className='font-medium text-blue-600'>
-                {formatMoney(stats.totalStake)}đ
+                {formatMoney(
+                  filteredCodes.length > 0
+                    ? filteredStats.totalStake
+                    : stats.totalStake
+                )}
+                đ
               </span>
             </div>
-            {/* <div className='flex items-center gap-1.5'>
+            <div className='flex items-center gap-1.5'>
               <span className='text-muted-foreground'>Tiềm năng thắng:</span>
               <span className='font-medium text-green-600'>
-                {formatMoney(stats.totalPotential)}đ
+                {formatMoney(
+                  filteredCodes.length > 0
+                    ? filteredStats.totalPotential
+                    : stats.totalPotential
+                )}
+                đ
               </span>
-            </div> */}
+            </div>
           </div>
         </div>
 
@@ -270,14 +288,14 @@ const BetCodeList = () => {
                   Không tìm thấy mã cược
                 </p>
                 <p className='text-sm'>
-                  Không có mã cược nào phù hợp với bộ lọc hiện tại
+                  Không có mã cược nào phù hợp với từ khóa tìm kiếm
                 </p>
                 <Button
                   variant='outline'
                   size='sm'
                   className='mt-4'
                   onClick={() => setFilterOpen(true)}>
-                  Điều chỉnh bộ lọc
+                  Điều chỉnh tìm kiếm
                 </Button>
               </div>
             )}
