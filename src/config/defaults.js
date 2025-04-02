@@ -7,9 +7,9 @@ export const defaultStations = [
     aliases: [
       "tp",
       "tpho",
+      "thanh pho",
       "hcm",
       "tp hcm",
-      "thanh pho",
       "thanh pho ho chi minh",
       "thành phố hồ chí minh",
       "thanh pho hcm",
