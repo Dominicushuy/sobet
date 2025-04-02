@@ -92,12 +92,14 @@ export function ChatProvider({ children }) {
       // console.log('multiStationBetCodes:', multiStationBetCodes)
 
       if (multiStationBetCodes) {
-        // Xử lý từng cặp đài-dòng cược riêng biệt
+        // Thay đổi logic: phân tích tất cả mã cược trước, chỉ lưu khi không có lỗi
         let successCount = 0
         let totalStake = 0
         let totalPotential = 0
         const failedBetCodes = []
+        const successfulBetCodes = []
 
+        // THAY ĐỔI: Phân tích tất cả mã cược trước
         for (const item of multiStationBetCodes) {
           const betCodeResult = betCodeService.analyzeBetCode(item.betCode)
 
@@ -107,8 +109,8 @@ export function ChatProvider({ children }) {
             const potentialWinning =
               betCodeResult.calculationResults.prizeResult?.totalPotential || 0
 
-            // Thêm vào danh sách nháp
-            addDraftCode({
+            // Thay vì lưu ngay, thêm vào danh sách thành công để xử lý sau
+            successfulBetCodes.push({
               id: uid(),
               station: betCodeResult.parseResult.station,
               lines: betCodeResult.parseResult.lines,
@@ -123,7 +125,6 @@ export function ChatProvider({ children }) {
                 betCodeResult.calculationResults.stakeResult?.details || [],
               prizeDetails:
                 betCodeResult.calculationResults.prizeResult?.details || [],
-              // Add permutation information if available
               permutations: betCodeResult.parseResult.permutations || {},
             })
 
@@ -142,7 +143,22 @@ export function ChatProvider({ children }) {
           }
         }
 
-        if (successCount > 0) {
+        // THAY ĐỔI: Chỉ lưu khi tất cả mã cược đều hợp lệ
+        if (failedBetCodes.length > 0) {
+          // Có mã lỗi - không lưu bất kỳ mã nào
+          const errorMessage = formatFailedBetCodesMessage(failedBetCodes)
+          addMessage(
+            `Phát hiện ${failedBetCodes.length} mã cược lỗi. Vui lòng sửa tất cả lỗi trước khi tiếp tục.\n\n${errorMessage}`,
+            'bot',
+            { error: true }
+          )
+        } else if (successCount > 0) {
+          // Không có lỗi và có mã thành công - lưu tất cả
+          // Lưu các mã cược thành công vào hệ thống
+          for (const betCode of successfulBetCodes) {
+            addDraftCode(betCode)
+          }
+
           // Hiển thị thông báo thành công
           addMessage(
             `Đã xử lý thành công ${successCount} mã cược từ ${multiStationBetCodes.length} dòng.`,
@@ -159,12 +175,6 @@ export function ChatProvider({ children }) {
               },
             }
           )
-
-          // Add a separate message for failed bet codes if any
-          if (failedBetCodes.length > 0) {
-            const errorMessage = formatFailedBetCodesMessage(failedBetCodes)
-            addMessage(errorMessage, 'bot', { error: true })
-          }
         } else {
           // Không có mã cược nào thành công
           addMessage(
