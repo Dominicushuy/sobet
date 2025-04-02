@@ -74,292 +74,6 @@ export function ChatProvider({ children }) {
     setMessages([])
   }
 
-  /**
-   * Phát hiện các trường hợp đặc biệt trong mã cược
-   * @param {string} betCode - Mã cược đầu vào
-   * @param {object} parseResult - Kết quả phân tích mã cược
-   * @returns {object} Thông tin về các trường hợp đặc biệt
-   */
-  function extractSpecialCases(betCode, parseResult) {
-    const specialCases = {
-      groupedNumbers: [],
-      multipleBetTypes: [],
-      type: null, // Thêm trường để xác định loại cụ thể
-      description: '', // Thêm mô tả chi tiết
-    }
-
-    if (!parseResult || !parseResult.lines) {
-      return specialCases
-    }
-
-    parseResult.lines.forEach((line, index) => {
-      // 1. Kiểm tra số gộp thành nhóm (vd: 1234.5678da1)
-      const groupedNumbers = line.originalLine.match(/\d{4,}/g)
-      if (
-        groupedNumbers &&
-        groupedNumbers.some((num) => num.length % 2 === 0)
-      ) {
-        const separateLines = []
-
-        if (line.betType?.alias === 'da' || line.betType?.alias === 'dv') {
-          // Xử lý đặc biệt cho kiểu đá (da/dv)
-          // Phân tích từng nhóm 4 chữ số thành cặp để đá với nhau
-          const pairs = []
-
-          for (const group of groupedNumbers) {
-            if (group.length % 4 === 0) {
-              // Tách nhóm 4 chữ số thành các cặp 2 chữ số để đá
-              for (let i = 0; i < group.length; i += 4) {
-                if (i + 4 <= group.length) {
-                  const firstPair = group.substring(i, i + 2)
-                  const secondPair = group.substring(i + 2, i + 4)
-                  pairs.push(`${firstPair}.${secondPair}`)
-                }
-              }
-            } else if (group.length % 2 === 0) {
-              // Tách thành các số 2 chữ số riêng lẻ
-              const singleNumbers = []
-              for (let i = 0; i < group.length; i += 2) {
-                singleNumbers.push(group.substring(i, i + 2))
-              }
-              if (singleNumbers.length >= 2) {
-                // Tạo cặp từ các số này
-                for (let i = 0; i < singleNumbers.length; i += 2) {
-                  if (i + 1 < singleNumbers.length) {
-                    pairs.push(`${singleNumbers[i]}.${singleNumbers[i + 1]}`)
-                  }
-                }
-              }
-            }
-          }
-
-          // Nếu có cặp đá sẵn (nhưng không phải là cặp đá gộp)
-          const lineWithoutGroups = line.originalLine
-            .split(/[a-zA-Z]/)[0] // Lấy phần trước kiểu cược
-            .split('.')
-            .filter((part) => !groupedNumbers.includes(part)) // Lọc bỏ các số gộp
-
-          for (const part of lineWithoutGroups) {
-            if (part.match(/^\d+\.\d+$/)) {
-              // Đây là cặp đá có sẵn
-              pairs.push(part)
-            }
-          }
-
-          // Thêm betType và amount vào mỗi cặp
-          const formattedAmount = Math.floor((line.amount || 10000) / 1000)
-          const betTypeStr = `${line.betType.alias}${formattedAmount}`
-
-          // Tạo ra một dòng cược riêng biệt cho mỗi cặp đá
-          // Quan trọng: Thêm đài vào mỗi dòng cược
-          const stationText = parseResult.station.name || 'mb'
-
-          pairs.forEach((pair) => {
-            separateLines.push(`${stationText}\n${pair}${betTypeStr}`)
-          })
-
-          // Cập nhật mô tả cho loại này
-          if (specialCases.type === null) {
-            specialCases.type = 'da_grouped'
-            specialCases.description = `Mã đá gộp ${groupedNumbers.join(
-              ', '
-            )} được tách thành ${pairs.length} cặp đá riêng biệt`
-          }
-        } else {
-          // Các kiểu cược khác - tách mỗi số 4 chữ số thành hai số 2 chữ số
-          const expandedNumbers = []
-
-          for (const group of groupedNumbers) {
-            if (group.length % 2 === 0) {
-              for (let i = 0; i < group.length; i += 2) {
-                expandedNumbers.push(group.substring(i, i + 2))
-              }
-            }
-          }
-
-          // Tạo lại dòng với tất cả các số đã tách
-          const existingNumbers = line.originalLine
-            .split(/[a-zA-Z]/)[0]
-            .split('.')
-            .filter((n) => !groupedNumbers.includes(n))
-          const allNumbers = [...existingNumbers, ...expandedNumbers].filter(
-            Boolean
-          )
-
-          // Thêm betType và amount
-          const formattedAmount = Math.floor((line.amount || 10000) / 1000)
-          const betTypeStr = `${line.betType.alias}${formattedAmount}`
-
-          // Không cần tách thành nhiều dòng cho các kiểu cược không phải đá
-          separateLines.push(`${allNumbers.join('.')}${betTypeStr}`)
-
-          // Cập nhật mô tả cho loại này
-          if (specialCases.type === null) {
-            specialCases.type = 'number_grouped'
-            specialCases.description = `Số gộp ${groupedNumbers.join(
-              ', '
-            )} được tách thành các số 2 chữ số riêng biệt`
-          }
-        }
-
-        if (separateLines.length > 0) {
-          specialCases.groupedNumbers.push({
-            originalLine: line.originalLine,
-            explanation: `Số ${groupedNumbers.join(
-              ', '
-            )} sẽ được tách thành các cặp 2 chữ số`,
-            separateLines,
-          })
-        }
-      }
-
-      // 2. Kiểm tra nhiều kiểu cược (vd: 23.45.67dd10.dau20.duoi5)
-      if (line.additionalBetTypes && line.additionalBetTypes.length > 0) {
-        const numbersPart = line.numbers ? line.numbers.join('.') : ''
-        const separateLines = []
-
-        // Tạo dòng cho kiểu cược chính
-        const formattedMainAmount = Math.floor((line.amount || 10000) / 1000)
-        const mainBetType = `${line.betType.alias}${formattedMainAmount}`
-
-        // Quan trọng: Thêm đài vào mỗi dòng cược
-        const stationText = parseResult.station.name || 'mb'
-
-        // Tạo một dòng cược hoàn chỉnh bao gồm đài
-        separateLines.push(`${stationText}\n${numbersPart}${mainBetType}`)
-
-        // Tạo dòng cho mỗi kiểu cược bổ sung
-        line.additionalBetTypes.forEach((additionalBet) => {
-          const formattedAmount = Math.floor(
-            (additionalBet.amount || 10000) / 1000
-          )
-          const betTypeStr = `${additionalBet.betType.alias}${formattedAmount}`
-          separateLines.push(`${stationText}\n${numbersPart}${betTypeStr}`)
-        })
-
-        if (separateLines.length > 0) {
-          specialCases.multipleBetTypes.push({
-            originalLine: line.originalLine,
-            explanation: `Nhiều kiểu cược sẽ được tách thành dòng riêng biệt`,
-            separateLines,
-          })
-
-          // Cập nhật mô tả cho loại này nếu chưa có type nào được set
-          if (specialCases.type === null) {
-            const betTypes = [
-              line.betType.alias,
-              ...line.additionalBetTypes.map((b) => b.betType.alias),
-            ]
-            specialCases.type = 'multiple_bet_types'
-            specialCases.description = `Nhiều kiểu cược (${betTypes.join(
-              ', '
-            )}) cho cùng dãy số được tách thành các dòng riêng biệt`
-          }
-        }
-      }
-    })
-
-    return specialCases
-  }
-
-  // Kiểm tra xem một dòng có phải là dòng chỉ chứa đài không
-  const isStationLine = (line) => {
-    const cleanLine = line.trim().toLowerCase()
-
-    // Kiểm tra các mẫu đài miền (mb, mt, mn, 2dmn, 3dmt, etc.)
-    if (/^(mb|mt|mn|hn|hanoi)$/i.test(cleanLine)) return true
-    if (/^\d+d(mn|mt|n|t|nam|trung)$/i.test(cleanLine)) return true
-
-    // Kiểm tra từng đài trong danh sách đài
-    for (const station of defaultStations) {
-      if (
-        station.name.toLowerCase() === cleanLine ||
-        station.aliases.some((alias) => alias === cleanLine)
-      ) {
-        return true
-      }
-    }
-
-    // Kiểm tra các đài ghép (vl.ct, etc.)
-    if (cleanLine.includes('.')) {
-      const parts = cleanLine.split('.')
-      const allPartsAreStations = parts.every((part) => {
-        return defaultStations.some(
-          (station) =>
-            station.name.toLowerCase() === part ||
-            station.aliases.some((alias) => alias === part)
-        )
-      })
-
-      if (allPartsAreStations) return true
-    }
-
-    return false
-  }
-
-  const processMultiStationBetCode = (text) => {
-    const lines = text.trim().split('\n')
-    if (lines.length < 2) return null
-
-    const betCodesByStation = []
-    let currentStation = null
-    const uniqueStations = new Set() // Track unique stations
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (!line) continue
-
-      // Detect if this line is a station line
-      if (isStationLine(line)) {
-        currentStation = line
-        uniqueStations.add(line) // Add to unique stations set
-        continue
-      }
-
-      // If we have a station and this is a bet line
-      if (currentStation) {
-        // Create a new station-betcode pair
-        betCodesByStation.push({
-          station: currentStation,
-          betLine: line,
-          betCode: `${currentStation}\n${line}`,
-        })
-      }
-    }
-
-    // Only return result if we have more than one unique station
-    return uniqueStations.size > 1 && betCodesByStation.length > 0
-      ? betCodesByStation
-      : null
-  }
-
-  const ensureCorrectBetCodeFormat = (betCode) => {
-    if (!betCode || typeof betCode !== 'string') {
-      return betCode
-    }
-
-    const lines = betCode.split('\n')
-    if (lines.length <= 1) return betCode
-
-    // Lấy danh sách alias từ defaultBetTypes
-    const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases)
-
-    // Chỉ xử lý các dòng từ dòng thứ 2 trở đi (sau dòng đài)
-    for (let i = 1; i < lines.length; i++) {
-      let line = lines[i]
-
-      // Loại bỏ dấu chấm trước kiểu cược
-      for (const alias of betTypeAliases) {
-        const betTypeRegex = new RegExp(`\\.(${alias}\\d*(?:[,.n]\\d+)?)`, 'gi')
-        line = line.replace(betTypeRegex, '$1')
-      }
-
-      lines[i] = line
-    }
-
-    return lines.join('\n')
-  }
-
   const processUserMessage = async (text) => {
     setIsTyping(true)
 
@@ -382,6 +96,7 @@ export function ChatProvider({ children }) {
         let successCount = 0
         let totalStake = 0
         let totalPotential = 0
+        const failedBetCodes = []
 
         for (const item of multiStationBetCodes) {
           const betCodeResult = betCodeService.analyzeBetCode(item.betCode)
@@ -415,6 +130,14 @@ export function ChatProvider({ children }) {
             successCount++
             totalStake += stakeAmount
             totalPotential += potentialWinning
+          } else {
+            // Collect error information for failed bet codes
+            failedBetCodes.push({
+              station: item.station,
+              betLine: item.betLine,
+              betCode: item.betCode,
+              betCodeResult, // Store the full result for better error analysis
+            })
           }
         }
 
@@ -435,6 +158,12 @@ export function ChatProvider({ children }) {
               },
             }
           )
+
+          // Add a separate message for failed bet codes if any
+          if (failedBetCodes.length > 0) {
+            const errorMessage = formatFailedBetCodesMessage(failedBetCodes)
+            addMessage(errorMessage, 'bot', { error: true })
+          }
         } else {
           // Không có mã cược nào thành công
           addMessage(
@@ -918,9 +647,7 @@ export function ChatProvider({ children }) {
               if (singleLineResult.success) {
                 // Add the individual bet code to drafts with a unique ID
                 addDraftCode({
-                  id: `${Date.now()}-${Math.random()
-                    .toString(36)
-                    .substr(2, 9)}-${i}`, // Ensure uniqueness
+                  id: uid(),
                   station: singleLineResult.parseResult.station,
                   lines: singleLineResult.parseResult.lines,
                   originalText: singleLineBetCode,
@@ -1033,4 +760,435 @@ export function useChat() {
     throw new Error('useChat must be used within a ChatProvider')
   }
   return context
+}
+
+/**
+ * Phát hiện các trường hợp đặc biệt trong mã cược
+ * @param {string} betCode - Mã cược đầu vào
+ * @param {object} parseResult - Kết quả phân tích mã cược
+ * @returns {object} Thông tin về các trường hợp đặc biệt
+ */
+function extractSpecialCases(betCode, parseResult) {
+  const specialCases = {
+    groupedNumbers: [],
+    multipleBetTypes: [],
+    type: null, // Thêm trường để xác định loại cụ thể
+    description: '', // Thêm mô tả chi tiết
+  }
+
+  if (!parseResult || !parseResult.lines) {
+    return specialCases
+  }
+
+  parseResult.lines.forEach((line, index) => {
+    // 1. Kiểm tra số gộp thành nhóm (vd: 1234.5678da1)
+    const groupedNumbers = line.originalLine.match(/\d{4,}/g)
+    if (groupedNumbers && groupedNumbers.some((num) => num.length % 2 === 0)) {
+      const separateLines = []
+
+      if (line.betType?.alias === 'da' || line.betType?.alias === 'dv') {
+        // Xử lý đặc biệt cho kiểu đá (da/dv)
+        // Phân tích từng nhóm 4 chữ số thành cặp để đá với nhau
+        const pairs = []
+
+        for (const group of groupedNumbers) {
+          if (group.length % 4 === 0) {
+            // Tách nhóm 4 chữ số thành các cặp 2 chữ số để đá
+            for (let i = 0; i < group.length; i += 4) {
+              if (i + 4 <= group.length) {
+                const firstPair = group.substring(i, i + 2)
+                const secondPair = group.substring(i + 2, i + 4)
+                pairs.push(`${firstPair}.${secondPair}`)
+              }
+            }
+          } else if (group.length % 2 === 0) {
+            // Tách thành các số 2 chữ số riêng lẻ
+            const singleNumbers = []
+            for (let i = 0; i < group.length; i += 2) {
+              singleNumbers.push(group.substring(i, i + 2))
+            }
+            if (singleNumbers.length >= 2) {
+              // Tạo cặp từ các số này
+              for (let i = 0; i < singleNumbers.length; i += 2) {
+                if (i + 1 < singleNumbers.length) {
+                  pairs.push(`${singleNumbers[i]}.${singleNumbers[i + 1]}`)
+                }
+              }
+            }
+          }
+        }
+
+        // Nếu có cặp đá sẵn (nhưng không phải là cặp đá gộp)
+        const lineWithoutGroups = line.originalLine
+          .split(/[a-zA-Z]/)[0] // Lấy phần trước kiểu cược
+          .split('.')
+          .filter((part) => !groupedNumbers.includes(part)) // Lọc bỏ các số gộp
+
+        for (const part of lineWithoutGroups) {
+          if (part.match(/^\d+\.\d+$/)) {
+            // Đây là cặp đá có sẵn
+            pairs.push(part)
+          }
+        }
+
+        // Thêm betType và amount vào mỗi cặp
+        const formattedAmount = Math.floor((line.amount || 10000) / 1000)
+        const betTypeStr = `${line.betType.alias}${formattedAmount}`
+
+        // Tạo ra một dòng cược riêng biệt cho mỗi cặp đá
+        // Quan trọng: Thêm đài vào mỗi dòng cược
+        const stationText = parseResult.station.name || 'mb'
+
+        pairs.forEach((pair) => {
+          separateLines.push(`${stationText}\n${pair}${betTypeStr}`)
+        })
+
+        // Cập nhật mô tả cho loại này
+        if (specialCases.type === null) {
+          specialCases.type = 'da_grouped'
+          specialCases.description = `Mã đá gộp ${groupedNumbers.join(
+            ', '
+          )} được tách thành ${pairs.length} cặp đá riêng biệt`
+        }
+      } else {
+        // Các kiểu cược khác - tách mỗi số 4 chữ số thành hai số 2 chữ số
+        const expandedNumbers = []
+
+        for (const group of groupedNumbers) {
+          if (group.length % 2 === 0) {
+            for (let i = 0; i < group.length; i += 2) {
+              expandedNumbers.push(group.substring(i, i + 2))
+            }
+          }
+        }
+
+        // Tạo lại dòng với tất cả các số đã tách
+        const existingNumbers = line.originalLine
+          .split(/[a-zA-Z]/)[0]
+          .split('.')
+          .filter((n) => !groupedNumbers.includes(n))
+        const allNumbers = [...existingNumbers, ...expandedNumbers].filter(
+          Boolean
+        )
+
+        // Thêm betType và amount
+        const formattedAmount = Math.floor((line.amount || 10000) / 1000)
+        const betTypeStr = `${line.betType.alias}${formattedAmount}`
+
+        // Không cần tách thành nhiều dòng cho các kiểu cược không phải đá
+        separateLines.push(`${allNumbers.join('.')}${betTypeStr}`)
+
+        // Cập nhật mô tả cho loại này
+        if (specialCases.type === null) {
+          specialCases.type = 'number_grouped'
+          specialCases.description = `Số gộp ${groupedNumbers.join(
+            ', '
+          )} được tách thành các số 2 chữ số riêng biệt`
+        }
+      }
+
+      if (separateLines.length > 0) {
+        specialCases.groupedNumbers.push({
+          originalLine: line.originalLine,
+          explanation: `Số ${groupedNumbers.join(
+            ', '
+          )} sẽ được tách thành các cặp 2 chữ số`,
+          separateLines,
+        })
+      }
+    }
+
+    // 2. Kiểm tra nhiều kiểu cược (vd: 23.45.67dd10.dau20.duoi5)
+    if (line.additionalBetTypes && line.additionalBetTypes.length > 0) {
+      const numbersPart = line.numbers ? line.numbers.join('.') : ''
+      const separateLines = []
+
+      // Tạo dòng cho kiểu cược chính
+      const formattedMainAmount = Math.floor((line.amount || 10000) / 1000)
+      const mainBetType = `${line.betType.alias}${formattedMainAmount}`
+
+      // Quan trọng: Thêm đài vào mỗi dòng cược
+      const stationText = parseResult.station.name || 'mb'
+
+      // Tạo một dòng cược hoàn chỉnh bao gồm đài
+      separateLines.push(`${stationText}\n${numbersPart}${mainBetType}`)
+
+      // Tạo dòng cho mỗi kiểu cược bổ sung
+      line.additionalBetTypes.forEach((additionalBet) => {
+        const formattedAmount = Math.floor(
+          (additionalBet.amount || 10000) / 1000
+        )
+        const betTypeStr = `${additionalBet.betType.alias}${formattedAmount}`
+        separateLines.push(`${stationText}\n${numbersPart}${betTypeStr}`)
+      })
+
+      if (separateLines.length > 0) {
+        specialCases.multipleBetTypes.push({
+          originalLine: line.originalLine,
+          explanation: `Nhiều kiểu cược sẽ được tách thành dòng riêng biệt`,
+          separateLines,
+        })
+
+        // Cập nhật mô tả cho loại này nếu chưa có type nào được set
+        if (specialCases.type === null) {
+          const betTypes = [
+            line.betType.alias,
+            ...line.additionalBetTypes.map((b) => b.betType.alias),
+          ]
+          specialCases.type = 'multiple_bet_types'
+          specialCases.description = `Nhiều kiểu cược (${betTypes.join(
+            ', '
+          )}) cho cùng dãy số được tách thành các dòng riêng biệt`
+        }
+      }
+    }
+  })
+
+  return specialCases
+}
+
+// Kiểm tra xem một dòng có phải là dòng chỉ chứa đài không
+const isStationLine = (line) => {
+  const cleanLine = line.trim().toLowerCase()
+
+  // Kiểm tra các mẫu đài miền (mb, mt, mn, 2dmn, 3dmt, etc.)
+  if (/^(mb|mt|mn|hn|hanoi)$/i.test(cleanLine)) return true
+  if (/^\d+d(mn|mt|n|t|nam|trung)$/i.test(cleanLine)) return true
+
+  // Kiểm tra từng đài trong danh sách đài
+  for (const station of defaultStations) {
+    if (
+      station.name.toLowerCase() === cleanLine ||
+      station.aliases.some((alias) => alias === cleanLine)
+    ) {
+      return true
+    }
+  }
+
+  // Kiểm tra các đài ghép (vl.ct, etc.)
+  if (cleanLine.includes('.')) {
+    const parts = cleanLine.split('.')
+    const allPartsAreStations = parts.every((part) => {
+      return defaultStations.some(
+        (station) =>
+          station.name.toLowerCase() === part ||
+          station.aliases.some((alias) => alias === part)
+      )
+    })
+
+    if (allPartsAreStations) return true
+  }
+
+  return false
+}
+
+const processMultiStationBetCode = (text) => {
+  const lines = text.trim().split('\n')
+  if (lines.length < 2) return null
+
+  const betCodesByStation = []
+  let currentStation = null
+  const uniqueStations = new Set() // Track unique stations
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line) continue
+
+    // Detect if this line is a station line
+    if (isStationLine(line)) {
+      currentStation = line
+      uniqueStations.add(line) // Add to unique stations set
+      continue
+    }
+
+    // If we have a station and this is a bet line
+    if (currentStation) {
+      // Create a new station-betcode pair
+      betCodesByStation.push({
+        station: currentStation,
+        betLine: line,
+        betCode: `${currentStation}\n${line}`,
+      })
+    }
+  }
+
+  // Only return result if we have more than one unique station
+  return uniqueStations.size > 1 && betCodesByStation.length > 0
+    ? betCodesByStation
+    : null
+}
+
+const ensureCorrectBetCodeFormat = (betCode) => {
+  if (!betCode || typeof betCode !== 'string') {
+    return betCode
+  }
+
+  const lines = betCode.split('\n')
+  if (lines.length <= 1) return betCode
+
+  // Lấy danh sách alias từ defaultBetTypes
+  const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases)
+
+  // Chỉ xử lý các dòng từ dòng thứ 2 trở đi (sau dòng đài)
+  for (let i = 1; i < lines.length; i++) {
+    let line = lines[i]
+
+    // Loại bỏ dấu chấm trước kiểu cược
+    for (const alias of betTypeAliases) {
+      const betTypeRegex = new RegExp(`\\.(${alias}\\d*(?:[,.n]\\d+)?)`, 'gi')
+      line = line.replace(betTypeRegex, '$1')
+    }
+
+    lines[i] = line
+  }
+
+  return lines.join('\n')
+}
+
+// Add these utility functions
+/**
+ * Extracts the most relevant error message from a bet code result
+ * @param {object} betCodeResult - The result from betCodeService.analyzeBetCode
+ * @returns {string} The most relevant error message
+ */
+function extractMainErrorMessage(betCodeResult) {
+  if (!betCodeResult) return 'Lỗi không xác định'
+
+  // Check in order of specificity
+  if (betCodeResult.calculationErrors) {
+    return betCodeResult.calculationErrors
+  }
+
+  if (betCodeResult.lineErrors) {
+    return betCodeResult.lineErrors
+  }
+
+  if (betCodeResult.errors && betCodeResult.errors.length > 0) {
+    return betCodeResult.errors.map((err) => err.message || err).join(', ')
+  }
+
+  if (betCodeResult.parseResult && betCodeResult.parseResult.errors) {
+    return betCodeResult.parseResult.errors
+      .map((err) => err.message || err)
+      .join(', ')
+  }
+
+  // Check for specific line errors in parse result
+  if (betCodeResult.parseResult && betCodeResult.parseResult.lines) {
+    const lineErrors = betCodeResult.parseResult.lines
+      .filter((line) => !line.valid && line.error)
+      .map((line) => line.error)
+
+    if (lineErrors.length > 0) {
+      return lineErrors.join(', ')
+    }
+  }
+
+  return 'Định dạng mã cược không hợp lệ'
+}
+
+/**
+ * Format error message for failed bet codes
+ * @param {Array} failedBetCodes - Array of failed bet codes with error information
+ * @returns {string} Formatted error message
+ */
+function formatFailedBetCodesMessage(failedBetCodes) {
+  if (!failedBetCodes || failedBetCodes.length === 0) {
+    return 'Không có mã cược nào bị lỗi.'
+  }
+
+  // Group errors by type for better presentation
+  const errorsByType = {
+    numberLengthErrors: [],
+    betTypeErrors: [],
+    stationErrors: [],
+    formatErrors: [],
+    otherErrors: [],
+  }
+
+  // Categorize each error
+  failedBetCodes.forEach((item) => {
+    const errorMessage = extractMainErrorMessage(item.betCodeResult)
+
+    if (
+      errorMessage.includes(
+        'Tất cả các số trong một dòng cược phải có cùng độ dài'
+      )
+    ) {
+      errorsByType.numberLengthErrors.push({ ...item, errorMessage })
+    } else if (
+      errorMessage.includes('Kiểu cược') &&
+      (errorMessage.includes('chỉ chấp nhận') ||
+        errorMessage.includes('không hỗ trợ'))
+    ) {
+      errorsByType.betTypeErrors.push({ ...item, errorMessage })
+    } else if (
+      errorMessage.includes('Không thể xác định đài') ||
+      errorMessage.includes('đài không tồn tại')
+    ) {
+      errorsByType.stationErrors.push({ ...item, errorMessage })
+    } else if (item.betCodeResult && !item.betCodeResult.success) {
+      errorsByType.formatErrors.push({ ...item, errorMessage })
+    } else {
+      errorsByType.otherErrors.push({ ...item, errorMessage })
+    }
+  })
+
+  // Build the message
+  let message = `⚠️ ${failedBetCodes.length} mã cược không thể xử lý do lỗi:\n\n`
+
+  let errorCount = 1
+
+  // Number length errors
+  if (errorsByType.numberLengthErrors.length > 0) {
+    message += `📏 **Lỗi độ dài số không nhất quán (${errorsByType.numberLengthErrors.length}):**\n`
+    errorsByType.numberLengthErrors.forEach((error) => {
+      message += `${errorCount++}. Đài: **${error.station}** - \`${
+        error.betLine
+      }\`\n   *Các số phải có cùng độ dài (ví dụ: 23.45.67 hoặc 123.456.789)*\n\n`
+    })
+  }
+
+  // Bet type errors
+  if (errorsByType.betTypeErrors.length > 0) {
+    message += `🎮 **Lỗi kiểu cược không hỗ trợ (${errorsByType.betTypeErrors.length}):**\n`
+    errorsByType.betTypeErrors.forEach((error) => {
+      message += `${errorCount++}. Đài: **${error.station}** - \`${
+        error.betLine
+      }\`\n   *${error.errorMessage}*\n\n`
+    })
+  }
+
+  // Station errors
+  if (errorsByType.stationErrors.length > 0) {
+    message += `🏢 **Lỗi đài không hợp lệ (${errorsByType.stationErrors.length}):**\n`
+    errorsByType.stationErrors.forEach((error) => {
+      message += `${errorCount++}. \`${error.betCode}\`\n   *${
+        error.errorMessage
+      }*\n\n`
+    })
+  }
+
+  // Format errors
+  if (errorsByType.formatErrors.length > 0) {
+    message += `📝 **Lỗi định dạng (${errorsByType.formatErrors.length}):**\n`
+    errorsByType.formatErrors.forEach((error) => {
+      message += `${errorCount++}. Đài: **${error.station}** - \`${
+        error.betLine
+      }\`\n   *${error.errorMessage}*\n\n`
+    })
+  }
+
+  // Other errors
+  if (errorsByType.otherErrors.length > 0) {
+    message += `❓ **Lỗi khác (${errorsByType.otherErrors.length}):**\n`
+    errorsByType.otherErrors.forEach((error) => {
+      message += `${errorCount++}. Đài: **${error.station}** - \`${
+        error.betLine
+      }\`\n   *${error.errorMessage}*\n\n`
+    })
+  }
+
+  message += 'Vui lòng kiểm tra và sửa lại các mã cược bị lỗi.'
+  return message
 }
