@@ -258,6 +258,49 @@ function formatBetLine(line) {
   // Bước 1: Chuẩn hóa khoảng trắng và dấu phân cách giữa các số
   let normalizedLine = line.trim()
 
+  // Xử lý đặc biệt cho kiểu đá với chuỗi số dài
+  // Kiểm tra mẫu dạng: XXXXXX(da|dv)N - số liền nhau + da/dv + số tiền
+  const daPattern = /^(\d+)(da|dv)(\d+(?:[,.]\d+)?)$/i
+  const daMatch = normalizedLine.match(daPattern)
+
+  if (daMatch) {
+    const [_, numbers, betType, amount] = daMatch
+
+    // Nếu chuỗi số có độ dài ≥ 4 và là bội số của 2, tách thành các cặp 2 chữ số
+    if (numbers.length >= 4 && numbers.length % 2 === 0) {
+      let formattedNumbers = ''
+      for (let i = 0; i < numbers.length; i += 2) {
+        if (i > 0) formattedNumbers += '.'
+        formattedNumbers += numbers.substr(i, 2)
+      }
+      normalizedLine = `${formattedNumbers}${betType}${amount}`
+    }
+  }
+
+  // Cải tiến: Xử lý cả trường hợp số liền nhau trong đá có dấu chấm ở đâu đó
+  // Ví dụ: 30.4050da1 -> 30.40.50da1
+  const partialDaPattern =
+    /^((?:\d+\.)*?)(\d{4,})(?!\.)?(da|dv)(\d+(?:[,.]\d+)?)$/i
+  const partialDaMatch = normalizedLine.match(partialDaPattern)
+
+  if (partialDaMatch && !daMatch) {
+    // Chỉ xử lý nếu chưa được xử lý bởi mẫu trước
+    const [_, prefix, numbers, betType, amount] = partialDaMatch
+
+    if (numbers.length >= 4 && numbers.length % 2 === 0) {
+      let formattedNumbers = ''
+      for (let i = 0; i < numbers.length; i += 2) {
+        if (i > 0) formattedNumbers += '.'
+        formattedNumbers += numbers.substr(i, 2)
+      }
+
+      // Nối lại với prefix nếu có
+      normalizedLine = prefix
+        ? `${prefix}${formattedNumbers}${betType}${amount}`
+        : `${formattedNumbers}${betType}${amount}`
+    }
+  }
+
   // Convert spaces between numbers to dots (e.g. "15 16 37 77" → "15.16.37.77")
   normalizedLine = normalizedLine.replace(/(\d+)\s+(\d+)/g, '$1.$2')
 
