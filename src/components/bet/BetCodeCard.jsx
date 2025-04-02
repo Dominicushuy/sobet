@@ -182,7 +182,7 @@ const BetCodeCard = ({
     )
 
     if (betType) {
-      return `${betTypeAlias} (${betType.name})`
+      return `${betType.name} (${betTypeAlias})`
     }
 
     return betTypeAlias || 'N/A'
