@@ -110,7 +110,11 @@ const BetCodeCard = ({
     }
 
     if (betCode.station.stations && betCode.station.stations.length > 0) {
-      displayName = betCode.station.stations.map((s) => s.name).join(', ')
+      // Sử dụng Set để đảm bảo tên đài không bị trùng lặp
+      const uniqueStations = [
+        ...new Set(betCode.station.stations.map((s) => s.name)),
+      ].join(', ')
+      displayName = uniqueStations
     }
 
     return displayName

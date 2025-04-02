@@ -931,12 +931,21 @@ function findStationByAlias(alias) {
   for (const station of defaultStations) {
     for (const a of station.aliases) {
       const aliasLower = a.toLowerCase()
-      // Tính điểm phù hợp
+      // Tính điểm phù hợp - cải tiến để tránh trường hợp các tỉnh bị trùng lặp
       let score = 0
-      if (normalizedAlias.includes(aliasLower)) {
-        score = aliasLower.length
-      } else if (aliasLower.includes(normalizedAlias)) {
-        score = normalizedAlias.length
+
+      // Ưu tiên khớp chính xác cao nhất
+      if (normalizedAlias === aliasLower) {
+        score = 1000 // Điểm rất cao cho khớp chính xác
+      }
+      // Chỉ xét các trường hợp partial match khi độ dài đủ lớn
+      else if (normalizedAlias.includes(aliasLower) && aliasLower.length >= 3) {
+        score = aliasLower.length * 2
+      } else if (
+        aliasLower.includes(normalizedAlias) &&
+        normalizedAlias.length >= 3
+      ) {
+        score = normalizedAlias.length * 2
       }
 
       // Cập nhật bestMatch nếu tìm thấy alias phù hợp hơn
@@ -947,7 +956,8 @@ function findStationByAlias(alias) {
     }
   }
 
-  return bestMatch
+  // Chỉ trả về kết quả nếu có điểm đủ cao (tránh trường hợp ký tự đơn)
+  return bestScore >= 6 ? bestMatch : null
 }
 
 /**
