@@ -8,16 +8,12 @@ import React, {
 } from 'react'
 import betCodeService from '../services/betCodeService'
 
-// Định nghĩa action types
+// Define action types
 const ACTION_TYPES = {
   INIT_CODES: 'INIT_CODES',
   ADD_DRAFT: 'ADD_DRAFT',
   REMOVE_DRAFT: 'REMOVE_DRAFT',
   EDIT_DRAFT: 'EDIT_DRAFT',
-  CONFIRM_ALL_DRAFTS: 'CONFIRM_ALL_DRAFTS',
-  CONFIRM_DRAFT: 'CONFIRM_DRAFT',
-  REMOVE_CODE: 'REMOVE_CODE',
-  EDIT_CODE: 'EDIT_CODE',
   SELECT_CODE: 'SELECT_CODE',
   CLEAR_SELECTION: 'CLEAR_SELECTION',
   BATCH_DELETE: 'BATCH_DELETE',
@@ -25,24 +21,23 @@ const ACTION_TYPES = {
   FILTER_CODES: 'FILTER_CODES',
 }
 
-// Reducer để quản lý state
+// Reducer to manage state
 const betCodeReducer = (state, action) => {
   switch (action.type) {
     case ACTION_TYPES.INIT_CODES:
       return {
         ...state,
-        betCodes: action.payload.betCodes || [],
         draftCodes: action.payload.draftCodes || [],
         isInitialized: true,
       }
 
     case ACTION_TYPES.ADD_DRAFT: {
-      // Tạo mã cược mới với ID duy nhất
+      // Create new code with unique ID
       const uniqueId = `${Date.now()}-${Math.random()
         .toString(36)
         .substring(2, 9)}`
 
-      // Chuẩn bị mã cược mới
+      // Prepare new code
       const newCode = {
         ...action.payload,
         id: action.payload.id || uniqueId,
@@ -51,11 +46,11 @@ const betCodeReducer = (state, action) => {
         status: 'pending',
       }
 
-      // Nếu đây là mã cược đã được tự động tách, thêm thông tin về việc tách
+      // If this is an automatically expanded code, add info about the expansion
       if (action.payload.autoExpanded) {
         newCode.autoExpanded = true
         newCode.specialCase = action.payload.specialCase || true
-        // Không lưu trữ thông tin specialCases quá chi tiết trong state
+        // Don't store too detailed specialCases info in state
         delete newCode.specialCases
 
         return {
@@ -112,87 +107,6 @@ const betCodeReducer = (state, action) => {
         },
       }
 
-    case ACTION_TYPES.CONFIRM_ALL_DRAFTS: {
-      if (state.draftCodes.length === 0) return state
-
-      const confirmedCodes = state.draftCodes.map((code) => ({
-        ...code,
-        isDraft: false,
-        status: 'confirmed',
-        confirmedAt: new Date().toISOString(),
-      }))
-
-      return {
-        ...state,
-        betCodes: [...state.betCodes, ...confirmedCodes],
-        draftCodes: [],
-        lastOperation: {
-          type: 'confirm_all',
-          timestamp: new Date().toISOString(),
-          count: confirmedCodes.length,
-        },
-      }
-    }
-
-    case ACTION_TYPES.CONFIRM_DRAFT: {
-      const draftToConfirm = state.draftCodes.find(
-        (code) => code.id === action.payload.id
-      )
-      if (!draftToConfirm) return state
-
-      const confirmedCode = {
-        ...draftToConfirm,
-        isDraft: false,
-        status: 'confirmed',
-        confirmedAt: new Date().toISOString(),
-      }
-
-      return {
-        ...state,
-        betCodes: [...state.betCodes, confirmedCode],
-        draftCodes: state.draftCodes.filter(
-          (code) => code.id !== action.payload.id
-        ),
-        lastOperation: {
-          type: 'confirm_single',
-          timestamp: new Date().toISOString(),
-          codeId: action.payload.id,
-        },
-      }
-    }
-
-    case ACTION_TYPES.REMOVE_CODE:
-      return {
-        ...state,
-        betCodes: state.betCodes.filter(
-          (code) => code.id !== action.payload.id
-        ),
-        lastOperation: {
-          type: 'remove_code',
-          timestamp: new Date().toISOString(),
-          codeId: action.payload.id,
-        },
-      }
-
-    case ACTION_TYPES.EDIT_CODE:
-      return {
-        ...state,
-        betCodes: state.betCodes.map((code) =>
-          code.id === action.payload.id
-            ? {
-                ...code,
-                ...action.payload.updates,
-                updatedAt: new Date().toISOString(),
-              }
-            : code
-        ),
-        lastOperation: {
-          type: 'edit_code',
-          timestamp: new Date().toISOString(),
-          codeId: action.payload.id,
-        },
-      }
-
     case ACTION_TYPES.SELECT_CODE:
       return {
         ...state,
@@ -208,9 +122,6 @@ const betCodeReducer = (state, action) => {
     case ACTION_TYPES.BATCH_DELETE:
       return {
         ...state,
-        betCodes: state.betCodes.filter(
-          (code) => !action.payload.ids.includes(code.id)
-        ),
         draftCodes: state.draftCodes.filter(
           (code) => !action.payload.ids.includes(code.id)
         ),
@@ -223,7 +134,7 @@ const betCodeReducer = (state, action) => {
 
     case ACTION_TYPES.SORT_CODES: {
       const { field, direction } = action.payload
-      const sortedBetCodes = [...state.betCodes].sort((a, b) => {
+      const sortedDraftCodes = [...state.draftCodes].sort((a, b) => {
         let valA = a[field]
         let valB = b[field]
 
@@ -253,7 +164,7 @@ const betCodeReducer = (state, action) => {
 
       return {
         ...state,
-        betCodes: sortedBetCodes,
+        draftCodes: sortedDraftCodes,
         sortConfig: { field, direction },
       }
     }
@@ -269,37 +180,34 @@ const betCodeReducer = (state, action) => {
   }
 }
 
-// Trạng thái khởi tạo
+// Initial state
 const initialState = {
-  betCodes: [], // Các mã cược đã xác nhận
-  draftCodes: [], // Các mã cược nháp
-  selectedCodeId: null, // ID của mã cược đang được chọn
-  isInitialized: false, // Đã khởi tạo từ storage chưa
-  lastOperation: null, // Thông tin về thao tác cuối cùng
+  draftCodes: [], // Draft bet codes
+  selectedCodeId: null, // ID of selected bet code
+  isInitialized: false, // Whether initialized from storage
+  lastOperation: null, // Info about last operation
   sortConfig: {
-    // Cấu hình sắp xếp
+    // Sort configuration
     field: 'createdAt',
     direction: 'desc',
   },
-  filterCriteria: null, // Tiêu chí lọc
+  filterCriteria: null, // Filter criteria
 }
 
 const BetCodeContext = createContext()
 
 export function BetCodeProvider({ children }) {
   const [state, dispatch] = useReducer(betCodeReducer, initialState)
-  const { betCodes, draftCodes, selectedCodeId, isInitialized } = state
+  const { draftCodes, selectedCodeId, isInitialized } = state
 
   // Load from session storage on mount
   useEffect(() => {
     try {
-      const savedBetCodes = sessionStorage.getItem('betCodes')
       const savedDraftCodes = sessionStorage.getItem('draftCodes')
 
       dispatch({
         type: ACTION_TYPES.INIT_CODES,
         payload: {
-          betCodes: savedBetCodes ? JSON.parse(savedBetCodes) : [],
           draftCodes: savedDraftCodes ? JSON.parse(savedDraftCodes) : [],
         },
       })
@@ -308,7 +216,7 @@ export function BetCodeProvider({ children }) {
       // Initialize with empty arrays if error
       dispatch({
         type: ACTION_TYPES.INIT_CODES,
-        payload: { betCodes: [], draftCodes: [] },
+        payload: { draftCodes: [] },
       })
     }
   }, [])
@@ -318,12 +226,11 @@ export function BetCodeProvider({ children }) {
     if (!isInitialized) return
 
     try {
-      sessionStorage.setItem('betCodes', JSON.stringify(betCodes))
       sessionStorage.setItem('draftCodes', JSON.stringify(draftCodes))
     } catch (error) {
       console.error('Error saving to session storage:', error)
     }
-  }, [betCodes, draftCodes, isInitialized])
+  }, [draftCodes, isInitialized])
 
   // Add a new draft code
   const addDraftCode = useCallback((code) => {
@@ -349,35 +256,18 @@ export function BetCodeProvider({ children }) {
     })
   }, [])
 
-  // Confirm all draft codes
-  const confirmDraftCodes = useCallback(() => {
-    dispatch({
-      type: ACTION_TYPES.CONFIRM_ALL_DRAFTS,
-    })
-  }, [])
-
-  // Confirm a single draft code
+  // Save a draft code (simplified to just log action, no state change)
   const confirmDraftCode = useCallback((id) => {
-    dispatch({
-      type: ACTION_TYPES.CONFIRM_DRAFT,
-      payload: { id },
-    })
+    console.log('Save action triggered for code:', id)
+    // In a real app, you might trigger navigation or API call here
+    // But we don't actually modify the state anymore
   }, [])
 
-  // Remove a confirmed code
-  const removeBetCode = useCallback((id) => {
-    dispatch({
-      type: ACTION_TYPES.REMOVE_CODE,
-      payload: { id },
-    })
-  }, [])
-
-  // Update a confirmed code
-  const updateBetCode = useCallback((id, updates) => {
-    dispatch({
-      type: ACTION_TYPES.EDIT_CODE,
-      payload: { id, updates },
-    })
+  // Save all draft codes (simplified to just log action, no state change)
+  const confirmDraftCodes = useCallback(() => {
+    console.log('Save all action triggered')
+    // In a real app, you might trigger navigation or API call here
+    // But we don't actually modify the state anymore
   }, [])
 
   // Select a code
@@ -422,13 +312,9 @@ export function BetCodeProvider({ children }) {
   // Get a specific bet code by id
   const getBetCode = useCallback(
     (id) => {
-      const fromDrafts = draftCodes.find((code) => code.id === id)
-      if (fromDrafts) return fromDrafts
-
-      const fromConfirmed = betCodes.find((code) => code.id === id)
-      return fromConfirmed
+      return draftCodes.find((code) => code.id === id)
     },
-    [betCodes, draftCodes]
+    [draftCodes]
   )
 
   // Get currently selected bet code
@@ -437,25 +323,14 @@ export function BetCodeProvider({ children }) {
     return getBetCode(selectedCodeId)
   }, [selectedCodeId, getBetCode])
 
-  // Get total statistics
+  // Get total statistics (simplified for draft codes only)
   const getStatistics = useCallback(() => {
-    const totalBetCodes = betCodes.length
     const totalDraftCodes = draftCodes.length
     const totalAutoExpandedCodes = draftCodes.filter(
       (code) => code.autoExpanded
     ).length
 
     // Calculate total stake and potential amounts
-    const totalStake = betCodes.reduce(
-      (sum, code) => sum + (code.stakeAmount || 0),
-      0
-    )
-    const totalPotential = betCodes.reduce(
-      (sum, code) => sum + (code.potentialWinning || 0),
-      0
-    )
-
-    // Calculate draft stakes and potentials
     const totalDraftStake = draftCodes.reduce(
       (sum, code) => sum + (code.stakeAmount || 0),
       0
@@ -467,12 +342,12 @@ export function BetCodeProvider({ children }) {
 
     // Count by station
     const stationCounts = {}
-    betCodes.forEach((code) => {
+    draftCodes.forEach((code) => {
       const stationName = code.station?.name || 'Unknown'
       stationCounts[stationName] = (stationCounts[stationName] || 0) + 1
     })
 
-    // Thêm thống kê về special cases
+    // Add special case statistics
     const specialCaseStats = {
       autoExpanded: totalAutoExpandedCodes,
       groupedNumbers: draftCodes.filter(
@@ -486,18 +361,18 @@ export function BetCodeProvider({ children }) {
     }
 
     return {
-      totalBetCodes,
+      totalBetCodes: 0, // No saved codes in simplified version
       totalDraftCodes,
-      totalStake,
-      totalPotential,
+      totalStake: 0, // No saved codes in simplified version
+      totalPotential: 0, // No saved codes in simplified version
       totalDraftStake,
       totalDraftPotential,
       stationCounts,
       specialCaseStats,
     }
-  }, [betCodes, draftCodes])
+  }, [draftCodes])
 
-  // Add a new function to calculate statistics for filtered codes
+  // Function to calculate statistics for filtered codes
   const getFilteredStatistics = useCallback((filteredCodes = []) => {
     if (!filteredCodes || filteredCodes.length === 0) {
       return {
@@ -524,11 +399,11 @@ export function BetCodeProvider({ children }) {
   }, [])
 
   // Filter codes with the current filter criteria
-  // Sửa đổi hàm getFilteredCodes để chấp nhận tham số type
   const getFilteredCodes = useCallback(
-    (type = 'saved') => {
+    (type = 'draft') => {
+      // In the simplified version, all codes are drafts
       const { filterCriteria } = state
-      const codes = type === 'draft' ? draftCodes : betCodes
+      const codes = draftCodes
 
       if (!filterCriteria) return codes
 
@@ -712,7 +587,7 @@ export function BetCodeProvider({ children }) {
         return true
       })
     },
-    [state, betCodes, draftCodes]
+    [state, draftCodes]
   )
 
   // Analyze a new bet code without adding it
@@ -721,17 +596,14 @@ export function BetCodeProvider({ children }) {
   }, [])
 
   const value = {
-    betCodes,
     draftCodes,
     isInitialized,
     selectedCodeId,
     addDraftCode,
     removeDraftCode,
     editDraftCode,
-    confirmDraftCodes,
-    confirmDraftCode,
-    removeBetCode,
-    updateBetCode,
+    confirmDraftCodes, // Kept for API compatibility but simplified
+    confirmDraftCode, // Kept for API compatibility but simplified
     getBetCode,
     selectBetCode,
     clearSelection,

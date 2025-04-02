@@ -3,10 +3,7 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useBetCode } from '@/contexts/BetCodeContext'
 import {
-  Save,
   AlertTriangle,
-  BarChart2,
-  Check,
   Filter,
   CircleSlash,
   Loader2,
@@ -21,7 +18,6 @@ import { cn } from '@/lib/utils'
 
 const BetCodeList = () => {
   const {
-    betCodes,
     draftCodes,
     getFilteredCodes,
     confirmDraftCodes,
@@ -31,31 +27,19 @@ const BetCodeList = () => {
     getFilteredStatistics,
   } = useBetCode()
 
-  // State cho chọn nhiều
+  // State for selection
   const [selectedIds, setSelectedIds] = useState([])
   const [selectMode, setSelectMode] = useState(false)
   const [filterOpen, setFilterOpen] = useState(true)
 
-  // Lấy các mã cược đã lọc
-  const filteredSavedCodes = getFilteredCodes()
+  // Get filtered draft codes
   const filteredDraftCodes = getFilteredCodes('draft')
 
-  // Lấy thống kê cho tất cả mã cược
+  // Get statistics for all codes
   const stats = getStatistics()
 
-  // Lấy thống kê cho mã cược đã lưu đã lọc
-  const filteredSavedStats = getFilteredStatistics(filteredSavedCodes)
-
-  // Lấy thống kê cho mã cược nháp đã lọc
+  // Get statistics for filtered draft codes
   const filteredDraftStats = getFilteredStatistics(filteredDraftCodes)
-
-  // Tính tổng thống kê cho tất cả mã cược đã lọc
-  const combinedFilteredStats = {
-    totalStake: filteredSavedStats.totalStake + filteredDraftStats.totalStake,
-    totalPotential:
-      filteredSavedStats.totalPotential + filteredDraftStats.totalPotential,
-    count: filteredSavedCodes.length + filteredDraftCodes.length,
-  }
 
   // Toggle select mode
   const toggleSelectMode = () => {
@@ -63,28 +47,25 @@ const BetCodeList = () => {
     setSelectedIds([])
   }
 
-  // Toggle chọn một mã cược
+  // Toggle select bet code
   const toggleSelectBetCode = (id) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
     )
   }
 
-  // Chọn tất cả
+  // Select all
   const selectAll = () => {
-    const allIds = [
-      ...filteredSavedCodes.map((code) => code.id),
-      ...filteredDraftCodes.map((code) => code.id),
-    ]
+    const allIds = filteredDraftCodes.map((code) => code.id)
     setSelectedIds(allIds)
   }
 
-  // Bỏ chọn tất cả
+  // Clear selection
   const clearSelection = () => {
     setSelectedIds([])
   }
 
-  // Hiển thị thông báo đang tải
+  // Show loading message
   if (!isInitialized) {
     return (
       <div className='flex flex-col h-full bg-white rounded-md shadow-sm'>
@@ -107,14 +88,9 @@ const BetCodeList = () => {
         <div className='flex items-center gap-2'>
           <h2 className='text-lg font-bold'>Mã cược</h2>
           <div className='flex space-x-1'>
-            <span className='text-xs text-white bg-primary px-2 py-0.5 rounded-full'>
-              {betCodes.length} đã lưu
+            <span className='text-xs text-yellow-800 bg-yellow-100 px-2 py-0.5 rounded-full'>
+              {draftCodes.length} mã cược
             </span>
-            {draftCodes.length > 0 && (
-              <span className='text-xs text-yellow-800 bg-yellow-100 px-2 py-0.5 rounded-full'>
-                {draftCodes.length} nháp
-              </span>
-            )}
           </div>
         </div>
 
@@ -126,7 +102,7 @@ const BetCodeList = () => {
                 size='sm'
                 onClick={selectAll}
                 className='h-8'>
-                <Check className='h-3.5 w-3.5 mr-1' />
+                <span className='h-3.5 w-3.5 mr-1'>✓</span>
                 Chọn tất cả
               </Button>
 
@@ -158,9 +134,8 @@ const BetCodeList = () => {
                 onClick={confirmDraftCodes}
                 disabled={draftCodes.length === 0}
                 className='flex items-center gap-1.5 h-8 bg-primary-600 hover:bg-primary-700'>
-                <Save className='h-3.5 w-3.5' />
-                {draftCodes.length > 0 && `Lưu (${draftCodes.length})`}
-                {draftCodes.length === 0 && 'Lưu tất cả'}
+                {draftCodes.length > 0 && `Xử lý (${draftCodes.length})`}
+                {draftCodes.length === 0 && 'Xử lý'}
               </Button>
             </>
           )}
@@ -190,9 +165,9 @@ const BetCodeList = () => {
               <span className='text-muted-foreground'>Tổng tiền đóng:</span>
               <span className='font-medium text-blue-600'>
                 {formatMoney(
-                  combinedFilteredStats.count > 0
-                    ? combinedFilteredStats.totalStake
-                    : stats.totalStake
+                  filteredDraftCodes.length > 0
+                    ? filteredDraftStats.totalStake
+                    : stats.totalDraftStake
                 )}
                 đ
               </span>
@@ -201,9 +176,9 @@ const BetCodeList = () => {
               <span className='text-muted-foreground'>Tiềm năng thắng:</span>
               <span className='font-medium text-green-600'>
                 {formatMoney(
-                  combinedFilteredStats.count > 0
-                    ? combinedFilteredStats.totalPotential
-                    : stats.totalPotential
+                  filteredDraftCodes.length > 0
+                    ? filteredDraftStats.totalPotential
+                    : stats.totalDraftPotential
                 )}
                 đ
               </span>
@@ -223,17 +198,7 @@ const BetCodeList = () => {
       </div>
 
       <div className='flex-1 overflow-y-auto p-4 space-y-4'>
-        {draftCodes.length > 0 && (
-          <div className='bg-yellow-50 p-3 rounded-md flex items-center gap-2 text-yellow-800 border border-yellow-200'>
-            <AlertTriangle className='h-4 w-4 text-yellow-600 shrink-0' />
-            <span className='text-sm'>
-              Bạn có {draftCodes.length} mã cược chưa lưu. Nhấn nút{' '}
-              <strong>Lưu</strong> để xác nhận.
-            </span>
-          </div>
-        )}
-
-        {betCodes.length === 0 && draftCodes.length === 0 ? (
+        {draftCodes.length === 0 ? (
           <div className='text-center py-12 text-muted-foreground'>
             <div className='flex justify-center mb-4'>
               <CircleSlash className='h-12 w-12 text-muted-foreground/50' />
@@ -245,13 +210,9 @@ const BetCodeList = () => {
           </div>
         ) : (
           <div className='space-y-4'>
-            {/* Hiển thị các mã nháp trước */}
+            {/* Display draft codes */}
             {filteredDraftCodes.length > 0 && (
               <div className='space-y-3'>
-                <h3 className='text-sm font-medium text-yellow-700 flex items-center gap-1.5'>
-                  <AlertTriangle className='h-3.5 w-3.5' />
-                  Mã cược nháp
-                </h3>
                 <div className='grid grid-cols-1 gap-3'>
                   {filteredDraftCodes.map((code) => (
                     <BetCodeCard
@@ -267,81 +228,56 @@ const BetCodeList = () => {
               </div>
             )}
 
-            {/* Hiển thị các mã đã lưu */}
-            {filteredSavedCodes.length > 0 && (
-              <div className='space-y-3'>
-                {filteredDraftCodes.length > 0 && (
-                  <h3 className='text-sm font-medium text-muted-foreground flex items-center gap-1.5'>
-                    <Check className='h-3.5 w-3.5' />
-                    Mã cược đã lưu
-                  </h3>
-                )}
-                <div className='grid grid-cols-1 gap-3'>
-                  {filteredSavedCodes.map((code) => (
-                    <BetCodeCard
-                      key={code.id}
-                      betCode={code}
-                      selectable={selectMode}
-                      selected={selectedIds.includes(code.id)}
-                      onSelectChange={() => toggleSelectBetCode(code.id)}
-                    />
-                  ))}
+            {draftCodes.length > 0 && filteredDraftCodes.length === 0 && (
+              <div className='text-center py-12 text-muted-foreground'>
+                <div className='flex justify-center mb-4'>
+                  <Filter className='h-10 w-10 text-muted-foreground/50' />
+                </div>
+                <p className='text-lg font-medium mb-1'>
+                  Không tìm thấy mã cược
+                </p>
+                <p className='text-sm'>
+                  Không có mã cược nào phù hợp với từ khóa tìm kiếm
+                </p>
+                <div className='flex justify-center gap-2 mt-4'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // Clear filter
+                      const searchInput = document.querySelector(
+                        'input[placeholder*="Tìm"]'
+                      )
+                      if (searchInput) {
+                        searchInput.value = ''
+                        searchInput.dispatchEvent(
+                          new Event('change', { bubbles: true })
+                        )
+                      }
+                      filterCodes(null)
+                    }}>
+                    Xóa bộ lọc
+                  </Button>
+                  <Button
+                    variant='default'
+                    size='sm'
+                    onClick={() => setFilterOpen(true)}>
+                    Điều chỉnh tìm kiếm
+                  </Button>
+                </div>
+                <div className='mt-4 bg-muted/40 p-3 rounded-md text-xs max-w-sm mx-auto'>
+                  <p className='text-muted-foreground font-medium mb-1'>
+                    Gợi ý tìm kiếm:
+                  </p>
+                  <ul className='list-disc list-inside space-y-1 text-muted-foreground/80'>
+                    <li>Tìm theo số cược (ví dụ: 23, 45, 78)</li>
+                    <li>Tìm theo đài (mb, vl, ct...)</li>
+                    <li>Tìm theo kiểu cược (dd, b, da...)</li>
+                    <li>Tìm theo nội dung mã cược gốc</li>
+                  </ul>
                 </div>
               </div>
             )}
-
-            {(betCodes.length > 0 || draftCodes.length > 0) &&
-              filteredSavedCodes.length === 0 &&
-              filteredDraftCodes.length === 0 && (
-                <div className='text-center py-12 text-muted-foreground'>
-                  <div className='flex justify-center mb-4'>
-                    <Filter className='h-10 w-10 text-muted-foreground/50' />
-                  </div>
-                  <p className='text-lg font-medium mb-1'>
-                    Không tìm thấy mã cược
-                  </p>
-                  <p className='text-sm'>
-                    Không có mã cược nào phù hợp với từ khóa tìm kiếm
-                  </p>
-                  <div className='flex justify-center gap-2 mt-4'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => {
-                        // Clear filter
-                        const searchInput = document.querySelector(
-                          'input[placeholder*="Tìm"]'
-                        )
-                        if (searchInput) {
-                          searchInput.value = ''
-                          searchInput.dispatchEvent(
-                            new Event('change', { bubbles: true })
-                          )
-                        }
-                        filterCodes(null)
-                      }}>
-                      Xóa bộ lọc
-                    </Button>
-                    <Button
-                      variant='default'
-                      size='sm'
-                      onClick={() => setFilterOpen(true)}>
-                      Điều chỉnh tìm kiếm
-                    </Button>
-                  </div>
-                  <div className='mt-4 bg-muted/40 p-3 rounded-md text-xs max-w-sm mx-auto'>
-                    <p className='text-muted-foreground font-medium mb-1'>
-                      Gợi ý tìm kiếm:
-                    </p>
-                    <ul className='list-disc list-inside space-y-1 text-muted-foreground/80'>
-                      <li>Tìm theo số cược (ví dụ: 23, 45, 78)</li>
-                      <li>Tìm theo đài (mb, vl, ct...)</li>
-                      <li>Tìm theo kiểu cược (dd, b, da...)</li>
-                      <li>Tìm theo nội dung mã cược gốc</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
           </div>
         )}
       </div>

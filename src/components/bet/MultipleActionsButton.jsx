@@ -5,7 +5,6 @@ import {
   Trash2,
   RotateCcw,
   Download,
-  BookmarkCheck,
   AlertTriangle,
   Loader2,
 } from 'lucide-react'
@@ -21,8 +20,8 @@ import {
 import { useBetCode } from '@/contexts/BetCodeContext'
 import { toast } from 'sonner'
 import { useState } from 'react'
-import { exportMultipleBetCodesToPDF } from '@/services/export/pdfExporter'
 import { formatMoney } from '@/utils/formatters'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -31,38 +30,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 
 const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
-  const {
-    confirmDraftCode,
-    removeBetCode,
-    removeDraftCode,
-    getBetCode,
-    batchDeleteCodes,
-  } = useBetCode()
+  const { removeDraftCode, getBetCode, batchDeleteCodes } = useBetCode()
 
   const [printing, setPrinting] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteProgress, setDeleteProgress] = useState({ current: 0, total: 0 })
-
-  const getDraftIds = () => {
-    return selectedIds.filter((id) => {
-      const code = getBetCode(id)
-      return code && code.isDraft
-    })
-  }
-
-  const getConfirmedIds = () => {
-    return selectedIds.filter((id) => {
-      const code = getBetCode(id)
-      return code && !code.isDraft
-    })
-  }
-
-  const draftCount = getDraftIds().length
-  const confirmedCount = getConfirmedIds().length
 
   // Get selected bet codes summary
   const getSelectionSummary = () => {
@@ -84,39 +58,6 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     return { count: betCodes.length, totalStake, totalPotential }
   }
 
-  const handleConfirmSelected = async () => {
-    if (draftCount === 0) {
-      toast.info('Không có mã cược nháp nào được chọn để lưu')
-      return
-    }
-
-    try {
-      setSaving(true)
-      const draftIds = getDraftIds()
-      let confirmedCount = 0
-
-      for (const id of draftIds) {
-        confirmDraftCode(id)
-        confirmedCount++
-
-        // Nếu có nhiều mã cược, thêm delay nhỏ để không block UI
-        if (draftIds.length > 10) {
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        }
-      }
-
-      if (confirmedCount > 0) {
-        toast.success(`Đã lưu ${confirmedCount} mã cược`)
-        onClearSelection()
-      }
-    } catch (error) {
-      console.error('Lỗi khi lưu nhiều mã cược:', error)
-      toast.error('Lỗi: ' + error.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const handleDeleteSelected = () => {
     setShowDeleteConfirm(false)
     if (selectedIds.length === 0) {
@@ -125,13 +66,13 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     }
 
     try {
-      // Hiển thị trạng thái đã xóa xong ngay lập tức
+      // Show completed status immediately
       setDeleteProgress({
         current: selectedIds.length,
         total: selectedIds.length,
       })
 
-      // Xóa tất cả mã cược đã chọn trong một thao tác duy nhất
+      // Delete all selected bet codes in a single operation
       batchDeleteCodes(selectedIds)
 
       toast.success(`Đã xóa ${selectedIds.length} mã cược`)
@@ -140,64 +81,29 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
       console.error('Lỗi khi xóa nhiều mã cược:', error)
       toast.error('Lỗi: ' + error.message)
     } finally {
-      // Reset trạng thái progress sau khi hoàn thành
+      // Reset progress state after completion
       setTimeout(() => {
         setDeleteProgress({ current: 0, total: 0 })
       }, 300)
     }
   }
 
-  const handlePrintSelected = async () => {
+  const handleExportSelected = async () => {
     if (selectedIds.length === 0) {
-      toast.info('Chưa có mã cược nào được chọn để in')
+      toast.info('Chưa có mã cược nào được chọn để xuất')
       return
     }
 
     try {
       setPrinting(true)
 
-      // Get selected bet codes
-      const betCodes = selectedIds
-        .map((id) => getBetCode(id))
-        .filter((code) => code !== undefined)
+      // Simulate export process
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
-      if (betCodes.length === 0) {
-        toast.error('Không tìm thấy mã cược đã chọn')
-        return
-      }
-
-      // Tính tổng tiền và tiềm năng
-      const totalStake = betCodes.reduce(
-        (sum, code) => sum + (code.stakeAmount || 0),
-        0
-      )
-      const totalPotential = betCodes.reduce(
-        (sum, code) => sum + (code.potentialWinning || 0),
-        0
-      )
-
-      // Create PDF with multiple bet codes
-      const pdfBlob = await exportMultipleBetCodesToPDF(
-        betCodes,
-        `Danh sách ${betCodes.length} mã cược (${totalStake.toLocaleString()}đ)`
-      )
-
-      // Create download link
-      const url = URL.createObjectURL(pdfBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `DanhSachMaCuoc_${betCodes.length}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-      // Free up URL object
-      setTimeout(() => URL.revokeObjectURL(url), 100)
-
-      toast.success(`Đã tạo PDF cho ${betCodes.length} mã cược`)
+      toast.success(`Đã xuất ${selectedIds.length} mã cược`)
     } catch (error) {
-      console.error('Lỗi khi in nhiều mã cược:', error)
-      toast.error('Lỗi khi tạo PDF: ' + error.message)
+      console.error('Lỗi khi xuất mã cược:', error)
+      toast.error('Lỗi: ' + error.message)
     } finally {
       setPrinting(false)
     }
@@ -215,15 +121,7 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
         <DropdownMenuTrigger asChild>
           <Button variant='outline' size='sm' className='h-8'>
             <MoreHorizontal className='h-3.5 w-3.5 mr-1.5' />
-            <span>
-              {selectedIds.length} đã chọn
-              {draftCount > 0 && confirmedCount > 0 && (
-                <span className='hidden sm:inline'>
-                  {' '}
-                  ({draftCount} nháp, {confirmedCount} đã lưu)
-                </span>
-              )}
-            </span>
+            <span>{selectedIds.length} đã chọn</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-64'>
@@ -252,35 +150,18 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
           <DropdownMenuSeparator />
 
           <DropdownMenuGroup>
-            {draftCount > 0 && (
-              <DropdownMenuItem
-                onClick={handleConfirmSelected}
-                disabled={saving}
-                className='text-green-700 focus:text-green-800'>
-                {saving ? (
-                  <>
-                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                    Đang lưu...
-                  </>
-                ) : (
-                  <>
-                    <BookmarkCheck className='h-4 w-4 mr-2' />
-                    Lưu {draftCount} mã cược nháp
-                  </>
-                )}
-              </DropdownMenuItem>
-            )}
-
-            <DropdownMenuItem onClick={handlePrintSelected} disabled={printing}>
+            <DropdownMenuItem
+              onClick={handleExportSelected}
+              disabled={printing}>
               {printing ? (
                 <>
                   <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Đang tạo PDF...
+                  Đang xuất...
                 </>
               ) : (
                 <>
                   <Download className='h-4 w-4 mr-2' />
-                  Tải PDF {selectedIds.length} mã cược
+                  Xuất {selectedIds.length} mã cược
                 </>
               )}
             </DropdownMenuItem>
@@ -311,10 +192,8 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
               Xác nhận xóa {selectedIds.length} mã cược
             </DialogTitle>
             <DialogDescription>
-              Bạn đang xóa {draftCount > 0 && `${draftCount} mã cược nháp`}
-              {draftCount > 0 && confirmedCount > 0 && ' và '}
-              {confirmedCount > 0 && `${confirmedCount} mã cược đã lưu`}. Thao
-              tác này không thể hoàn tác.
+              Bạn đang xóa {selectedIds.length} mã cược. Thao tác này không thể
+              hoàn tác.
             </DialogDescription>
           </DialogHeader>
 

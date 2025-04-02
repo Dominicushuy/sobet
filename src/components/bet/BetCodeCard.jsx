@@ -11,27 +11,21 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
-  CheckCircle2,
   Edit,
   Trash2,
   FileText,
-  Printer,
   ChevronDown,
   ChevronUp,
   Clock,
-  Hash,
+  Tag,
   DollarSign,
   Award,
-  Eye,
   Copy,
-  Scissors,
-  Sparkles,
-  Tag,
+  CheckCircle2,
 } from 'lucide-react'
 import { useBetCode } from '@/contexts/BetCodeContext'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
-import PrintBetCode from './PrintBetCode'
 import BetCodeDetailModal from './BetCodeDetailModal'
 import { formatMoney } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
@@ -39,58 +33,45 @@ import { defaultBetTypes } from '@/config/defaults'
 
 const BetCodeCard = ({
   betCode,
-  isDraft = false,
   selectable = false,
   selected = false,
   onSelectChange = null,
 }) => {
-  const { removeDraftCode, removeBetCode, confirmDraftCode } = useBetCode()
+  const { removeDraftCode, confirmDraftCode } = useBetCode()
 
   const [showDetails, setShowDetails] = useState(false)
   const [showFullCode, setShowFullCode] = useState(false)
-  const [isPrintOpen, setIsPrintOpen] = useState(false)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
 
   const handleRemove = () => {
-    if (isDraft) {
-      removeDraftCode(betCode.id)
-      toast.success('Đã xóa mã cược nháp')
-    } else {
-      if (confirm('Bạn có chắc chắn muốn xóa mã cược này?')) {
-        removeBetCode(betCode.id)
-        toast.success('Đã xóa mã cược')
-      }
-    }
+    removeDraftCode(betCode.id)
+    toast.success('Đã xóa mã cược')
   }
 
   const handleConfirm = () => {
     confirmDraftCode(betCode.id)
-    toast.success('Đã lưu mã cược')
+    toast.success('Đã xử lý mã cược')
+    // Note: In the simplified version, this function just logs an action and doesn't actually modify state
   }
 
   const handleCopyText = () => {
     try {
-      // Sử dụng Clipboard API
-      navigator.clipboard
-        .writeText(betCode.originalText || betText)
-        .then(() => {
-          setIsCopied(true)
-          toast.success('Đã sao chép mã cược')
+      navigator.clipboard.writeText(betCode.originalText || '').then(() => {
+        setIsCopied(true)
+        toast.success('Đã sao chép mã cược')
 
-          // Tự động reset lại trạng thái sau 2 giây
-          setTimeout(() => {
-            setIsCopied(false)
-          }, 2000)
-        })
+        // Auto reset after 2 seconds
+        setTimeout(() => {
+          setIsCopied(false)
+        }, 2000)
+      })
     } catch (err) {
       toast.error('Sao chép thất bại')
       console.error('Copy failed', err)
     }
   }
 
-  const handleOpenPrint = () => setIsPrintOpen(true)
-  const handleClosePrint = () => setIsPrintOpen(false)
   const handleOpenDetail = () => setIsDetailOpen(true)
   const handleCloseDetail = () => setIsDetailOpen(false)
 
@@ -110,7 +91,7 @@ const BetCodeCard = ({
     }
 
     if (betCode.station.stations && betCode.station.stations.length > 0) {
-      // Sử dụng Set để đảm bảo tên đài không bị trùng lặp
+      // Use Set to ensure unique station names
       const uniqueStations = [
         ...new Set(betCode.station.stations.map((s) => s.name)),
       ].join(', ')
@@ -123,8 +104,6 @@ const BetCodeCard = ({
   // Get original stake amount from the bet code
   const getOriginalStakeAmount = () => {
     if (!betCode.lines || !Array.isArray(betCode.lines)) return 0
-
-    // console.log('Bet code lines:', betCode.lines)
 
     // Sum up the original amount from all lines
     return betCode.lines.reduce((total, line) => {
@@ -140,18 +119,18 @@ const BetCodeCard = ({
     const allNumbers = []
     betCode.lines.forEach((line) => {
       if (line.numbers && Array.isArray(line.numbers)) {
-        // Thêm các số cơ bản
+        // Add base numbers
         allNumbers.push(...line.numbers)
 
-        // Thêm các số hoán vị nếu có
+        // Add permutations if available
         line.numbers.forEach((number) => {
-          // Kiểm tra xem số có permutations không
+          // Check if number has permutations
           const perms =
             (line.permutations && line.permutations[number]) ||
             (betCode.permutations && betCode.permutations[number]) ||
             []
 
-          // Thêm tất cả các số hoán vị trừ số gốc (đã được thêm ở trên)
+          // Add all permutations except the original number (already added above)
           perms.forEach((perm) => {
             if (perm !== number && !allNumbers.includes(perm)) {
               allNumbers.push(perm)
@@ -164,9 +143,7 @@ const BetCodeCard = ({
     return allNumbers
   }
 
-  // console.log('BetCodeCard - Bet Code:', betCode)
-
-  // Lấy thông tin kiểu cược từ dòng đầu tiên
+  // Get bet type names from the first line
   const getBetTypeNames = () => {
     if (
       !betCode.lines ||
@@ -180,7 +157,7 @@ const BetCodeCard = ({
     const line = betCode.lines[0]
     const betTypeAlias = line.betType.alias?.toLowerCase() || ''
 
-    // Tìm thông tin đầy đủ từ defaultBetTypes
+    // Find full info from defaultBetTypes
     const betType = defaultBetTypes.find((type) =>
       type.aliases.some((a) => a.toLowerCase() === betTypeAlias)
     )
@@ -200,7 +177,7 @@ const BetCodeCard = ({
       <Card
         className={cn(
           'transition-all hover:shadow-md',
-          isDraft ? 'border-dashed border-yellow-300' : 'border-solid',
+          'border-dashed border-yellow-300',
           selected ? 'ring-2 ring-primary' : ''
         )}>
         <CardHeader className='py-3 px-4'>
@@ -217,16 +194,9 @@ const BetCodeCard = ({
               <div>
                 <CardTitle className='text-base flex items-center gap-2'>
                   {getStationDisplayName()}
-                  {isDraft ? (
-                    <Badge className='bg-yellow-100 text-yellow-800 font-normal text-xs'>
-                      Nháp
-                    </Badge>
-                  ) : (
-                    <Badge className='bg-green-100 text-green-800 font-normal text-xs'>
-                      <CheckCircle2 className='h-3 w-3 mr-1' />
-                      Đã lưu
-                    </Badge>
-                  )}
+                  <Badge className='bg-yellow-100 text-yellow-800 font-normal text-xs'>
+                    Mã cược
+                  </Badge>
                 </CardTitle>
                 <div className='text-xs text-muted-foreground mt-1 flex items-center'>
                   <Clock className='h-3 w-3 mr-1' />
@@ -259,7 +229,7 @@ const BetCodeCard = ({
                 {betText}
               </pre>
 
-              {/* Nút copy */}
+              {/* Copy button */}
               <Button
                 variant='ghost'
                 size='icon'
@@ -341,7 +311,7 @@ const BetCodeCard = ({
               {betCode.lines && betCode.lines.length > 0 && (
                 <div className='space-y-2'>
                   <div className='font-medium text-xs flex items-center gap-1'>
-                    <Eye className='h-3.5 w-3.5' />
+                    <FileText className='h-3.5 w-3.5' />
                     Chi tiết dòng:
                   </div>
                   <div className='grid gap-1.5 max-h-60 overflow-y-auto pr-1'>
@@ -393,66 +363,35 @@ const BetCodeCard = ({
         </CardContent>
 
         <CardFooter className='px-4 py-2 gap-2 flex-wrap border-t'>
-          {isDraft ? (
-            <>
-              <Button
-                variant='outline'
-                size='sm'
-                className='bg-green-50 text-green-700 hover:bg-green-100 border-green-200'
-                onClick={handleConfirm}>
-                <CheckCircle2 className='h-3 w-3 mr-1' />
-                Lưu
-              </Button>
-              <Button variant='outline' size='sm' onClick={handleOpenDetail}>
-                <FileText className='h-3 w-3 mr-1' />
-                Chi tiết
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                className='ml-auto text-rose-600 hover:bg-rose-50'
-                onClick={handleRemove}>
-                <Trash2 className='h-3 w-3 mr-1' />
-                Xóa
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant='outline' size='sm' onClick={handleOpenDetail}>
-                <FileText className='h-3 w-3 mr-1' />
-                Chi tiết
-              </Button>
-              <Button variant='outline' size='sm' onClick={handleOpenPrint}>
-                <Printer className='h-3 w-3 mr-1' />
-                In
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                className='ml-auto text-rose-600 hover:bg-rose-50'
-                onClick={handleRemove}>
-                <Trash2 className='h-3 w-3 mr-1' />
-                Xóa
-              </Button>
-            </>
-          )}
+          <Button
+            variant='outline'
+            size='sm'
+            className='bg-green-50 text-green-700 hover:bg-green-100 border-green-200'
+            onClick={handleConfirm}>
+            <CheckCircle2 className='h-3 w-3 mr-1' />
+            Xử lý
+          </Button>
+          <Button variant='outline' size='sm' onClick={handleOpenDetail}>
+            <FileText className='h-3 w-3 mr-1' />
+            Chi tiết
+          </Button>
+          <Button
+            variant='outline'
+            size='sm'
+            className='ml-auto text-rose-600 hover:bg-rose-50'
+            onClick={handleRemove}>
+            <Trash2 className='h-3 w-3 mr-1' />
+            Xóa
+          </Button>
         </CardFooter>
       </Card>
 
-      {/* Modal dialogs */}
-      {isPrintOpen && (
-        <PrintBetCode
-          betCode={betCode}
-          isOpen={isPrintOpen}
-          onClose={handleClosePrint}
-        />
-      )}
+      {/* Modal dialog */}
       {isDetailOpen && (
         <BetCodeDetailModal
           betCode={betCode}
           isOpen={isDetailOpen}
           onClose={handleCloseDetail}
-          onPrint={handleOpenPrint}
         />
       )}
     </>

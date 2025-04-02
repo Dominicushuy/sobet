@@ -12,10 +12,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  Printer,
-  Edit,
-  Trash2,
   CheckCircle2,
+  Trash2,
   FileText,
   Clock,
   Info,
@@ -24,7 +22,6 @@ import {
   Award,
   Building,
   Hash,
-  ListChecks,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatMoney } from '@/utils/formatters'
@@ -32,10 +29,8 @@ import { useBetCode } from '@/contexts/BetCodeContext'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
-  const { confirmDraftCode, removeBetCode, removeDraftCode } = useBetCode()
-
-  // console.log('BetCodeDetailModal betCode:', betCode)
+const BetCodeDetailModal = ({ betCode, isOpen, onClose }) => {
+  const { confirmDraftCode, removeDraftCode } = useBetCode()
 
   const [activeTab, setActiveTab] = useState('general')
 
@@ -47,20 +42,13 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
 
   const handleConfirm = () => {
     confirmDraftCode(betCode.id)
-    toast.success('Đã lưu mã cược')
+    toast.success('Đã xử lý mã cược')
     onClose()
   }
 
   const handleDelete = () => {
-    if (betCode.isDraft) {
-      removeDraftCode(betCode.id)
-      toast.success('Đã xóa mã cược nháp')
-    } else {
-      if (confirm('Bạn có chắc chắn muốn xóa mã cược này?')) {
-        removeBetCode(betCode.id)
-        toast.success('Đã xóa mã cược')
-      }
-    }
+    removeDraftCode(betCode.id)
+    toast.success('Đã xóa mã cược')
     onClose()
   }
 
@@ -73,17 +61,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
     return regionMap[region] || region || 'Không xác định'
   }
 
-  const mapStatusName = (status) => {
-    const statusMap = {
-      pending: 'Chờ xử lý',
-      confirmed: 'Đã xác nhận',
-      verified: 'Đã đối soát',
-      deleted: 'Đã xóa',
-    }
-    return statusMap[status] || status || 'Chờ xử lý'
-  }
-
-  // Get original stake amount directly from bet code (not divided by coefficient)
+  // Get original stake amount directly from bet code
   const getOriginalStakeAmount = () => {
     if (!betCode.lines || !Array.isArray(betCode.lines)) return 0
 
@@ -117,20 +95,9 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
           <DialogTitle className='flex items-center gap-2'>
             <Info className='h-5 w-5 text-primary' />
             Chi tiết mã cược
-            {betCode.isDraft ? (
-              <Badge
-                variant='outline'
-                className='bg-yellow-100 text-yellow-800 ml-2'>
-                Nháp
-              </Badge>
-            ) : (
-              <Badge
-                variant='outline'
-                className='bg-green-100 text-green-800 ml-2'>
-                <CheckCircle2 className='h-3 w-3 mr-1' />
-                Đã lưu
-              </Badge>
-            )}
+            <Badge className='bg-yellow-100 text-yellow-800 ml-2'>
+              Mã cược
+            </Badge>
           </DialogTitle>
           <div className='text-sm text-muted-foreground flex items-center gap-1'>
             <Clock className='h-3.5 w-3.5' />
@@ -146,14 +113,10 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
           defaultValue='general'
           value={activeTab}
           onValueChange={setActiveTab}>
-          <TabsList className='grid grid-cols-3 mb-4'>
+          <TabsList className='grid grid-cols-2 mb-4'>
             <TabsTrigger value='general' className='flex items-center gap-1.5'>
               <FileText className='h-3.5 w-3.5' />
               Thông tin chung
-            </TabsTrigger>
-            <TabsTrigger value='lines' className='flex items-center gap-1.5'>
-              <ListChecks className='h-3.5 w-3.5' />
-              Chi tiết dòng
             </TabsTrigger>
             <TabsTrigger
               value='calculation'
@@ -222,16 +185,7 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
                     <div className='space-y-2 text-sm'>
                       <div className='grid grid-cols-[120px_1fr] gap-2'>
                         <div className='text-muted-foreground'>Trạng thái:</div>
-                        <div className='font-medium'>
-                          {mapStatusName(betCode.status)}
-                        </div>
-                      </div>
-
-                      <div className='grid grid-cols-[120px_1fr] gap-2'>
-                        <div className='text-muted-foreground'>Loại:</div>
-                        <div className='font-medium'>
-                          {betCode.isDraft ? 'Nháp' : 'Đã lưu'}
-                        </div>
+                        <div className='font-medium'>Đang xử lý</div>
                       </div>
 
                       <div className='grid grid-cols-[120px_1fr] gap-2'>
@@ -391,111 +345,6 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
                   )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value='lines'>
-            <div className='space-y-4'>
-              {betCode.lines && betCode.lines.length > 0 ? (
-                betCode.lines.map((line, idx) => (
-                  <Card key={idx}>
-                    <CardContent className='p-4'>
-                      <div className='flex justify-between items-center mb-3'>
-                        <Badge variant='outline' className='font-normal'>
-                          {line.betType?.alias || 'N/A'}
-                        </Badge>
-                      </div>
-
-                      <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm'>
-                        <div>
-                          <div className='text-muted-foreground mb-1'>
-                            Nội dung:
-                          </div>
-                          <div className='font-mono font-medium bg-muted px-2.5 py-1.5 rounded text-xs'>
-                            {line.originalLine || 'N/A'}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className='text-muted-foreground mb-1'>
-                            Thông tin số:
-                          </div>
-                          <div className='flex flex-wrap gap-1'>
-                            {line.numbers?.map((number, numIdx) => (
-                              <Badge
-                                key={numIdx}
-                                variant='secondary'
-                                className='bg-blue-50 text-blue-700'>
-                                {number}
-                              </Badge>
-                            ))}
-                            <Badge variant='outline' className='font-normal'>
-                              {line.numbers?.length || 0} số
-                            </Badge>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className='text-muted-foreground mb-1'>
-                            Kiểu cược:
-                          </div>
-                          <div className='font-medium'>
-                            {line.betType?.alias || 'N/A'} (
-                            {line.betType?.name || 'N/A'})
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className='text-muted-foreground mb-1'>
-                            Tiền cược:
-                          </div>
-                          <div className='font-medium text-blue-600'>
-                            {formatMoney(line.amount || 0)}đ
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Additional bet types if available */}
-                      {line.additionalBetTypes &&
-                        line.additionalBetTypes.length > 0 && (
-                          <div className='mt-4 pt-4 border-t'>
-                            <h4 className='text-sm font-medium mb-2'>
-                              Kiểu cược bổ sung:
-                            </h4>
-                            <div className='space-y-2'>
-                              {line.additionalBetTypes.map((addBet, addIdx) => (
-                                <div
-                                  key={addIdx}
-                                  className='grid grid-cols-2 gap-2 text-sm bg-muted p-2 rounded'>
-                                  <div>
-                                    <span className='text-muted-foreground'>
-                                      Kiểu cược:
-                                    </span>{' '}
-                                    <span className='font-medium'>
-                                      {addBet.betType?.alias || 'N/A'}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className='text-muted-foreground'>
-                                      Tiền cược:
-                                    </span>{' '}
-                                    <span className='font-medium'>
-                                      {formatMoney(addBet.amount || 0)}đ
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className='text-center py-8 text-muted-foreground'>
-                  Không có thông tin chi tiết về các dòng cược.
-                </div>
-              )}
-            </div>
           </TabsContent>
 
           <TabsContent value='calculation'>
@@ -702,42 +551,22 @@ const BetCodeDetailModal = ({ betCode, isOpen, onClose, onPrint }) => {
         </Tabs>
 
         <DialogFooter className='space-x-2'>
-          {betCode.isDraft ? (
-            <>
-              <Button
-                variant='outline'
-                size='sm'
-                className='bg-green-50 text-green-700 hover:bg-green-100 border-green-200'
-                onClick={handleConfirm}>
-                <CheckCircle2 className='h-3.5 w-3.5 mr-1.5' />
-                Lưu
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                className='text-destructive hover:bg-destructive/10'
-                onClick={handleDelete}>
-                <Trash2 className='h-3.5 w-3.5 mr-1.5' />
-                Xóa
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant='outline' size='sm' onClick={onPrint}>
-                <Printer className='h-3.5 w-3.5 mr-1.5' />
-                In
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                className='text-destructive hover:bg-destructive/10'
-                onClick={handleDelete}>
-                <Trash2 className='h-3.5 w-3.5 mr-1.5' />
-                Xóa
-              </Button>
-            </>
-          )}
-
+          <Button
+            variant='outline'
+            size='sm'
+            className='bg-green-50 text-green-700 hover:bg-green-100 border-green-200'
+            onClick={handleConfirm}>
+            <CheckCircle2 className='h-3.5 w-3.5 mr-1.5' />
+            Xử lý
+          </Button>
+          <Button
+            variant='outline'
+            size='sm'
+            className='text-destructive hover:bg-destructive/10'
+            onClick={handleDelete}>
+            <Trash2 className='h-3.5 w-3.5 mr-1.5' />
+            Xóa
+          </Button>
           <Button
             variant='outline'
             size='sm'
