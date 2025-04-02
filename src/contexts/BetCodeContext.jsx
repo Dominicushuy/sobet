@@ -524,186 +524,196 @@ export function BetCodeProvider({ children }) {
   }, [])
 
   // Filter codes with the current filter criteria
-  const getFilteredCodes = useCallback(() => {
-    const { filterCriteria } = state
-    if (!filterCriteria) return betCodes
+  // Sửa đổi hàm getFilteredCodes để chấp nhận tham số type
+  const getFilteredCodes = useCallback(
+    (type = 'saved') => {
+      const { filterCriteria } = state
+      const codes = type === 'draft' ? draftCodes : betCodes
 
-    return betCodes.filter((code) => {
-      // If we only have searchText, perform a comprehensive text search
-      if (
-        Object.keys(filterCriteria).length === 1 &&
-        filterCriteria.searchText
-      ) {
-        const searchText = filterCriteria.searchText.toLowerCase()
+      if (!filterCriteria) return codes
 
-        // Function to check if search text exists in any numbers array
-        const hasMatchInNumbers = (lines) => {
-          if (!lines || !Array.isArray(lines)) return false
+      return codes.filter((code) => {
+        // If we only have searchText, perform a comprehensive text search
+        if (
+          Object.keys(filterCriteria).length === 1 &&
+          filterCriteria.searchText
+        ) {
+          const searchText = filterCriteria.searchText.toLowerCase()
 
-          for (const line of lines) {
-            // Check in numbers array
-            if (line.numbers && Array.isArray(line.numbers)) {
-              if (line.numbers.some((num) => num.includes(searchText))) {
+          // Function to check if search text exists in any numbers array
+          const hasMatchInNumbers = (lines) => {
+            if (!lines || !Array.isArray(lines)) return false
+
+            for (const line of lines) {
+              // Check in numbers array
+              if (line.numbers && Array.isArray(line.numbers)) {
+                if (line.numbers.some((num) => num.includes(searchText))) {
+                  return true
+                }
+              }
+
+              // Check in original line text
+              if (
+                (line.originalLine || '').toLowerCase().includes(searchText)
+              ) {
+                return true
+              }
+
+              // Check in bet type
+              if (
+                (line.betType?.alias || '').toLowerCase().includes(searchText)
+              ) {
                 return true
               }
             }
+            return false
+          }
 
-            // Check in original line text
-            if ((line.originalLine || '').toLowerCase().includes(searchText)) {
-              return true
-            }
+          // Search in original text
+          if ((code.originalText || '').toLowerCase().includes(searchText)) {
+            return true
+          }
 
-            // Check in bet type
+          // Search in formatted text
+          if ((code.formattedText || '').toLowerCase().includes(searchText)) {
+            return true
+          }
+
+          // Search in station name or other station properties
+          if ((code.station?.name || '').toLowerCase().includes(searchText)) {
+            return true
+          }
+
+          // If station has multiple stations (e.g., vl.ct)
+          if (code.station?.stations && Array.isArray(code.station.stations)) {
             if (
-              (line.betType?.alias || '').toLowerCase().includes(searchText)
+              code.station.stations.some((s) =>
+                (s.name || '').toLowerCase().includes(searchText)
+              )
             ) {
               return true
             }
           }
+
+          // Search in all numbers and bet types from lines
+          if (hasMatchInNumbers(code.lines)) {
+            return true
+          }
+
           return false
         }
 
-        // Search in original text
-        if ((code.originalText || '').toLowerCase().includes(searchText)) {
-          return true
-        }
+        // Handle combined criteria search
+        if (filterCriteria.searchText) {
+          const searchText = filterCriteria.searchText.toLowerCase()
+          let foundMatch = false
 
-        // Search in formatted text
-        if ((code.formattedText || '').toLowerCase().includes(searchText)) {
-          return true
-        }
-
-        // Search in station name or other station properties
-        if ((code.station?.name || '').toLowerCase().includes(searchText)) {
-          return true
-        }
-
-        // If station has multiple stations (e.g., vl.ct)
-        if (code.station?.stations && Array.isArray(code.station.stations)) {
-          if (
-            code.station.stations.some((s) =>
-              (s.name || '').toLowerCase().includes(searchText)
-            )
-          ) {
-            return true
+          // Search in original text
+          if ((code.originalText || '').toLowerCase().includes(searchText)) {
+            foundMatch = true
           }
-        }
 
-        // Search in all numbers and bet types from lines
-        if (hasMatchInNumbers(code.lines)) {
-          return true
-        }
-
-        return false
-      }
-
-      // Handle combined criteria search
-      if (filterCriteria.searchText) {
-        const searchText = filterCriteria.searchText.toLowerCase()
-        let foundMatch = false
-
-        // Search in original text
-        if ((code.originalText || '').toLowerCase().includes(searchText)) {
-          foundMatch = true
-        }
-
-        // Search in formatted text
-        else if (
-          (code.formattedText || '').toLowerCase().includes(searchText)
-        ) {
-          foundMatch = true
-        }
-
-        // Search in station name
-        else if (
-          (code.station?.name || '').toLowerCase().includes(searchText)
-        ) {
-          foundMatch = true
-        }
-
-        // Search in multiple stations
-        else if (
-          code.station?.stations &&
-          Array.isArray(code.station.stations)
-        ) {
-          if (
-            code.station.stations.some((s) =>
-              (s.name || '').toLowerCase().includes(searchText)
-            )
+          // Search in formatted text
+          else if (
+            (code.formattedText || '').toLowerCase().includes(searchText)
           ) {
             foundMatch = true
           }
-        }
 
-        // Search in numbers array and bet types
-        else if (code.lines && Array.isArray(code.lines)) {
-          for (const line of code.lines) {
-            // Search in original line
-            if ((line.originalLine || '').toLowerCase().includes(searchText)) {
+          // Search in station name
+          else if (
+            (code.station?.name || '').toLowerCase().includes(searchText)
+          ) {
+            foundMatch = true
+          }
+
+          // Search in multiple stations
+          else if (
+            code.station?.stations &&
+            Array.isArray(code.station.stations)
+          ) {
+            if (
+              code.station.stations.some((s) =>
+                (s.name || '').toLowerCase().includes(searchText)
+              )
+            ) {
               foundMatch = true
-              break
             }
+          }
 
-            // Search in numbers
-            if (line.numbers && Array.isArray(line.numbers)) {
-              if (line.numbers.some((num) => num.includes(searchText))) {
+          // Search in numbers array and bet types
+          else if (code.lines && Array.isArray(code.lines)) {
+            for (const line of code.lines) {
+              // Search in original line
+              if (
+                (line.originalLine || '').toLowerCase().includes(searchText)
+              ) {
+                foundMatch = true
+                break
+              }
+
+              // Search in numbers
+              if (line.numbers && Array.isArray(line.numbers)) {
+                if (line.numbers.some((num) => num.includes(searchText))) {
+                  foundMatch = true
+                  break
+                }
+              }
+
+              // Search in bet type alias
+              if (
+                (line.betType?.alias || '').toLowerCase().includes(searchText)
+              ) {
                 foundMatch = true
                 break
               }
             }
+          }
 
-            // Search in bet type alias
-            if (
-              (line.betType?.alias || '').toLowerCase().includes(searchText)
-            ) {
-              foundMatch = true
-              break
-            }
+          if (!foundMatch) return false
+        }
+
+        // Other filter criteria remain unchanged
+        if (
+          filterCriteria.station &&
+          code.station?.name !== filterCriteria.station
+        ) {
+          return false
+        }
+
+        if (filterCriteria.dateFrom || filterCriteria.dateTo) {
+          const codeDate = new Date(code.createdAt).getTime()
+
+          if (filterCriteria.dateFrom) {
+            const fromDate = new Date(filterCriteria.dateFrom).getTime()
+            if (codeDate < fromDate) return false
+          }
+
+          if (filterCriteria.dateTo) {
+            const toDate = new Date(filterCriteria.dateTo).getTime()
+            if (codeDate > toDate) return false
           }
         }
 
-        if (!foundMatch) return false
-      }
-
-      // Other filter criteria remain unchanged
-      if (
-        filterCriteria.station &&
-        code.station?.name !== filterCriteria.station
-      ) {
-        return false
-      }
-
-      if (filterCriteria.dateFrom || filterCriteria.dateTo) {
-        const codeDate = new Date(code.createdAt).getTime()
-
-        if (filterCriteria.dateFrom) {
-          const fromDate = new Date(filterCriteria.dateFrom).getTime()
-          if (codeDate < fromDate) return false
+        if (
+          filterCriteria.minAmount &&
+          code.stakeAmount < filterCriteria.minAmount
+        ) {
+          return false
         }
 
-        if (filterCriteria.dateTo) {
-          const toDate = new Date(filterCriteria.dateTo).getTime()
-          if (codeDate > toDate) return false
+        if (
+          filterCriteria.maxAmount &&
+          code.stakeAmount > filterCriteria.maxAmount
+        ) {
+          return false
         }
-      }
 
-      if (
-        filterCriteria.minAmount &&
-        code.stakeAmount < filterCriteria.minAmount
-      ) {
-        return false
-      }
-
-      if (
-        filterCriteria.maxAmount &&
-        code.stakeAmount > filterCriteria.maxAmount
-      ) {
-        return false
-      }
-
-      return true
-    })
-  }, [state, betCodes])
+        return true
+      })
+    },
+    [state, betCodes, draftCodes]
+  )
 
   // Analyze a new bet code without adding it
   const analyzeBetCode = useCallback((text) => {
