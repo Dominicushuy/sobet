@@ -135,6 +135,7 @@ export function ChatProvider({ children }) {
             failedBetCodes.push({
               station: item.station,
               betLine: item.betLine,
+              originalText: text,
               betCode: item.betCode,
               betCodeResult, // Store the full result for better error analysis
             })
@@ -1099,6 +1100,38 @@ function formatFailedBetCodesMessage(failedBetCodes) {
     return 'Không có mã cược nào bị lỗi.'
   }
 
+  // Helper function to find the original user input line
+  const findOriginalLine = (originalText, betLine) => {
+    if (!originalText) return betLine
+
+    // Extract number patterns from the betLine for matching
+    const betNumbers = betLine.match(/\d+/g) || []
+    if (betNumbers.length === 0) return betLine // Fallback if no numbers
+
+    // Split the original text into lines
+    const originalLines = originalText.trim().split('\n')
+
+    // Look for a line with similar number patterns
+    let bestMatch = null
+    let bestMatchScore = 0
+
+    for (const line of originalLines) {
+      const lineNumbers = line.match(/\d+/g) || []
+      const matchingNumbers = betNumbers.filter((n) => lineNumbers.includes(n))
+
+      if (matchingNumbers.length === betNumbers.length) {
+        // Score this match by similarity in length and character count
+        const score = 1000 - Math.abs(line.length - betLine.length)
+        if (score > bestMatchScore) {
+          bestMatch = line
+          bestMatchScore = score
+        }
+      }
+    }
+
+    return bestMatch || betLine
+  }
+
   // Group errors by type for better presentation
   const errorsByType = {
     numberLengthErrors: [],
@@ -1145,9 +1178,11 @@ function formatFailedBetCodesMessage(failedBetCodes) {
   if (errorsByType.numberLengthErrors.length > 0) {
     message += `📏 **Lỗi độ dài số không nhất quán (${errorsByType.numberLengthErrors.length}):**\n`
     errorsByType.numberLengthErrors.forEach((error) => {
-      message += `${errorCount++}. Đài: **${error.station}** - \`${
-        error.betLine
-      }\`\n   *Các số phải có cùng độ dài (ví dụ: 23.45.67 hoặc 123.456.789)*\n\n`
+      // Find original line from original text if available
+      const originalLine = findOriginalLine(error.originalText, error.betLine)
+      message += `${errorCount++}. Đài: **${
+        error.station
+      }** - \`${originalLine}\`\n   *Các số phải có cùng độ dài (ví dụ: 23.45.67 hoặc 123.456.789)*\n\n`
     })
   }
 
@@ -1155,9 +1190,10 @@ function formatFailedBetCodesMessage(failedBetCodes) {
   if (errorsByType.betTypeErrors.length > 0) {
     message += `🎮 **Lỗi kiểu cược không hỗ trợ (${errorsByType.betTypeErrors.length}):**\n`
     errorsByType.betTypeErrors.forEach((error) => {
-      message += `${errorCount++}. Đài: **${error.station}** - \`${
-        error.betLine
-      }\`\n   *${error.errorMessage}*\n\n`
+      const originalLine = findOriginalLine(error.originalText, error.betLine)
+      message += `${errorCount++}. Đài: **${
+        error.station
+      }** - \`${originalLine}\`\n   *${error.errorMessage}*\n\n`
     })
   }
 
@@ -1165,7 +1201,8 @@ function formatFailedBetCodesMessage(failedBetCodes) {
   if (errorsByType.stationErrors.length > 0) {
     message += `🏢 **Lỗi đài không hợp lệ (${errorsByType.stationErrors.length}):**\n`
     errorsByType.stationErrors.forEach((error) => {
-      message += `${errorCount++}. \`${error.betCode}\`\n   *${
+      const originalLine = findOriginalLine(error.originalText, error.betLine)
+      message += `${errorCount++}. \`${originalLine}\`\n   *${
         error.errorMessage
       }*\n\n`
     })
@@ -1175,9 +1212,10 @@ function formatFailedBetCodesMessage(failedBetCodes) {
   if (errorsByType.formatErrors.length > 0) {
     message += `📝 **Lỗi định dạng (${errorsByType.formatErrors.length}):**\n`
     errorsByType.formatErrors.forEach((error) => {
-      message += `${errorCount++}. Đài: **${error.station}** - \`${
-        error.betLine
-      }\`\n   *${error.errorMessage}*\n\n`
+      const originalLine = findOriginalLine(error.originalText, error.betLine)
+      message += `${errorCount++}. Đài: **${
+        error.station
+      }** - \`${originalLine}\`\n   *${error.errorMessage}*\n\n`
     })
   }
 
@@ -1185,9 +1223,10 @@ function formatFailedBetCodesMessage(failedBetCodes) {
   if (errorsByType.otherErrors.length > 0) {
     message += `❓ **Lỗi khác (${errorsByType.otherErrors.length}):**\n`
     errorsByType.otherErrors.forEach((error) => {
-      message += `${errorCount++}. Đài: **${error.station}** - \`${
-        error.betLine
-      }\`\n   *${error.errorMessage}*\n\n`
+      const originalLine = findOriginalLine(error.originalText, error.betLine)
+      message += `${errorCount++}. Đài: **${
+        error.station
+      }** - \`${originalLine}\`\n   *${error.errorMessage}*\n\n`
     })
   }
 
