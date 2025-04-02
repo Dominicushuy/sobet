@@ -5,7 +5,6 @@ import { useBetCode } from '@/contexts/BetCodeContext'
 import {
   Save,
   AlertTriangle,
-  BarChart2,
   Check,
   Filter,
   CircleSlash,
@@ -15,13 +14,7 @@ import {
 } from 'lucide-react'
 import BetCodeCard from './BetCodeCard'
 import BetCodeFilter from './BetCodeFilter'
-import BetCodeStats from './BetCodeStats'
 import MultipleActionsButton from './MultipleActionsButton'
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@/components/ui/popover'
 import { formatMoney } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
 
@@ -142,18 +135,6 @@ const BetCodeList = () => {
                 Chọn nhiều
               </Button>
 
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant='outline' size='sm' className='h-8'>
-                    <BarChart2 className='h-3.5 w-3.5 mr-1' />
-                    Thống kê
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className='w-80'>
-                  <BetCodeStats />
-                </PopoverContent>
-              </Popover>
-
               <Button
                 onClick={confirmDraftCodes}
                 disabled={draftCodes.length === 0}
@@ -192,12 +173,12 @@ const BetCodeList = () => {
                 {formatMoney(stats.totalStake)}đ
               </span>
             </div>
-            <div className='flex items-center gap-1.5'>
+            {/* <div className='flex items-center gap-1.5'>
               <span className='text-muted-foreground'>Tiềm năng thắng:</span>
               <span className='font-medium text-green-600'>
                 {formatMoney(stats.totalPotential)}đ
               </span>
-            </div>
+            </div> */}
           </div>
         </div>
 

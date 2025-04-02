@@ -34,8 +34,13 @@ import {
 import { Badge } from '@/components/ui/badge'
 
 const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
-  const { confirmDraftCode, removeBetCode, removeDraftCode, getBetCode } =
-    useBetCode()
+  const {
+    confirmDraftCode,
+    removeBetCode,
+    removeDraftCode,
+    getBetCode,
+    batchDeleteCodes,
+  } = useBetCode()
 
   const [printing, setPrinting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -112,7 +117,7 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     }
   }
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     setShowDeleteConfirm(false)
     if (selectedIds.length === 0) {
       toast.info('Chưa có mã cược nào được chọn để xóa')
@@ -120,37 +125,25 @@ const MultipleActionsButton = ({ selectedIds, onClearSelection }) => {
     }
 
     try {
-      setDeleteProgress({ current: 0, total: selectedIds.length })
-      let deletedCount = 0
+      // Hiển thị trạng thái đã xóa xong ngay lập tức
+      setDeleteProgress({
+        current: selectedIds.length,
+        total: selectedIds.length,
+      })
 
-      for (const id of selectedIds) {
-        const code = getBetCode(id)
-        if (!code) continue
+      // Xóa tất cả mã cược đã chọn trong một thao tác duy nhất
+      batchDeleteCodes(selectedIds)
 
-        if (code.isDraft) {
-          removeDraftCode(id)
-        } else {
-          removeBetCode(id)
-        }
-
-        deletedCount++
-        setDeleteProgress({ current: deletedCount, total: selectedIds.length })
-
-        // Nếu có nhiều mã cược, thêm delay nhỏ để không block UI
-        if (selectedIds.length > 10) {
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        }
-      }
-
-      if (deletedCount > 0) {
-        toast.success(`Đã xóa ${deletedCount} mã cược`)
-        onClearSelection()
-      }
+      toast.success(`Đã xóa ${selectedIds.length} mã cược`)
+      onClearSelection()
     } catch (error) {
       console.error('Lỗi khi xóa nhiều mã cược:', error)
       toast.error('Lỗi: ' + error.message)
     } finally {
-      setDeleteProgress({ current: 0, total: 0 })
+      // Reset trạng thái progress sau khi hoàn thành
+      setTimeout(() => {
+        setDeleteProgress({ current: 0, total: 0 })
+      }, 300)
     }
   }
 
