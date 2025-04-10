@@ -1,4 +1,4 @@
-const BET_CONFIG = {
+export const BET_CONFIG = {
   user: {
     id: "5c332b8e-4b3f-4778-93a4-a63997d8844c",
     username: "huy_user1",
