@@ -51,20 +51,21 @@ export const betCodeService = {
       if (parseResult.success) {
         // Check for permutation types and ensure the permutations are generated
         for (const line of parseResult.lines) {
-          // Check if this line has a permutation bet type
+          // Check if this line has a permutation bet type from BET_CONFIG
           const betTypeAlias = line.betType?.alias?.toLowerCase();
-          const isPermutationType = BET_CONFIG.betTypes.some(
-            (bt) =>
-              bt.is_permutation && bt.aliases.some((a) => a === betTypeAlias)
+          const betType = BET_CONFIG.betTypes.find((bt) =>
+            bt.aliases.some((a) => a.toLowerCase() === betTypeAlias)
           );
+
+          const isPermutationType = betType && betType.is_permutation;
 
           // If this is a permutation type, mark it and generate permutations
           if (
-            betTypeAlias &&
-            (betTypeAlias.includes("dao") ||
-              betTypeAlias.includes("dxc") ||
-              isPermutationType ||
-              betTypeAlias === "xcd")
+            isPermutationType ||
+            (betTypeAlias &&
+              (betTypeAlias.includes("dao") ||
+                betTypeAlias.includes("dxc") ||
+                betTypeAlias === "xcd"))
           ) {
             line.isPermutation = true;
 
@@ -143,14 +144,22 @@ export const betCodeService = {
    * @returns {boolean} Là dòng đài hay không
    */
   isStationLine(line) {
-    // Lấy danh sách các đài từ defaultStations
-    const stationNames = BET_CONFIG.accessibleStations.flatMap((station) => [
+    // Lấy danh sách các đài và aliases từ BET_CONFIG
+    const stationAliases = BET_CONFIG.accessibleStations.flatMap((station) => [
       station.name.toLowerCase(),
       ...station.aliases,
     ]);
 
-    // Các mẫu đài nhiều miền
-    const multiRegionPattern = /^\d+d(mn|mt|n|t|nam|trung)$/i;
+    // Lấy danh sách các region aliases từ BET_CONFIG
+    const regionAliases = BET_CONFIG.regions.flatMap(
+      (region) => region.aliases
+    );
+
+    // Các mẫu đài nhiều miền từ region aliases
+    const multiRegionPattern = new RegExp(
+      `^\\d+d(${regionAliases.join("|")})$`,
+      "i"
+    );
 
     // Kiểm tra nếu dòng chỉ chứa tên đài
     const simpleLine = line.trim().toLowerCase().replace(/\.+$/, "");
@@ -160,16 +169,19 @@ export const betCodeService = {
       return true;
     }
 
+    // Fallback cho các mẫu 2dmn, 3dmt
+    if (/^\d+d(mn|mt|n|t|nam|trung)$/i.test(simpleLine)) {
+      return true;
+    }
+
     // Trường hợp 2: Đài đơn lẻ
-    if (stationNames.includes(simpleLine)) {
+    if (stationAliases.includes(simpleLine)) {
       return true;
     }
 
     // Trường hợp 3: Các tên miền
-    for (const region of BET_CONFIG.regions) {
-      if (region.aliases.includes(simpleLine)) {
-        return true;
-      }
+    if (regionAliases.includes(simpleLine)) {
+      return true;
     }
 
     // Trường hợp 4: Nhiều đài (vl.ct, v.v.)
@@ -177,7 +189,7 @@ export const betCodeService = {
       const parts = simpleLine.split(".");
       if (parts.length > 1) {
         // Nếu tất cả các phần đều là tên đài
-        return parts.every((part) => stationNames.includes(part));
+        return parts.every((part) => stationAliases.includes(part));
       }
     }
 

@@ -93,7 +93,7 @@ function isStationOnlyLine(line) {
     return true;
   }
 
-  // 2. Kiểm tra tên đài đơn lẻ
+  // 2. Kiểm tra tên đài đơn lẻ từ BET_CONFIG
   for (const station of BET_CONFIG.accessibleStations) {
     if (
       station.name.toLowerCase() === cleanLine ||
@@ -103,7 +103,7 @@ function isStationOnlyLine(line) {
     }
   }
 
-  // 3. Kiểm tra mẫu "mb", "mt", "mn" và biến thể của chúng
+  // 3. Kiểm tra mẫu region codes và aliases từ BET_CONFIG
   for (const region of BET_CONFIG.regions) {
     if (region.aliases.includes(cleanLine)) {
       return true;
@@ -166,7 +166,7 @@ function formatStation(stationLine) {
  * Tìm và sửa đài ghép liền nhau không dùng dấu phân cách
  */
 function findMergedStations(stationText) {
-  // Trường hợp đặc biệt: dnaictho, tp.dongthap
+  // Sử dụng BET_CONFIG.accessibleStations để tìm tất cả các đài và aliases
   for (const station1 of BET_CONFIG.accessibleStations) {
     // Thử tất cả các alias của đài 1
     for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
@@ -194,6 +194,7 @@ function findMergedStations(stationText) {
     }
   }
 
+  // Kiểm tra lại với ghép chính xác
   for (const station1 of BET_CONFIG.accessibleStations) {
     for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
       for (const station2 of BET_CONFIG.accessibleStations) {
@@ -315,11 +316,21 @@ function formatBetLine(line) {
   // Loại bỏ dấu chấm ở đầu dòng
   normalizedLine = normalizedLine.replace(/^\./, "");
 
-  // Sửa lỗi tên kiểu cược
-  normalizedLine = normalizedLine.replace(/xcdui/g, "duoi");
-  normalizedLine = normalizedLine.replace(/xcduoi/g, "duoi");
-  normalizedLine = normalizedLine.replace(/xcd(?!\w)/g, "dau");
-  normalizedLine = normalizedLine.replace(/xcdau/g, "dau");
+  // Sửa lỗi tên kiểu cược - sử dụng BET_CONFIG.betTypes
+  const betTypeCorrections = {
+    xcdui: "duoi",
+    xcduoi: "duoi",
+    xcd: "dau",
+    xcdau: "dau",
+  };
+
+  // Apply corrections
+  for (const [incorrect, correct] of Object.entries(betTypeCorrections)) {
+    const pattern = new RegExp(`\\b${incorrect}(?!\\w)`, "g");
+    normalizedLine = normalizedLine.replace(pattern, correct);
+  }
+
+  // Đặc biệt xử lý "dui" -> "duoi"
   normalizedLine = normalizedLine.replace(/(\b|[^a-z])dui(\d+|$)/g, "$1duoi$2");
 
   // Bước 2: Phát hiện và tách nhiều kiểu cược (dau20.duoi10)

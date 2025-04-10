@@ -65,11 +65,12 @@ function getNumberInfo(line, betTypeInfo, station) {
     };
   }
 
-  // Kiểm tra loại cược
+  // Kiểm tra loại cược từ BET_CONFIG
+  const daAliases = BET_CONFIG.betTypes.find(
+    (bt) => bt.special_calc === "bridge"
+  )?.aliases || ["da", "dv"];
   const isBridge =
-    betTypeAlias === "da" ||
-    betTypeAlias === "dv" ||
-    betTypeInfo.specialCalc === "bridge";
+    betTypeInfo.specialCalc === "bridge" || daAliases.includes(betTypeAlias);
 
   // Find the exact bet type from BET_CONFIG
   const betType = BET_CONFIG.betTypes.find(
@@ -178,7 +179,11 @@ function getBetTypeInfo(line, stationInfo) {
 
   // Handle complex payout rate structures
   if (typeof payoutRate === "object") {
-    if (betTypeAlias === "da" || betTypeAlias === "dv") {
+    if (
+      betTypeAlias === "da" ||
+      betTypeAlias === "dv" ||
+      betType.special_calc === "bridge"
+    ) {
       // Bridge bet type logic
       const region = stationInfo.region;
       const stationCount = stationInfo.count || 1;
@@ -245,8 +250,8 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
   const betAmount = line.amount || 0;
   const payoutRate = betTypeInfo.payoutRate || 0;
 
-  // Kiểm tra nếu là kiểu đá (bridge)
-  if (numberInfo.isBridge) {
+  // Kiểm tra nếu là kiểu đá (bridge) từ BET_CONFIG
+  if (numberInfo.isBridge || betTypeInfo.specialCalc === "bridge") {
     // For bridge bet types, make sure we have at least 2 numbers
     if (numberInfo.count < 2) {
       return {
@@ -274,7 +279,7 @@ function calculateLinePotential(line, stationInfo, betTypeInfo, numberInfo) {
       formula: `${stationInfo.count} × ${maxPairs} × ${betAmount} × ${payoutRate}`,
     };
   }
-  // Kiểm tra nếu là kiểu đảo (permutation)
+  // Kiểm tra nếu là kiểu đảo (permutation) từ BET_CONFIG
   else if (numberInfo.isPermutation) {
     // Số lượng hoán vị của các số
     const numbers = line.numbers || [];

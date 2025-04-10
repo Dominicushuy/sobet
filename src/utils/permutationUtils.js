@@ -1,4 +1,5 @@
 // src/utils/permutationUtils.js
+import { BET_CONFIG } from "@/config/data";
 
 /**
  * Determine if a bet type is a permutation type
@@ -6,30 +7,16 @@
  * @returns {boolean} True if it's a permutation type
  */
 export function isPermutationType(betTypeAlias) {
-  if (!betTypeAlias) return false
+  if (!betTypeAlias) return false;
 
-  const permutationTypes = [
-    'dao',
-    'xcd',
-    'daob',
-    'bdao',
-    'daoxc',
-    'dxc',
-    'daodau',
-    'ddau',
-    'daoduoi',
-    'daodui',
-    'dduoi',
-    'ddui',
-    'dxcdau',
-    'dxcduoi',
-    'b7ld',
-    'b7ldao',
-    'b8ld',
-    'b8ldao',
-  ]
+  // Sử dụng BET_CONFIG để xác định các kiểu cược permutation
+  const betType = BET_CONFIG.betTypes.find((bt) =>
+    bt.aliases.some(
+      (alias) => alias.toLowerCase() === betTypeAlias.toLowerCase()
+    )
+  );
 
-  return permutationTypes.includes(betTypeAlias.toLowerCase())
+  return betType && betType.is_permutation;
 }
 
 /**
@@ -38,13 +25,13 @@ export function isPermutationType(betTypeAlias) {
  * @returns {Object} Map of original numbers to their permutations
  */
 export function getAllPermutations(numbers) {
-  const permutationsMap = {}
+  const permutationsMap = {};
 
   for (const number of numbers) {
-    permutationsMap[number] = generatePermutations(number)
+    permutationsMap[number] = generatePermutations(number);
   }
 
-  return permutationsMap
+  return permutationsMap;
 }
 
 /**
@@ -53,14 +40,14 @@ export function getAllPermutations(numbers) {
  * @returns {number} Total permutation count
  */
 export function getTotalPermutationsCount(numbers) {
-  const allPermutations = new Set()
+  const allPermutations = new Set();
 
   for (const number of numbers) {
-    const perms = generatePermutations(number)
-    perms.forEach((p) => allPermutations.add(p))
+    const perms = generatePermutations(number);
+    perms.forEach((p) => allPermutations.add(p));
   }
 
-  return allPermutations.size
+  return allPermutations.size;
 }
 
 /**
@@ -69,8 +56,8 @@ export function getTotalPermutationsCount(numbers) {
  * @returns {string} Formatted string
  */
 export function formatPermutationsDisplay(permutations) {
-  if (!permutations || permutations.length <= 1) return ''
-  return permutations.slice(1).join(', ')
+  if (!permutations || permutations.length <= 1) return "";
+  return permutations.slice(1).join(", ");
 }
 
 /**
@@ -79,31 +66,31 @@ export function formatPermutationsDisplay(permutations) {
  * @returns {number} Số lượng hoán vị
  */
 export function calculatePermutationCount(number) {
-  if (!number) return 1
+  if (!number) return 1;
 
   // Đếm số lượng mỗi chữ số
-  const digitCounts = {}
+  const digitCounts = {};
   for (let i = 0; i < number.length; i++) {
-    const digit = number[i]
-    digitCounts[digit] = (digitCounts[digit] || 0) + 1
+    const digit = number[i];
+    digitCounts[digit] = (digitCounts[digit] || 0) + 1;
   }
 
   // Tính giai thừa của độ dài số
-  let factorial = 1
+  let factorial = 1;
   for (let i = 2; i <= number.length; i++) {
-    factorial *= i
+    factorial *= i;
   }
 
   // Chia cho giai thừa của số lần xuất hiện của mỗi chữ số
   for (const digit in digitCounts) {
-    let digitFactorial = 1
+    let digitFactorial = 1;
     for (let i = 2; i <= digitCounts[digit]; i++) {
-      digitFactorial *= i
+      digitFactorial *= i;
     }
-    factorial /= digitFactorial
+    factorial /= digitFactorial;
   }
 
-  return factorial
+  return factorial;
 }
 
 /**
@@ -112,32 +99,32 @@ export function calculatePermutationCount(number) {
  * @returns {string[]} Mảng các hoán vị
  */
 export function generatePermutations(number) {
-  if (!number || number.length <= 1) return [number]
+  if (!number || number.length <= 1) return [number];
 
-  const uniquePerms = new Set()
+  const uniquePerms = new Set();
 
   // Sử dụng thuật toán Heap để tạo hoán vị
   function heapPermutation(a, size) {
     // Nếu size là 1, hoán vị hoàn tất
     if (size === 1) {
-      uniquePerms.add(a.join(''))
-      return
+      uniquePerms.add(a.join(""));
+      return;
     }
 
     for (let i = 0; i < size; i++) {
-      heapPermutation(a, size - 1)
+      heapPermutation(a, size - 1);
 
       // Nếu size là số lẻ, đổi phần tử 0 và size-1
       // Nếu size là số chẵn, đổi phần tử i và size-1
-      const j = size % 2 === 0 ? i : 0
-      const temp = a[j]
-      a[j] = a[size - 1]
-      a[size - 1] = temp
+      const j = size % 2 === 0 ? i : 0;
+      const temp = a[j];
+      a[j] = a[size - 1];
+      a[size - 1] = temp;
     }
   }
 
-  const digits = number.split('')
-  heapPermutation([...digits], digits.length)
+  const digits = number.split("");
+  heapPermutation([...digits], digits.length);
 
-  return Array.from(uniquePerms)
+  return Array.from(uniquePerms);
 }
