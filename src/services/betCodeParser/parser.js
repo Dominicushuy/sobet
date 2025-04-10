@@ -1,5 +1,5 @@
 // src/services/betCodeParser/parser.js
-import { defaultStations, defaultBetTypes } from "@/config/defaults";
+import { BET_CONFIG } from "@/config/data";
 
 /**
  * Phân tích mã cược đầu vào
@@ -63,7 +63,7 @@ export function parseBetCode(betCode) {
           }
 
           // Identify bet type
-          const betType = defaultBetTypes.find((bt) =>
+          const betType = BET_CONFIG.betTypes.find((bt) =>
             bt.aliases.some(
               (a) => a.toLowerCase() === betTypeText.toLowerCase()
             )
@@ -111,7 +111,7 @@ export function parseBetCode(betCode) {
       let stationData = null;
 
       // Kiểm tra trong tất cả các đài và aliases
-      for (const station of defaultStations) {
+      for (const station of BET_CONFIG.allStations) {
         if (
           station.name.toLowerCase() === potentialStation ||
           (station.aliases &&
@@ -122,10 +122,10 @@ export function parseBetCode(betCode) {
           isValidStation = true;
           stationData = {
             name: station.name,
-            region: station.region,
+            region: station.region.code,
             multiStation: false,
           };
-          if (station.region === "north" && station.name === "Miền Bắc") {
+          if (station.region.code === "north" && station.name === "Miền Bắc") {
             stationData.multiStation = true;
           }
           break;
@@ -152,8 +152,6 @@ export function parseBetCode(betCode) {
     // Chuẩn hóa dấu xuống dòng và khoảng trắng
     betCode = betCode.trim();
 
-    // console.log('Bet code before normalization:', betCode)
-
     // Tiền xử lý: Tự động định dạng khi người dùng nhập đài và mã cược trên cùng một dòng
     if (!betCode.includes("\n")) {
       // Sử dụng split với regex mạnh hơn để xử lý tất cả loại khoảng trắng
@@ -170,7 +168,7 @@ export function parseBetCode(betCode) {
         let isValidStation = false;
 
         // Kiểm tra trong tất cả các đài và aliases
-        for (const station of defaultStations) {
+        for (const station of BET_CONFIG.allStations) {
           if (
             station.name.toLowerCase() === potentialStation ||
             (station.aliases &&
@@ -430,7 +428,7 @@ function isStationLine(line) {
   }
 
   // 3. Kiểm tra tên đài đơn lẻ
-  for (const station of defaultStations) {
+  for (const station of BET_CONFIG.allStations) {
     if (
       station.name.toLowerCase() === cleanLine ||
       station.aliases.some((alias) => alias === cleanLine)
@@ -440,15 +438,17 @@ function isStationLine(line) {
   }
 
   // 4. Kiểm tra mẫu "mb", "mt", "mn" và biến thể của chúng
-  if (/^(mb|mt|mn|mienbac|mientrung|miennam|hanoi|hn)$/i.test(cleanLine)) {
-    return true;
+  for (const region of BET_CONFIG.regions) {
+    if (region.aliases.includes(cleanLine)) {
+      return true;
+    }
   }
 
   // 5. Kiểm tra nếu là tổ hợp các đài (vd: vl.ct, dn.hue)
   if (cleanLine.includes(".")) {
     const parts = cleanLine.split(".");
     return parts.every((part) =>
-      defaultStations.some(
+      BET_CONFIG.allStations.some(
         (station) =>
           station.name.toLowerCase() === part ||
           station.aliases.some((alias) => alias === part)
@@ -475,9 +475,10 @@ function isStationOnly(line) {
   }
 
   // Kiểm tra mẫu "mb", "mt", "mn" và biến thể của chúng
-  const regionPattern = /^(mb|mt|mn|mienbac|mientrung|miennam|hanoi|hn)$/i;
-  if (regionPattern.test(line)) {
-    return true;
+  for (const region of BET_CONFIG.regions) {
+    if (region.aliases.includes(line.toLowerCase())) {
+      return true;
+    }
   }
 
   return false;
@@ -488,7 +489,7 @@ function isStationOnly(line) {
  */
 function isPartOfStationName(alias, line) {
   // Kiểm tra nếu line chính là một tên đài/alias của đài
-  const isLineExactlyStation = defaultStations.some(
+  const isLineExactlyStation = BET_CONFIG.allStations.some(
     (station) =>
       station.name.toLowerCase() === line.trim().toLowerCase() ||
       station.aliases.some((a) => a === line.trim().toLowerCase())
@@ -500,7 +501,7 @@ function isPartOfStationName(alias, line) {
   }
 
   // Ngược lại kiểm tra nếu alias là một phần của tên đài
-  for (const station of defaultStations) {
+  for (const station of BET_CONFIG.allStations) {
     if (
       station.aliases.some(
         (stationAlias) =>
@@ -595,7 +596,7 @@ function extractStationPart(line) {
   }
 
   // Tìm vị trí kiểu cược đầu tiên
-  const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases);
+  const betTypeAliases = BET_CONFIG.betTypes.flatMap((bt) => bt.aliases);
   for (const alias of betTypeAliases) {
     const aliasPos = line.indexOf(alias);
     if (aliasPos !== -1 && !isPartOfStationName(alias, line)) {
@@ -616,13 +617,13 @@ function parseStation(stationString) {
   const stationText = stationString.trim().toLowerCase().replace(/\.+$/, "");
 
   // Kiểm tra tên đài chính xác
-  for (const station of defaultStations) {
+  for (const station of BET_CONFIG.allStations) {
     if (station.name.toLowerCase() === stationText) {
       return {
         success: true,
         data: {
           name: station.name,
-          region: station.region,
+          region: station.region.code,
           multiStation: false,
         },
       };
@@ -634,7 +635,7 @@ function parseStation(stationString) {
         success: true,
         data: {
           name: station.name,
-          region: station.region,
+          region: station.region.code,
           multiStation: false,
         },
       };
@@ -693,14 +694,14 @@ function parseStation(stationString) {
     const validStations = [];
 
     for (const part of stationParts) {
-      for (const station of defaultStations) {
+      for (const station of BET_CONFIG.allStations) {
         if (
           station.name.toLowerCase() === part ||
           station.aliases.some((alias) => alias.toLowerCase() === part)
         ) {
           validStations.push({
             name: station.name,
-            region: station.region,
+            region: station.region.code,
           });
           break;
         }
@@ -745,7 +746,7 @@ function parseBetLine(line, station) {
 
   try {
     // First, check for direct "da" with 3-digit numbers pattern
-    const daWithDigitsPattern = /^([\d.]+)da(\d+)$/i;
+    const daWithDigitsPattern = /^([\d.]+)(da|dv)(\d+)$/i;
     const daMatch = line.match(daWithDigitsPattern);
 
     if (daMatch) {
@@ -772,12 +773,12 @@ function parseBetLine(line, station) {
     }
 
     // Lấy danh sách alias từ các kiểu cược, sắp xếp từ dài đến ngắn
-    const sortedAliases = defaultBetTypes
+    const sortedAliases = BET_CONFIG.betTypes
       .flatMap((bt) => bt.aliases)
       .sort((a, b) => b.length - a.length);
 
     // Thử phân tích bằng pattern matching tổng quát cho hầu hết dòng cược
-    const betLinePattern = /^([\d.]+)([a-z][a-z0-9]*)(\d+(?:[,.n]\d+)?)$/i;
+    const betLinePattern = /^([\d.]+)([a-z][a-z0-9]*)(\d+(?:[,.]\d+)?)$/i;
     const betLineMatch = line.match(betLinePattern);
 
     if (betLineMatch) {
@@ -876,8 +877,7 @@ function parseBetLine(line, station) {
     }
 
     // Thử với pattern cụ thể cho b7l, b7lo, b8l, b8lo
-    const specialBetPattern =
-      /^([\d.]+)(b7l|b7lo|b8l|b8lo)(\d+(?:[,.n]\d+)?)$/i;
+    const specialBetPattern = /^([\d.]+)(b7l|b7lo|b8l|b8lo)(\d+(?:[,.]\d+)?)$/i;
     const specialBetMatch = line.match(specialBetPattern);
 
     if (specialBetMatch) {
@@ -946,7 +946,6 @@ function parseBetLine(line, station) {
 
         const [_, firstBetTypeText, firstAmountText] = firstBetTypeMatch;
         let firstBetType = identifyBetType(firstBetTypeText);
-        const firstAmount = parseAmount(firstAmountText);
 
         // Đặc biệt kiểm tra cho b7l, b7lo, b8l, b8lo
         if (
@@ -962,7 +961,7 @@ function parseBetLine(line, station) {
         if (!firstBetType) return result;
 
         // Process remaining bet types
-        const betTypes = [{ betType: firstBetType, amount: firstAmount }];
+        const betTypes = [{ betType: firstBetType, amount: firstAmountText }];
         const remainingBetTypePattern = /([a-z]+)(\d+(?:[,.]\d+)?)/gi;
         let betTypeMatch;
 
@@ -1005,14 +1004,14 @@ function parseBetLine(line, station) {
           // Set the primary bet type and additional bet types
           result.numbers = numbers;
           result.betType = betTypes[0].betType;
-          result.amount = betTypes[0].amount;
+          result.amount = parseAmount(betTypes[0].amount);
           result.valid = true;
 
           // Add additional bet types
           for (let i = 1; i < betTypes.length; i++) {
             result.additionalBetTypes.push({
               betType: betTypes[i].betType,
-              amount: betTypes[i].amount,
+              amount: parseAmount(betTypes[i].amount),
               numbers: numbers, // Share the same numbers
             });
           }
@@ -1542,7 +1541,7 @@ function hasCompleteBetTypeAndAmount(line, currentPos) {
 
   // Cải tiến: Sử dụng regex chính xác hơn để tìm kiểu cược
   // Tạo pattern regex từ các alias kiểu cược, sắp xếp theo độ dài để ưu tiên tìm kiếm các alias dài hơn trước
-  const betTypePattern = defaultBetTypes
+  const betTypePattern = BET_CONFIG.betTypes
     .flatMap((bt) => bt.aliases)
     .sort((a, b) => b.length - a.length)
     .join("|");
@@ -1561,7 +1560,7 @@ function hasCompleteBetTypeAndAmount(line, currentPos) {
  */
 function isBetTypeOrAmount(text) {
   // Tạo danh sách aliases sắp xếp theo độ dài (dài nhất trước)
-  const sortedAliases = defaultBetTypes
+  const sortedAliases = BET_CONFIG.betTypes
     .flatMap((bt) => bt.aliases)
     .sort((a, b) => b.length - a.length);
 
@@ -1606,7 +1605,7 @@ function identifyBetType(betTypeString) {
 
   // Đặc biệt xử lý cho b7l, b7lo, b8l, b8lo
   if (normalized === "b7l" || normalized === "b7lo") {
-    for (const betType of defaultBetTypes) {
+    for (const betType of BET_CONFIG.betTypes) {
       if (
         betType.name === "Bao Lô 7" ||
         betType.aliases.some((alias) => alias === "b7l" || alias === "b7lo")
@@ -1621,7 +1620,7 @@ function identifyBetType(betTypeString) {
   }
 
   if (normalized === "b8l" || normalized === "b8lo") {
-    for (const betType of defaultBetTypes) {
+    for (const betType of BET_CONFIG.betTypes) {
       if (
         betType.name === "Bao Lô 8" ||
         betType.aliases.some((alias) => alias === "b8l" || alias === "b8lo")
@@ -1636,7 +1635,7 @@ function identifyBetType(betTypeString) {
   }
 
   // Exact match
-  for (const betType of defaultBetTypes) {
+  for (const betType of BET_CONFIG.betTypes) {
     for (const alias of betType.aliases) {
       if (normalized === alias.toLowerCase()) {
         return {
@@ -1649,7 +1648,7 @@ function identifyBetType(betTypeString) {
   }
 
   // Partial match
-  for (const betType of defaultBetTypes) {
+  for (const betType of BET_CONFIG.betTypes) {
     for (const alias of betType.aliases) {
       if (
         alias.toLowerCase().startsWith(normalized) ||
@@ -1676,12 +1675,12 @@ function isAlphabetChar(char) {
 
 // Add new validation helper function
 function validateBetTypeDigitCount(betTypeId, digitCount) {
-  const betType = defaultBetTypes.find((bt) => bt.name === betTypeId);
-  if (!betType || !betType.betRule) {
+  const betType = BET_CONFIG.betTypes.find((bt) => bt.name === betTypeId);
+  if (!betType || !betType.bet_rule) {
     return { valid: true }; // No rules defined, allow any
   }
 
-  const allowedDigitRules = betType.betRule;
+  const allowedDigitRules = betType.bet_rule;
   const isAllowed = allowedDigitRules.some(
     (rule) => rule === `${digitCount} digits`
   );
@@ -1716,7 +1715,7 @@ function validateBetTypeRegionCompatibility(betType, station) {
   }
 
   // Tìm kiểu cược trong danh sách kiểu cược mặc định
-  const defaultBetType = defaultBetTypes.find(
+  const defaultBetType = BET_CONFIG.betTypes.find(
     (bt) =>
       bt.name === betType.id ||
       bt.aliases.some((a) => a.toLowerCase() === betType.alias?.toLowerCase())
@@ -1731,7 +1730,7 @@ function validateBetTypeRegionCompatibility(betType, station) {
   }
 
   // Lấy danh sách các miền mà kiểu cược này có thể áp dụng
-  const applicableRegions = defaultBetType.applicableRegions || [];
+  const applicableRegions = defaultBetType.applicable_regions || [];
 
   // Lấy miền của đài
   const stationRegion = station.region;
@@ -1758,12 +1757,8 @@ function validateBetTypeRegionCompatibility(betType, station) {
  * @returns {string} Tên miền hiển thị
  */
 function mapRegionName(region) {
-  const regionMap = {
-    north: "Miền Bắc",
-    central: "Miền Trung",
-    south: "Miền Nam",
-  };
-  return regionMap[region] || region;
+  const regionObj = BET_CONFIG.regions.find((r) => r.code === region);
+  return regionObj ? regionObj.name : region;
 }
 
 /**

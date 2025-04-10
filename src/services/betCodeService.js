@@ -1,10 +1,10 @@
 // src/services/betCodeService.js
-import { parseBetCode } from './betCodeParser/parser'
-import { formatBetCode } from './betCodeParser/formatter'
-import { calculateStake } from './calculator/stakeCalculator'
-import { calculatePotentialPrize } from './calculator/prizeCalculator'
-import { generatePermutations } from '@/utils/permutationUtils'
-import { defaultBetTypes } from '@/config/defaults'
+import { parseBetCode } from "./betCodeParser/parser";
+import { formatBetCode } from "./betCodeParser/formatter";
+import { calculateStake } from "./calculator/stakeCalculator";
+import { calculatePotentialPrize } from "./calculator/prizeCalculator";
+import { generatePermutations } from "@/utils/permutationUtils";
+import { BET_CONFIG } from "@/config/data";
 
 /**
  * Dịch vụ phân tích và xử lý mã cược
@@ -19,81 +19,77 @@ export const betCodeService = {
     try {
       // Kiểm tra nếu là trường hợp nhiều đài trong một mã cược
       if (this.isMultiStationBetCode(rawText)) {
-        return this.analyzeMultiStationBetCode(rawText)
+        return this.analyzeMultiStationBetCode(rawText);
       }
 
       // Chuẩn hóa định dạng
-      const formattedText = formatBetCode(rawText)
-      const isFormatted = formattedText !== rawText
+      const formattedText = formatBetCode(rawText);
+      const isFormatted = formattedText !== rawText;
 
       // Phân tích mã cược
-      const parseResult = parseBetCode(formattedText)
-
-      // console.log('parseResult', parseResult)
+      const parseResult = parseBetCode(formattedText);
 
       // Nếu mã cược hợp lệ, tính toán số tiền và tiềm năng thắng
-      let calculationResults = { stakeResult: null, prizeResult: null }
+      let calculationResults = { stakeResult: null, prizeResult: null };
 
       // NEW: Check for validity at the line level even if parsing succeeded overall
       const hasInvalidLines =
         parseResult.success &&
         parseResult.lines &&
-        parseResult.lines.some((line) => !line.valid && line.error)
+        parseResult.lines.some((line) => !line.valid && line.error);
 
       if (hasInvalidLines) {
         // Add specific error details from individual lines
         const errorMessages = parseResult.lines
           .filter((line) => !line.valid && line.error)
           .map((line) => `Dòng "${line.originalLine}": ${line.error}`)
-          .join('\n')
+          .join("\n");
 
-        parseResult.lineErrors = errorMessages
+        parseResult.lineErrors = errorMessages;
       }
-
-      // console.log(parseResult.lines)
 
       if (parseResult.success) {
         // Check for permutation types and ensure the permutations are generated
         for (const line of parseResult.lines) {
           // Check if this line has a permutation bet type
-          const betTypeAlias = line.betType?.alias?.toLowerCase()
-          const isPermutationType = defaultBetTypes.some(
+          const betTypeAlias = line.betType?.alias?.toLowerCase();
+          const isPermutationType = BET_CONFIG.betTypes.some(
             (bt) =>
-              bt.isPermutation && bt.aliases.some((a) => a === betTypeAlias)
-          )
+              bt.is_permutation && bt.aliases.some((a) => a === betTypeAlias)
+          );
 
           // If this is a permutation type, mark it and generate permutations
           if (
             betTypeAlias &&
-            (betTypeAlias.includes('dao') ||
-              betTypeAlias.includes('dxc') ||
+            (betTypeAlias.includes("dao") ||
+              betTypeAlias.includes("dxc") ||
               isPermutationType ||
-              betTypeAlias === 'xcd')
+              betTypeAlias === "xcd")
           ) {
-            line.isPermutation = true
+            line.isPermutation = true;
 
             // Generate permutations if not already present
             if (!line.permutations && line.numbers) {
-              line.permutations = {}
+              line.permutations = {};
               for (const number of line.numbers) {
-                const perms = generatePermutations(number)
-                line.permutations[number] = perms
+                const perms = generatePermutations(number);
+                line.permutations[number] = perms;
               }
             }
           }
         }
 
-        calculationResults.stakeResult = calculateStake(parseResult)
-        calculationResults.prizeResult = calculatePotentialPrize(parseResult)
+        calculationResults.stakeResult = calculateStake(parseResult);
+        calculationResults.prizeResult = calculatePotentialPrize(parseResult);
 
         // NEW: Check if stake calculation has errors
         if (calculationResults.stakeResult.hasErrors) {
           parseResult.calculationErrors = calculationResults.stakeResult.details
             .filter((detail) => !detail.valid && detail.error)
             .map((detail) => `Dòng "${detail.originalLine}": ${detail.error}`)
-            .join('\n')
+            .join("\n");
 
-          parseResult.success = false
+          parseResult.success = false;
         }
       }
 
@@ -104,14 +100,14 @@ export const betCodeService = {
         isFormatted,
         parseResult,
         calculationResults,
-      }
+      };
     } catch (error) {
-      console.error('Error analyzing bet code:', error)
+      console.error("Error analyzing bet code:", error);
       return {
         success: false,
         error: error.message,
         rawText,
-      }
+      };
     }
   },
 
@@ -121,24 +117,24 @@ export const betCodeService = {
    * @returns {boolean} Là mã cược nhiều đài hay không
    */
   isMultiStationBetCode(text) {
-    if (!text || typeof text !== 'string') return false
+    if (!text || typeof text !== "string") return false;
 
     const lines = text
       .trim()
-      .split('\n')
-      .filter((line) => line.trim() !== '')
-    if (lines.length < 2) return false
+      .split("\n")
+      .filter((line) => line.trim() !== "");
+    if (lines.length < 2) return false;
 
     // Đếm số dòng đài
-    let stationLineCount = 0
+    let stationLineCount = 0;
     for (const line of lines) {
       if (this.isStationLine(line)) {
-        stationLineCount++
-        if (stationLineCount >= 2) return true
+        stationLineCount++;
+        if (stationLineCount >= 2) return true;
       }
     }
 
-    return false
+    return false;
   },
 
   /**
@@ -148,65 +144,44 @@ export const betCodeService = {
    */
   isStationLine(line) {
     // Lấy danh sách các đài từ defaultStations
-    const stationNames = [
-      'mb',
-      'mt',
-      'mn',
-      'mienbac',
-      'mientrung',
-      'miennam',
-      'hn',
-      'hanoi',
-      'vl',
-      'ct',
-      'tp',
-      'hcm',
-      'dt',
-      'cm',
-      'bt',
-      'vt',
-      'bl',
-      'ag',
-      'dn',
-      'tg',
-      'la',
-      'kg',
-      'dl',
-      'qn',
-      'kh',
-      'hue',
-      'py',
-      'gl',
-    ]
+    const stationNames = BET_CONFIG.allStations.flatMap((station) => [
+      station.name.toLowerCase(),
+      ...station.aliases,
+    ]);
 
     // Các mẫu đài nhiều miền
-    const multiRegionPattern = /^\d+d(mn|mt|n|t|nam|trung)$/i
+    const multiRegionPattern = /^\d+d(mn|mt|n|t|nam|trung)$/i;
 
     // Kiểm tra nếu dòng chỉ chứa tên đài
-    const simpleLine = line.trim().toLowerCase().replace(/\.+$/, '')
+    const simpleLine = line.trim().toLowerCase().replace(/\.+$/, "");
 
     // Trường hợp 1: đài nhiều miền
     if (multiRegionPattern.test(simpleLine)) {
-      return true
+      return true;
     }
 
     // Trường hợp 2: Đài đơn lẻ
-    for (const stationName of stationNames) {
-      if (simpleLine === stationName) {
-        return true
+    if (stationNames.includes(simpleLine)) {
+      return true;
+    }
+
+    // Trường hợp 3: Các tên miền
+    for (const region of BET_CONFIG.regions) {
+      if (region.aliases.includes(simpleLine)) {
+        return true;
       }
     }
 
-    // Trường hợp 3: Nhiều đài (vl.ct, v.v.)
-    if (simpleLine.includes('.')) {
-      const parts = simpleLine.split('.')
+    // Trường hợp 4: Nhiều đài (vl.ct, v.v.)
+    if (simpleLine.includes(".")) {
+      const parts = simpleLine.split(".");
       if (parts.length > 1) {
         // Nếu tất cả các phần đều là tên đài
-        return parts.every((part) => stationNames.includes(part))
+        return parts.every((part) => stationNames.includes(part));
       }
     }
 
-    return false
+    return false;
   },
 
   /**
@@ -215,14 +190,14 @@ export const betCodeService = {
    * @returns {object} Kết quả phân tích
    */
   analyzeMultiStationBetCode(rawText) {
-    const stationBetCodes = this.extractMultiStationBetCodes(rawText)
+    const stationBetCodes = this.extractMultiStationBetCodes(rawText);
     if (!stationBetCodes || stationBetCodes.length === 0) {
       return {
         success: false,
-        error: 'Không thể phân tách mã cược nhiều đài',
+        error: "Không thể phân tách mã cược nhiều đài",
         rawText,
         multiStation: true,
-      }
+      };
     }
 
     // Phân tích từng cặp đài-dòng cược
@@ -230,12 +205,12 @@ export const betCodeService = {
       station: item.station,
       betLines: item.betLines,
       analysis: this.analyzeBetCode(item.betCode),
-    }))
+    }));
 
     // Kiểm tra xem có ít nhất một mã cược thành công
     const hasSuccessfulCode = analysisResults.some(
       (result) => result.analysis.success
-    )
+    );
 
     // Trả về kết quả tích hợp
     return {
@@ -244,7 +219,7 @@ export const betCodeService = {
       multiStation: true,
       stationBetCodes,
       analysisResults,
-    }
+    };
   },
 
   /**
@@ -255,51 +230,51 @@ export const betCodeService = {
   extractMultiStationBetCodes(rawText) {
     const lines = rawText
       .trim()
-      .split('\n')
-      .filter((line) => line.trim() !== '')
-    if (lines.length < 2) return null
+      .split("\n")
+      .filter((line) => line.trim() !== "");
+    if (lines.length < 2) return null;
 
-    const result = []
-    let currentStation = null
-    let currentBetLines = []
+    const result = [];
+    let currentStation = null;
+    let currentBetLines = [];
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (!line) continue
+      const line = lines[i].trim();
+      if (!line) continue;
 
       if (this.isStationLine(line)) {
         // Nếu đã có station và betLines, lưu lại vào result
         if (currentStation && currentBetLines.length > 0) {
-          const betCode = `${currentStation}\n${currentBetLines.join('\n')}`
+          const betCode = `${currentStation}\n${currentBetLines.join("\n")}`;
           result.push({
             station: currentStation,
             betLines: [...currentBetLines],
             betCode,
-          })
+          });
         }
 
         // Bắt đầu station mới
-        currentStation = line
-        currentBetLines = []
+        currentStation = line;
+        currentBetLines = [];
       } else {
         // Thêm dòng cược vào station hiện tại
         if (currentStation) {
-          currentBetLines.push(line)
+          currentBetLines.push(line);
         }
       }
     }
 
     // Thêm cặp cuối cùng nếu có
     if (currentStation && currentBetLines.length > 0) {
-      const betCode = `${currentStation}\n${currentBetLines.join('\n')}`
+      const betCode = `${currentStation}\n${currentBetLines.join("\n")}`;
       result.push({
         station: currentStation,
         betLines: [...currentBetLines],
         betCode,
-      })
+      });
     }
 
-    return result.length > 0 ? result : null
+    return result.length > 0 ? result : null;
   },
 
   /**
@@ -311,24 +286,24 @@ export const betCodeService = {
     try {
       // Kiểm tra trường hợp nhiều đài
       if (this.isMultiStationBetCode(text)) {
-        const stationBetCodes = this.extractMultiStationBetCodes(text)
-        if (!stationBetCodes || stationBetCodes.length === 0) return false
+        const stationBetCodes = this.extractMultiStationBetCodes(text);
+        if (!stationBetCodes || stationBetCodes.length === 0) return false;
 
         // Kiểm tra xem có ít nhất một mã cược hợp lệ
         return stationBetCodes.some((item) => {
-          const formattedText = formatBetCode(item.betCode)
-          const parseResult = parseBetCode(formattedText)
-          return parseResult.success
-        })
+          const formattedText = formatBetCode(item.betCode);
+          const parseResult = parseBetCode(formattedText);
+          return parseResult.success;
+        });
       }
 
       // Xử lý bình thường nếu không phải mã cược nhiều đài
-      const formattedText = formatBetCode(text)
-      const parseResult = parseBetCode(formattedText)
+      const formattedText = formatBetCode(text);
+      const parseResult = parseBetCode(formattedText);
 
-      return parseResult.success
+      return parseResult.success;
     } catch (error) {
-      return false
+      return false;
     }
   },
 
@@ -340,7 +315,7 @@ export const betCodeService = {
   extractBetCodeSummary(text) {
     // Kiểm tra trường hợp nhiều đài
     if (this.isMultiStationBetCode(text)) {
-      const stationBetCodes = this.extractMultiStationBetCodes(text)
+      const stationBetCodes = this.extractMultiStationBetCodes(text);
       if (!stationBetCodes || stationBetCodes.length === 0) {
         return {
           isValid: false,
@@ -350,29 +325,29 @@ export const betCodeService = {
           potentialWinning: 0,
           multiStation: true,
           stationCount: 0,
-        }
+        };
       }
 
       // Tính tổng hợp từ tất cả các đài
-      let totalStakeAmount = 0
-      let totalPotentialWinning = 0
-      let totalLineCount = 0
-      let validCodeCount = 0
+      let totalStakeAmount = 0;
+      let totalPotentialWinning = 0;
+      let totalLineCount = 0;
+      let validCodeCount = 0;
 
       stationBetCodes.forEach((item) => {
-        const analysis = this.analyzeBetCode(item.betCode)
+        const analysis = this.analyzeBetCode(item.betCode);
         if (analysis.success) {
-          validCodeCount++
-          const stakeResult = analysis.calculationResults.stakeResult
-          const prizeResult = analysis.calculationResults.prizeResult
+          validCodeCount++;
+          const stakeResult = analysis.calculationResults.stakeResult;
+          const prizeResult = analysis.calculationResults.prizeResult;
 
-          totalStakeAmount += stakeResult.success ? stakeResult.totalStake : 0
+          totalStakeAmount += stakeResult.success ? stakeResult.totalStake : 0;
           totalPotentialWinning += prizeResult.success
             ? prizeResult.totalPotential
-            : 0
-          totalLineCount += analysis.parseResult.lines.length
+            : 0;
+          totalLineCount += analysis.parseResult.lines.length;
         }
-      })
+      });
 
       return {
         isValid: validCodeCount > 0,
@@ -383,11 +358,11 @@ export const betCodeService = {
         potentialWinning: totalPotentialWinning,
         validCodeCount,
         totalStations: stationBetCodes.length,
-      }
+      };
     }
 
     // Xử lý bình thường nếu không phải mã cược nhiều đài
-    const analysis = this.analyzeBetCode(text)
+    const analysis = this.analyzeBetCode(text);
 
     if (!analysis.success) {
       return {
@@ -396,11 +371,11 @@ export const betCodeService = {
         lineCount: 0,
         stakeAmount: 0,
         potentialWinning: 0,
-      }
+      };
     }
 
-    const { parseResult, calculationResults } = analysis
-    const { stakeResult, prizeResult } = calculationResults
+    const { parseResult, calculationResults } = analysis;
+    const { stakeResult, prizeResult } = calculationResults;
 
     return {
       isValid: true,
@@ -409,8 +384,8 @@ export const betCodeService = {
       stakeAmount: stakeResult.success ? stakeResult.totalStake : 0,
       potentialWinning: prizeResult.success ? prizeResult.totalPotential : 0,
       lines: parseResult.lines,
-    }
+    };
   },
-}
+};
 
-export default betCodeService
+export default betCodeService;
