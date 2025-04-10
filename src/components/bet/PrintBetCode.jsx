@@ -14,13 +14,11 @@ import {
   CheckCircle2,
   FileText,
   Loader2,
-  BarChart2,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { exportBetCodeToPDF } from '@/services/export/pdfExporter'
 import { toast } from 'sonner'
 import { formatMoney } from '@/utils/formatters'
-import { Badge } from '@/components/ui/badge'
 
 const PrintBetCode = ({ betCode, isOpen, onClose }) => {
   const [printing, setPrinting] = useState(false)

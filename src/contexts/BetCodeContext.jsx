@@ -602,8 +602,8 @@ export function BetCodeProvider({ children }) {
     addDraftCode,
     removeDraftCode,
     editDraftCode,
-    confirmDraftCodes, // Kept for API compatibility but simplified
-    confirmDraftCode, // Kept for API compatibility but simplified
+    confirmDraftCodes,
+    confirmDraftCode,
     getBetCode,
     selectBetCode,
     clearSelection,
