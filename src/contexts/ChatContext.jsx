@@ -13,7 +13,7 @@ import { calculatePotentialPrize } from "../services/calculator/prizeCalculator"
 import { useBetCode } from "./BetCodeContext";
 import betCodeService from "@/services/betCodeService";
 import { uid } from "uid";
-import { defaultBetTypes, defaultStations } from "@/config/defaults";
+import { BET_CONFIG } from "@/config/data";
 
 const ChatContext = createContext();
 
@@ -987,13 +987,13 @@ function isStationLine(line) {
   }
 
   // 4. Kiểm tra tên đài đơn lẻ theo aliases
-  for (const station of defaultStations) {
+  for (const station of BET_CONFIG.allStations) {
     if (station.name.toLowerCase() === cleanLine) {
       return true;
     }
 
     // Kiểm tra chính xác các aliases
-    if (station.aliases.some((alias) => alias.toLowerCase() === cleanLine)) {
+    if (station.aliases.some((alias) => alias === cleanLine)) {
       return true;
     }
   }
@@ -1002,10 +1002,10 @@ function isStationLine(line) {
   if (cleanLine.includes(".")) {
     const parts = cleanLine.split(".");
     const allPartsAreStations = parts.every((part) => {
-      return defaultStations.some(
+      return BET_CONFIG.allStations.some(
         (station) =>
           station.name.toLowerCase() === part ||
-          station.aliases.some((alias) => alias.toLowerCase() === part)
+          station.aliases.some((alias) => alias === part)
       );
     });
 
@@ -1062,7 +1062,7 @@ const ensureCorrectBetCodeFormat = (betCode) => {
   if (lines.length <= 1) return betCode;
 
   // Lấy danh sách alias từ defaultBetTypes
-  const betTypeAliases = defaultBetTypes.flatMap((bt) => bt.aliases);
+  const betTypeAliases = BET_CONFIG.betTypes.flatMap((bt) => bt.aliases);
 
   // Chỉ xử lý các dòng từ dòng thứ 2 trở đi (sau dòng đài)
   for (let i = 1; i < lines.length; i++) {
