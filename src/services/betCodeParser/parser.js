@@ -111,7 +111,7 @@ export function parseBetCode(betCode) {
       let stationData = null;
 
       // Kiểm tra trong tất cả các đài và aliases
-      for (const station of BET_CONFIG.allStations) {
+      for (const station of BET_CONFIG.accessibleStations) {
         if (
           station.name.toLowerCase() === potentialStation ||
           (station.aliases &&
@@ -168,7 +168,7 @@ export function parseBetCode(betCode) {
         let isValidStation = false;
 
         // Kiểm tra trong tất cả các đài và aliases
-        for (const station of BET_CONFIG.allStations) {
+        for (const station of BET_CONFIG.accessibleStations) {
           if (
             station.name.toLowerCase() === potentialStation ||
             (station.aliases &&
@@ -428,7 +428,7 @@ function isStationLine(line) {
   }
 
   // 3. Kiểm tra tên đài đơn lẻ
-  for (const station of BET_CONFIG.allStations) {
+  for (const station of BET_CONFIG.accessibleStations) {
     if (
       station.name.toLowerCase() === cleanLine ||
       station.aliases.some((alias) => alias === cleanLine)
@@ -448,7 +448,7 @@ function isStationLine(line) {
   if (cleanLine.includes(".")) {
     const parts = cleanLine.split(".");
     return parts.every((part) =>
-      BET_CONFIG.allStations.some(
+      BET_CONFIG.accessibleStations.some(
         (station) =>
           station.name.toLowerCase() === part ||
           station.aliases.some((alias) => alias === part)
@@ -489,7 +489,7 @@ function isStationOnly(line) {
  */
 function isPartOfStationName(alias, line) {
   // Kiểm tra nếu line chính là một tên đài/alias của đài
-  const isLineExactlyStation = BET_CONFIG.allStations.some(
+  const isLineExactlyStation = BET_CONFIG.accessibleStations.some(
     (station) =>
       station.name.toLowerCase() === line.trim().toLowerCase() ||
       station.aliases.some((a) => a === line.trim().toLowerCase())
@@ -501,7 +501,7 @@ function isPartOfStationName(alias, line) {
   }
 
   // Ngược lại kiểm tra nếu alias là một phần của tên đài
-  for (const station of BET_CONFIG.allStations) {
+  for (const station of BET_CONFIG.accessibleStations) {
     if (
       station.aliases.some(
         (stationAlias) =>
@@ -617,7 +617,7 @@ function parseStation(stationString) {
   const stationText = stationString.trim().toLowerCase().replace(/\.+$/, "");
 
   // Kiểm tra tên đài chính xác
-  for (const station of BET_CONFIG.allStations) {
+  for (const station of BET_CONFIG.accessibleStations) {
     if (station.name.toLowerCase() === stationText) {
       return {
         success: true,
@@ -694,7 +694,7 @@ function parseStation(stationString) {
     const validStations = [];
 
     for (const part of stationParts) {
-      for (const station of BET_CONFIG.allStations) {
+      for (const station of BET_CONFIG.accessibleStations) {
         if (
           station.name.toLowerCase() === part ||
           station.aliases.some((alias) => alias.toLowerCase() === part)

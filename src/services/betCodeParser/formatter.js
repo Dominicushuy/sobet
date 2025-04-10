@@ -94,7 +94,7 @@ function isStationOnlyLine(line) {
   }
 
   // 2. Kiểm tra tên đài đơn lẻ
-  for (const station of BET_CONFIG.allStations) {
+  for (const station of BET_CONFIG.accessibleStations) {
     if (
       station.name.toLowerCase() === cleanLine ||
       station.aliases.some((alias) => alias === cleanLine)
@@ -114,7 +114,7 @@ function isStationOnlyLine(line) {
   if (cleanLine.includes(".")) {
     const parts = cleanLine.split(".");
     return parts.every((part) =>
-      BET_CONFIG.allStations.some(
+      BET_CONFIG.accessibleStations.some(
         (station) =>
           station.name.toLowerCase() === part ||
           station.aliases.some((alias) => alias === part)
@@ -167,14 +167,14 @@ function formatStation(stationLine) {
  */
 function findMergedStations(stationText) {
   // Trường hợp đặc biệt: dnaictho, tp.dongthap
-  for (const station1 of BET_CONFIG.allStations) {
+  for (const station1 of BET_CONFIG.accessibleStations) {
     // Thử tất cả các alias của đài 1
     for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
       if (stationText.startsWith(alias1)) {
         const remainingText = stationText.substring(alias1.length);
 
         // Tìm đài thứ 2 trong phần còn lại
-        for (const station2 of BET_CONFIG.allStations) {
+        for (const station2 of BET_CONFIG.accessibleStations) {
           // Không xét ghép giữa đài với chính nó
           if (station1.name === station2.name) continue;
 
@@ -194,9 +194,9 @@ function findMergedStations(stationText) {
     }
   }
 
-  for (const station1 of BET_CONFIG.allStations) {
+  for (const station1 of BET_CONFIG.accessibleStations) {
     for (const alias1 of [station1.name.toLowerCase(), ...station1.aliases]) {
-      for (const station2 of BET_CONFIG.allStations) {
+      for (const station2 of BET_CONFIG.accessibleStations) {
         // Không xét ghép giữa đài với chính nó
         if (station1.name === station2.name) continue;
 

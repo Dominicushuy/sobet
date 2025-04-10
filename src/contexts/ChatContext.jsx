@@ -987,7 +987,7 @@ function isStationLine(line) {
   }
 
   // 4. Kiểm tra tên đài đơn lẻ theo aliases
-  for (const station of BET_CONFIG.allStations) {
+  for (const station of BET_CONFIG.accessibleStations) {
     if (station.name.toLowerCase() === cleanLine) {
       return true;
     }
@@ -1002,7 +1002,7 @@ function isStationLine(line) {
   if (cleanLine.includes(".")) {
     const parts = cleanLine.split(".");
     const allPartsAreStations = parts.every((part) => {
-      return BET_CONFIG.allStations.some(
+      return BET_CONFIG.accessibleStations.some(
         (station) =>
           station.name.toLowerCase() === part ||
           station.aliases.some((alias) => alias === part)

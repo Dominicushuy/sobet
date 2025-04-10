@@ -144,7 +144,7 @@ export const betCodeService = {
    */
   isStationLine(line) {
     // Lấy danh sách các đài từ defaultStations
-    const stationNames = BET_CONFIG.allStations.flatMap((station) => [
+    const stationNames = BET_CONFIG.accessibleStations.flatMap((station) => [
       station.name.toLowerCase(),
       ...station.aliases,
     ]);
